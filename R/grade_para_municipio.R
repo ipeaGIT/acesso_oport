@@ -55,14 +55,3 @@ extrair_municipio_grade <- function(nome_municipio, uf_sigla) {
              paste0("data/grade_municipio/", municipio_nome_salvar, "/grade_", tolower(municipio_ok), ".shp"))
 
 }
-
-
-
-# aplicando ---------------------------------------------------------------
-
-extrair_municipio_grade("rio_de_janeiro", "rj")
-
-# abrir
-
-# rj <- st_read("data/grade_municipio/rio_de_janeiro/grade_rio de janeiro.shp")
-# mapview(rj)
