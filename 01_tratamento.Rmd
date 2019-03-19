@@ -1,0 +1,146 @@
+---
+title: "Tratamento dos dados - Acesso a Oportunidades"
+author: "Ipea"
+date: "19 de março de 2019"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = "UTF-8", output_dir = "reports") })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
+
+# rmarkdown::render("01_tratamento.Rmd", output_dir = "reports")
+
+library(knitr)
+library(tidyverse)
+library(readxl)
+library(scales)
+library(sf)
+library(mapview)
+library(data.table)
+```
+
+# Tratamento dos dados brutos
+
+Esse arquivo tem como objetivo tratar os dados brutos do projeto de acesso a oportunidades.
+As bases de dados tratadas aqui são:
+
+- ``Censo escolar``
+- ``Grade censo``
+- ``Hospitais``
+- ``GTFS``:
+
+## Censo escolar
+
+```{r}
+
+source("R/converter_censo_coords.R")
+# ABRIR ARQUIVO
+
+
+censo_escolar <- 
+  # Abrir e selecionar as colunas de interesse
+  fread("data-raw/censo_escolar/CAD_ESC_MAT_DOC_2015.csv", sep = ";",
+        select = c(17,3,6,14,128,138,144,150,165,187,196,201,206,27,28)) %>%
+  # Renomear as colunas
+  rename(cod_escola = CO_ENTIDADE,uf = SIGLA, municipio = NO_MUNICIPIO, rede = REDE, num_funcionarios = NU_FUNCIONARIOS,
+         presencial = IN_MEDIACAO_PRESENCIAL, mat_infantil = MAT_INF, mat_fundamental = MAT_FUND,
+         mat_medio = MAT_MED, mat_profissional = MAT_PROF, mat_eja = MAT_EJA, mat_especial = MAT_ESP, 
+         docentes = DOCTOTAL, lon = NU_LONGITUDE, lat = NU_LATITUDE) %>%
+  # Tratar as coordenadas
+  mutate(lon = convert_coords(lon),
+         lat = convert_coords(lat))
+
+
+# SALVAR
+
+write_csv(censo_escolar, "data/censo_escolar/censo_escolar_2015.csv")
+
+
+# TIDYING UP!!!
+
+censo_escolar_long <- censo_escolar %>%
+  gather(key = "tipo", value = "total", mat_infantil:docentes)
+
+write_csv(censo_escolar_long, "data/censo_escolar/censo_escolar_2015_long.csv")
+
+```
+
+
+## Grade censo
+
+```{r}
+
+
+source("R/grade_para_municipio.R")
+
+# aplicando
+
+extrair_municipio_grade("rio_de_janeiro", "rj")
+
+```
+
+## Hospitais
+
+## GTFS
+
+O GTFS do Rio de Janeiro apresenta algumas inconsistências no arquivo ``stop_times.txt``.
+
+```{r}
+
+
+# OTP RIO!!!!!!!!!1 -------------------------------------------------------
+
+# path_otp <- "otp/programs/otp.jar" # On Linux
+# 
+# path_data <- "otp"
+# 
+# log <- otp_build_graph(otp = path_otp, dir = path_data, router = "rio",
+#                        memory = 16)
+# 
+# 
+# otpcon <- otp_connect()
+# 
+# 
+# system("java -Xmx4G -jar \"otp/programs/otp.jar\" --build \"otp/graphs/rio")
+
+# Error:
+# Caused by: org.onebusaway.gtfs.serialization.mappings.InvalidStopTimeException: invalid stop time: 00:00:-6
+
+
+# VERIFICAR O ERRO --------------------------------------------------------
+
+stop_times <- fread("gtfs_teste/gtfs_rio_00_20171218/stop_times.txt", sep = ",") 
+
+teste1 <- stop_times %>%
+  select(arrival_time, departure_time) %>%
+  filter(!grepl("\\d{2}:\\d{2}:\\d{2}", arrival_time))
+
+
+
+# CORRIGIR O ERRO ---------------------------------------------------------
+
+
+stop_times_new <- stop_times %>%
+  mutate(arrival_time = ifelse(grepl("\\d{2}:\\d{2}:\\d{2}", arrival_time), arrival_time, "00:00:06")) %>%
+  mutate(departure_time = ifelse(grepl("\\d{2}:\\d{2}:\\d{2}", departure_time), departure_time, "00:00:06"))
+
+
+# TESTAR SE A CORREÇÃO FUNCIONOU ------------------------------------------
+
+
+stop_times_new %>%
+  filter(!grepl("\\d{2}:\\d{2}:\\d{2}", arrival_time))
+
+# OK!!!!!!!!!!
+
+# SALVAR, ENTAO! ----------------------------------------------------------
+
+
+data.table::fwrite(stop_times_new, "gtfs_teste/gtfs_rio_novo/stop_times.txt", quote = TRUE)
+
+```
+
+
+
