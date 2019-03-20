@@ -10,7 +10,7 @@ library(RColorBrewer)
 
 # ABRIR ARQUIVOS ----------------------------------------------------------
 
-educacao <- read_csv("data/censo_escolar/censo_escolar_2015.csv") %>%
+educacao <- read_csv("../data/censo_escolar/censo_escolar_2015.csv") %>%
   # Selecionar somente municipio de Fortaleza
   filter(municipio == "Fortaleza") %>%
   # Deletar as que nao tem localizacao
@@ -19,7 +19,7 @@ educacao <- read_csv("data/censo_escolar/censo_escolar_2015.csv") %>%
   # Selecionar somente o nome da escola
   select(cod_escola)
 
-hex_fortaleza <- st_read("data/hex_municipio/fortaleza/hex_fortaleza.shp") %>%
+hex_fortaleza <- st_read("../data/hex_municipio/fortaleza/hex_fortaleza.shp") %>%
   mutate(hex_id = 1:n()) %>%
   select(hex_id)
 
