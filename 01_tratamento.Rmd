@@ -5,12 +5,13 @@ date: "19 de março de 2019"
 output: html_document
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = "UTF-8", output_dir = "reports") })
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
 
-# rmarkdown::render("01_tratamento.Rmd", output_dir = "reports")
 
 library(knitr)
 library(tidyverse)
@@ -82,6 +83,15 @@ extrair_municipio_grade("rio_de_janeiro", "rj")
 ```
 
 ## Hospitais
+
+```{r hospitais}
+
+# hospitais <- read_csv("../data-raw/hospitais/cnesnone_2018.csv") %>%
+#   st_as_sf(coords = c("long", "lat"), crs = 4326)
+
+
+```
+
 
 ## GTFS
 
