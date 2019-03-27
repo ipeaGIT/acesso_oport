@@ -2,9 +2,7 @@
 title: "Tratamento dos dados - Acesso a Oportunidades"
 author: "Ipea"
 date: "19 de março de 2019"
-output: 
-  md_document:
-    variant: markdown_strict
+output: github_document
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = "UTF-8") })
 editor_options: 
@@ -16,7 +14,9 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FAL
 
 
 library(knitr)
-library(tidyverse)
+library(dplyr)
+library(readr)
+library(tidyr)
 library(readxl)
 library(scales)
 library(sf)
