@@ -1,0 +1,77 @@
+---
+title: "Agrupamento dos dados"
+author: "Ipea"
+date: "27 de março de 2019"
+output: 
+  html_document:
+    keep_md: yes
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = "UTF-8", output_dir = "reports") })
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
+
+
+library(knitr)
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(scales)
+library(sf)
+library(mapview)
+library(data.table)
+
+source("R/agrupar_por_hex.R")
+```
+
+# Agrupamento de dados socioeconômicos de uso do solo
+
+Esse arquivo tem como objetivo agrupar os dados pelas unidades de agregação espacial (hexágonos) e salvá-los em disco. As seguintes variáveis são agrupadas:
+
+- Estabelecimentos de saúde;
+- Escolas;
+- População;
+- Empregos (_very soon_).
+
+Primeiramente é necessário criar as unidades de agregação que serão utilizadas.
+
+## Criação de hexágonos
+
+As cidade brasileiras analisadas serão dividadas em hexágonos. A função ``poligono_para_hexagono`` pega os municípios e cria hexágonos de acordo com a resolução preferida, que no caso foi uma resolução de 960 metros (comprimento da menor diagonal do hexágono).
+
+```{r hexagonos}
+
+source("R/poligono_para_hexagono.R")
+
+# # aplicando ---------------------------------------------------------------
+
+munis <- c("fortaleza", "rio de janeiro", "recife", "belo horizonte")
+ufs <- c("ce", "rj", "pe", "mg")
+
+purrr::walk2(munis, ufs, shape_to_hexagon)
+
+```
+
+## Agrupamento das variáveis por hexágonos
+
+A função ``agrupar_variaveis`` aceita como _input_ o nome do município desejado e retorna um tabela com o shape dos hexágonos e a quantidade de estabelecimentos de saúde, educação e população agregados.
+
+```{r agregar variaveis}
+
+# abrir funcao
+source("R/agrupar_variaveis.R")
+
+# escolher cidades
+
+munis <- c("fortaleza", "rio de janeiro", "recife", "belo horizonte")
+
+# aplicar funcao
+
+purrr::walk(munis, agrupar_variaveis)
+
+```
+

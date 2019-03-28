@@ -1,0 +1,49 @@
+---
+title: "Matriz de tempo"
+author: "Ipea"
+date: "27 de março de 2019"
+output: 
+  html_document:
+    keep_md: yes
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = "UTF-8", output_dir = "reports") })
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
+
+
+library(knitr)
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(scales)
+library(sf)
+library(mapview)
+library(data.table)
+library(opentripplanner)
+library(purrr)
+library(httr)
+library(furrr)
+
+source("R/otp.R")
+source("R/matriz_acessibilidade.R")
+```
+
+# Matriz de tempo de viagem
+
+A função ``matriz_acessibilidade`` retorna uma matriz de tempo de viagem por transporte público a partir de um shapefile com os hexágonos.
+
+```{r matriz}
+
+tictoc::tic()
+matriz_fortaleza <- matriz_acessibilidade("fortaleza", ligar_otp = FALSE, amostra = TRUE)
+tictoc::toc()
+
+```
+
+
+

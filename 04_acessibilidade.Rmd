@@ -1,0 +1,44 @@
+---
+title: "Indicadores de acessibilidade"
+author: "Ipea"
+date: "27 de março de 2019"
+output: 
+  html_document:
+    keep_md: yes
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = "UTF-8", output_dir = "reports") })
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
+
+
+library(knitr)
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(scales)
+library(sf)
+library(mapview)
+library(data.table)
+library(opentripplanner)
+library(purrr)
+library(httr)
+library(furrr)
+
+```
+
+# Indicador de acesso cumulativo a oportunidades
+
+Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de tempo de viagem calculada entre os hexágonos, é hora da etapa de calcular o indicador de acessibilidade. Como projeto piloto, será calculado o indicador para a cidade de Fortaleza:
+
+```{r acess acumulativa}
+
+
+
+```
+
+
