@@ -125,7 +125,7 @@ write_csv(censo_escolar, "data/censo_escolar/censo_escolar_2015.csv")
 
 ## Grade censo
 
-As grades do censo são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo ``Tabela_UF_ID.csv`` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento dessa arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco. 
+As grades do censo são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo ``Tabela_UF_ID.csv`` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco. 
 
 ```{r grade censo}
 
