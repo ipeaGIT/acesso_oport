@@ -328,4 +328,3 @@ data.table::fwrite(stop_times_new, "gtfs_teste/gtfs_rio_novo/stop_times.txt", qu
 ```
 
 
-
