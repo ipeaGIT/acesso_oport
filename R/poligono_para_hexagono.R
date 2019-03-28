@@ -12,7 +12,7 @@ library(readr)
 library(dplyr)
 
 
-shape_to_hexagon <- function(municipio, uf_sigla) {
+shape_to_hexagon <- function(municipio, uf_sigla, resolution = 8) {
     
     dir_muni <- paste0("../data/municipios/", "municipios_", uf_sigla, ".rds")
     
@@ -20,7 +20,7 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
       filter(NM_MUNICIP == toupper(gsub( "_", " ", municipio)))
     
     # get the unique h3 ids of the hexagons intersecting your polygon at a given resolution
-    hex_ids <- h3jsr::polyfill(muni, res = 8, simple = FALSE)
+    hex_ids <- h3jsr::polyfill(muni, res = resolution, simple = FALSE)
     
     # Available resolutions considerinf length of short diagonal - https://uber.github.io/h3/#/documentation/core-library/resolution-table
     # 10 ~136 meters
@@ -31,7 +31,8 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
     
     # pass the h3 ids to return the hexagonal grid
     hex_grid <- unlist(hex_ids$h3_polyfillers) %>% 
-      h3jsr::h3_to_polygon(simple = FALSE)
+      h3jsr::h3_to_polygon(simple = FALSE) %>%
+      mutate(id_hex = 1:n())
     
     
 
