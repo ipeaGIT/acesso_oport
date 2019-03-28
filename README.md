@@ -2,7 +2,19 @@
 
 Repositório com os códigos utilizados no projeto do Ipea Acesso a Oportunidades.
 
+# Sobre o projeto
+
+Este projeto tem como objetivo analisar o número de oportunidades de emprego, educação e saúde que a população consegue acessar por meio do transporte público, a pé e de bicicleta em grandes áreas urbanas do Brasil. O projeto tem foco particular na análise das desigualdades sociais e espaciais no acesso a oportunidades em relação às políticas urbanas de transporte, habitação e uso do solo.
+
+Combinando dados de uso do solo, Censo Demográfico e de transporte (incluindo dados do OpenStreetMap e dados de transporte público em formato GTFS), o projeto irá estimar o acesso da população à postos de trabalho formais, escolas públicas e serviços de saúde providos pelos SUS utilizando medidas de acessibilidade gravitacionais e de acesso acumulativo de oportunidades, entre outras. As analises serão realizadas em alta resolução espacial, permitindo identificar a distribuição dos serviços de transporte público em cada área urbana e apontar clusters espaciais de áreas com baixo nível de acesso a oportunidades. 
+
 # Hierarquia organizacional
+
+O relatório do projeto com a explicação da metodologia e o código utilizado será disponibilizado na página principal do repositório e é dividido em:
+
+- ``01_tratamento``: documentação do tratamento inicial feito às bases de dados brutas de informações socieconômicas, de uso do solo e transporte;
+
+Além dessa documentação, outros arquivos necessários para o andamento do projeto estão divididos nas pastas:
 
 - ``analysis``: análises feitas a partir dos dados;
 - ``presentations``: apresentações advindas do projeto;
