@@ -2,9 +2,7 @@
 title: "Tratamento dos dados - Acesso a Oportunidades"
 author: "Ipea"
 date: "19 de março de 2019"
-output: 
-  md_document:
-    variant: markdown_strict
+output: github_document
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = "UTF-8") })
 editor_options: 
@@ -16,7 +14,9 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FAL
 
 
 library(knitr)
-library(tidyverse)
+library(dplyr)
+library(readr)
+library(tidyr)
 library(readxl)
 library(scales)
 library(sf)
@@ -88,7 +88,7 @@ walk(arquivos_shp, shp_to_rds)
 ## Censo escolar
 
 
-```{r}
+```{r censo escolar}
 
 source("R/converter_censo_coords.R")
 # ABRIR ARQUIVO
@@ -177,7 +177,7 @@ A função para extrair os municípios das grades do IBGE requer dois inputs: o 
 - O geoprocessamento extrai somente as grades que estão inseridas dentro dos limites do município;
 - O resultado é salvo em disco.
 
-```{r}
+```{r funcao grade para municipio}
 
 
 grade_para_municipio <- function(muni, uf_input) {
@@ -272,7 +272,7 @@ walk2(municipios, ufs, grade_para_municipio)
 
 O GTFS do Rio de Janeiro apresenta algumas inconsistências no arquivo ``stop_times.txt``.
 
-```{r}
+```{r gtfs}
 
 
 # OTP RIO!!!!!!!!!1 -------------------------------------------------------
