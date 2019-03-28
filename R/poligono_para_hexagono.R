@@ -8,14 +8,15 @@
 library(h3jsr)
 library(sf)
 library(ggplot2)
-library(tidyverse)
+library(readr)
+library(dplyr)
 
 
 shape_to_hexagon <- function(municipio, uf_sigla) {
     
-    dir_muni <- paste0("data-raw/municipios/", uf_sigla,  "/", "municipios_", uf_sigla, ".shp")
+    dir_muni <- paste0("../data/municipios/", "municipios_", uf_sigla, ".rds")
     
-    muni <- read_sf(dir_muni, crs = 4326) %>%
+    muni <- read_rds(dir_muni) %>%
       filter(NM_MUNICIP == toupper(gsub( "_", " ", municipio)))
     
     # get the unique h3 ids of the hexagons intersecting your polygon at a given resolution
@@ -32,18 +33,15 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
     hex_grid <- unlist(hex_ids$h3_polyfillers) %>% 
       h3jsr::h3_to_polygon(simple = FALSE)
     
-    # plot(hex_grid)
     
 
     # salvar ------------------------------------------------------------------
-
     
-    # criar pasta para o municipio
-    dir.create(paste0("data/hex_municipio/", municipio))
+    municipio_nome_salvar <- substring(municipio, 1, 3)
     
     # salvar no disco
-    st_write(hex_grid, 
-             paste0("data/hex_municipio/", municipio, "/hex_", municipio, ".shp"))
+    write_rds(hex_grid, 
+             paste0("../data/hex_municipio/hex_", municipio_nome_salvar, ".rds"))
 
 }
 
@@ -51,10 +49,12 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
 
 # # # aplicando ---------------------------------------------------------------
 # 
-# shape_to_hexagon("fortaleza", "ce")
+# munis <- c("fortaleza", "rio de janeiro", "recife", "belo horizonte")
+# ufs <- c("ce", "rj", "pe", "mg")
 # 
+# purrr::walk2(munis, ufs, shape_to_hexagon)
 # 
 # # abrir
 # 
-# fortaleza <- st_read("data/hex_municipio/fortaleza/hex_fortaleza.shp", crs = 4326)
-# mapview::mapview(fortaleza)
+# rj <- read_rds("../data/hex_municipio/hex_rio.rds")
+# mapview::mapview(rj)
