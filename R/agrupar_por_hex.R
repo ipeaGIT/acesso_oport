@@ -60,35 +60,38 @@ pop_por_hex <- function(shape, hex) {
 
 # AGRUPAR HOSPITAIS!!! ----------------------------------------------------
 
-hospitais_por_hex <- function(shape, hex) {
+hospitais_por_hex <- function(municipio, cnes = "../data-raw/hospitais/cnesnone_2018.csv") {
   
   # ABRIR ARQUIVOS ----------------------------------------------------------
   
-  hospitais <- read_csv(shape) %>%
+  hospitais <- read_csv(cnes) %>%
     st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
     identity()
   
-  hex_fortaleza <- st_read(hex) %>%
-    mutate(id_hex = 1:n()) %>%
+  muni_short_name <- substring(municipio, 1, 3)
+  
+  dir_muni <- paste0("../data/hex_municipio/hex_", muni_short_name, ".rds")
+  
+  hex_muni <- read_rds(dir_muni) %>%
     select(id_hex)
   
   
   # AGRUPAR TODAS OS HOSPITAIS POR HEXAGONO -----------------------------------
   
-  hex_fortaleza_v1 <- hospitais %>%
-    st_join(hex_fortaleza) %>%
+  hex_muni_v1 <- hospitais %>%
+    st_join(hex_muni) %>%
     # filter(id_hex == 278)
     st_set_geometry(NULL) %>%
     count(id_hex)
   
-  hex_final <- hex_fortaleza %>%
-    left_join(hex_fortaleza_v1)
+  hex_final <- hex_muni %>%
+    left_join(hex_muni_v1)
   
   
 
   # SALVAR ------------------------------------------------------------------
   
-  muni <- str_extract(hex, "_\\D+")
+  write_rds(hex_final, "..data/")
 
   
   
@@ -112,20 +115,20 @@ escolas_por_hex <- function(shape, hex) {
     # Selecionar somente o nome da escola
     select(cod_escola)
   
-  hex_fortaleza <- st_read(hex) %>%
+  hex_muni <- st_read(hex) %>%
     mutate(id_hex = 1:n()) %>%
     select(id_hex)
   
   
   # AGRUPAR TODAS AS ESCOLAS POR HEXAGONO -----------------------------------
   
-  hex_fortaleza_v1 <- educacao %>%
-    st_join(hex_fortaleza) %>%
+  hex_muni_v1 <- educacao %>%
+    st_join(hex_muni) %>%
     st_set_geometry(NULL) %>%
     count(id_hex)
   
-  hex_final <- hex_fortaleza %>%
-    left_join(hex_fortaleza_v1)
+  hex_final <- hex_muni %>%
+    left_join(hex_muni_v1)
   
   
 }
