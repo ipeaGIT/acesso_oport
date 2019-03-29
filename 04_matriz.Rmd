@@ -83,7 +83,7 @@ Agora rodando o comando para criar a matriz de tempo de viagem em python:
 
 setwd("../otp")
 
-command <- "java -jar jython.jar -Dpython.path=otp.jar  python_script_fortaleza.py"
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  python_script_fortaleza.py"
 
 bench_py <- system.time(system(command))
 
