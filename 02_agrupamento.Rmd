@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FAL
 
 library(knitr)
 library(readr)
-library(tidyverse)
 library(dplyr)
 library(readxl)
 library(scales)
@@ -25,7 +24,7 @@ library(sf)
 library(mapview)
 library(data.table)
 
-source("R/agrupar_por_hex.R")
+# source("R/agrupar_por_hex.R")
 ```
 
 # Agrupamento de dados socioeconômicos de uso do solo
