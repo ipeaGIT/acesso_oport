@@ -2,14 +2,10 @@
 # https://github.com/uber/h3/issues/87
 
 
-# devtools::install_github("obrl-soil/h3jsr")
+# remotes::install_local("misc/h3jsr-master.zip")
 
 
 library(h3jsr)
-library(sf)
-library(ggplot2)
-library(readr)
-library(dplyr)
 
 
 shape_to_hexagon <- function(municipio, uf_sigla, resolution = 8) {
