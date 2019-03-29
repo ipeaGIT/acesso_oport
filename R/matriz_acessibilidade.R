@@ -77,7 +77,8 @@ matriz_acessibilidade <- function(municipio, amostra = FALSE, ligar_otp = FALSE)
         walkReluctance = "2",
         arriveBy = "FALSE",
         transferPenalty = "0",
-        minTransferTime = "0"
+        minTransferTime = "0",
+        numItineraries = "1"
       )
     )
     
