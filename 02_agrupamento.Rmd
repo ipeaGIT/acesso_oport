@@ -57,7 +57,7 @@ purrr::walk2(munis, ufs, shape_to_hexagon)
 
 ## Agrupamento das variáveis por hexágonos
 
-A função ``agrupar_variaveis`` aceita como _input_ o nome do município desejado e retorna um tabela com o shape dos hexágonos e a quantidade de estabelecimentos de saúde, educação e população agregados.
+A função ``agrupar_variaveis`` aceita como _input_ o nome do município desejado e retorna um tabela com o shape dos hexágonos e a quantidade de estabelecimentos de saúde, educação e população agregados, salvos em disco.
 
 ```{r agregar variaveis}
 
