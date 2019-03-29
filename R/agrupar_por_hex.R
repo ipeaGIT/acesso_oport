@@ -1,8 +1,3 @@
-library(tools)
-library(tidyverse)
-library(sf)
-
-
 # AGRUPAR POPULACAO!!! ----------------------------------------------------
 
 
