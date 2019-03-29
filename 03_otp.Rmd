@@ -1,0 +1,55 @@
+---
+title: "OTP - Setup"
+author: "Ipea"
+date: "19 de março de 2019"
+output: github_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = "UTF-8") })
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
+
+
+library(knitr)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(readxl)
+library(scales)
+library(sf)
+library(mapview)
+library(data.table)
+library(osmdata)
+```
+
+# OTP Setup
+
+Criação dos graphs, basicamente.
+
+A função ``construir_graph`` constrói o arquivo ``Graph.obj``, que é necessário para as operações do OTP. O único argumento necessário para a construção do graph é o nome da cidade, que já deve estar com uma pasta criada com os arquivo ``.pbf``e ``GTFS`` referentes.
+
+
+```{r graphs}
+
+source("R/otp.R")
+
+construir_graph("fortaleza")
+
+
+
+```
+
+Próxima etapa: baixar os arquivos .pbf a partir do pacote ``osmdata``.
+
+```{r obj teste}
+
+getbb ("belo horizonte")
+
+q <- opq ("belo horizonte") %>%
+    add_osm_feature(key = "amenity", value = "restaurant")
+
+
+```
