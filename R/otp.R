@@ -19,7 +19,17 @@ construir_graph <- function(cidade) {
 
 ligar_servidor <- function(cidade) {
   
+  if (Sys.info()[1] == "Linux") {
+    
+    command <- sprintf("java -Xmx4G -jar ../otp/programs/otp.jar --router %s --graphs ../otp/graphs --server", cidade)
+    
+    system(command, intern = FALSE, wait = FALSE)
+    otp_for <- otp_connect(router = cidade)
+    
+  } else {
+    
   otp_setup(otp = "../otp/programs/otp.jar", dir = "../otp", router = cidade)
   otp_for <- otp_connect(router = cidade)
   
+  }
 }
