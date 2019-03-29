@@ -28,6 +28,7 @@ library(opentripplanner)
 library(purrr)
 library(httr)
 library(furrr)
+library(tidyr)
 
 source("R/otp.R")
 source("R/matriz_acessibilidade.R")
@@ -45,5 +46,18 @@ tictoc::toc()
 
 ```
 
+Usando python:
+
+```{r python fortaleza}
+
+setwd("../otp")
+
+system("dir graphs")
+
+command <- "java -jar jython.jar -Dpython.path=otp.jar  python_script_fortaleza.py"
+
+system(command)
+
+```
 
 
