@@ -24,7 +24,7 @@ matriz_acessibilidade <- function(municipio, amostra = FALSE, ligar_otp = FALSE)
   for_hex <- read_rds(dir_muni)
   
   if (isTRUE(amostra)) {
-    for_hex <- slice(for_hex, 1:25)
+    for_hex <- slice(for_hex, 1:100)
   }
   
   
