@@ -23,6 +23,7 @@ library(sf)
 library(mapview)
 library(data.table)
 library(osmdata)
+library(opentripplanner)
 ```
 
 # OTP Setup
@@ -37,10 +38,26 @@ A função ``construir_graph`` constrói o arquivo ``Graph.obj``, que é necess�
 source("R/otp.R")
 
 construir_graph("fortaleza")
+construir_graph("bel")
+construir_graph("rio")
 
 
 
 ```
+
+Atestar qualidade do GTFS através do ``feedvalidator``:
+
+```{r feedvalidator}
+
+source("R/feed_validator.R")
+
+
+
+
+
+```
+
+
 
 Próxima etapa: baixar os arquivos .pbf a partir do pacote ``osmdata``.
 
@@ -49,7 +66,12 @@ Próxima etapa: baixar os arquivos .pbf a partir do pacote ``osmdata``.
 getbb ("belo horizonte")
 
 q <- opq ("belo horizonte") %>%
-    add_osm_feature(key = "amenity", value = "restaurant")
+  add_osm_feature(key = "amenity", value = "") %>%
+  osmdata_sf()
+  
+  
+    
 
 
 ```
+
