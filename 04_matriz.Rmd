@@ -4,7 +4,7 @@ author: "Ipea"
 date: "27 de março de 2019"
 output: github_document
 knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = "UTF-8", output_dir = "reports") })
+  rmarkdown::render(inputFile, encoding = "UTF-8") })
 editor_options: 
   chunk_output_type: console
 ---
@@ -45,7 +45,7 @@ Buscando escolher o método de melhor performance para o projeto, é feito um be
 
 A função ``matriz_acessibilidade`` tem somente um argumento obrigatório, que é a cidade em questão. Além disso, é usado o argumento ``amostra``, que utilizará somente 100 pontos para a construção da matriz de tempo.
 
-```{r R, eval=TRUE}
+```{r R}
 
 # ligar_servidor("fortaleza")
 
@@ -78,7 +78,7 @@ write_csv(for_hex_centroids, "../otp/points.csv")
 
 Agora rodando o comando para criar a matriz de tempo de viagem em python:
 
-```{r python matriz, cache=TRUE}
+```{r python matriz}
 
 
 setwd("../otp")
@@ -95,3 +95,70 @@ system(command)
 
 Resultado: o método em python levou `r bench_r["elapsed"]` e o método em python levou `r bench_py["elapsed"]`.
 
+Aplicando o método em python para rioo Horizonte:
+
+```{r matriz bel}
+
+source("R/sfc_as_cols.R")
+
+# produzir pontos (centroids dos hexagonos)
+read_rds("../data/hex_municipio/hex_bel.rds") %>%
+  select(id_hex) %>%
+  # Gerar somente 100 pontos
+  # slice(1:100) %>%
+  st_centroid() %>%
+  sfc_as_cols(names = c("X","Y")) %>%
+  rename(GEOID = id_hex)
+  write_csv("../otp/points_bel.csv")
+
+
+
+# aplicar
+
+setwd("../otp")
+
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  python_script_bel.py"
+
+system(command)
+
+setwd("L:/Proj_acess_oport/acesso_oport_kaue")
+
+
+
+
+
+```
+
+Matriz para o Rio de Janeiro:
+
+```{r matriz rio}
+
+source("R/sfc_as_cols.R")
+
+# produzir pontos (centroids dos hexagonos)
+read_rds("../data/hex_municipio/hex_rio.rds") %>%
+  select(id_hex) %>%
+  # Gerar somente 100 pontos
+  # slice(1:100) %>%
+  st_centroid() %>%
+  sfc_as_cols(names = c("X","Y")) %>%
+  rename(GEOID = id_hex) %>%
+  write_csv("../otp/points_rio.csv")
+
+
+
+# aplicar
+
+setwd("../otp")
+
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  python_script_rio.py"
+
+system(command)
+
+setwd("L:/Proj_acess_oport/acesso_oport_kaue")
+
+# Elapsed time was 502.98 seconds
+
+
+
+```
