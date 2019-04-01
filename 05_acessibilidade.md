@@ -6,7 +6,10 @@ Ipea
 Indicador de acesso cumulativo a oportunidades
 ==============================================
 
-Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de tempo de viagem calculada entre os hexágonos, é hora da etapa de calcular o indicador de acessibilidade. Como projeto piloto, será calculado o indicador para a cidade de bel:
+Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de tempo de viagem calculadas entre os hexágonos, é hora da etapa de calcular o indicador de acessibilidade. Como projeto piloto, será calculado o indicador para as cidades de Fortaleza, Belo Horizonte e Rio de Janeiro.
+
+Fortaleza
+---------
 
 ``` r
 # abrir matriz
@@ -59,6 +62,9 @@ access_ac_for_fim %>%
 ```
 
 ![](05_acessibilidade_files/figure-markdown_github/viz%20for-1.png)
+
+Belo Horizonte
+--------------
 
 Para Belo Horizonte:
 
@@ -114,6 +120,9 @@ access_ac_bel_fim %>%
 ```
 
 ![](05_acessibilidade_files/figure-markdown_github/viz%20bel-1.png)
+
+Rio de Janeiro
+--------------
 
 Para o Rio de Janeiro:
 

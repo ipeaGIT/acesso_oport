@@ -32,7 +32,9 @@ library(patchwork)
 
 # Indicador de acesso cumulativo a oportunidades
 
-Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de tempo de viagem calculada entre os hexágonos, é hora da etapa de calcular o indicador de acessibilidade. Como projeto piloto, será calculado o indicador para a cidade de bel:
+Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de tempo de viagem calculadas entre os hexágonos, é hora da etapa de calcular o indicador de acessibilidade. Como projeto piloto, será calculado o indicador para as cidades de Fortaleza, Belo Horizonte e Rio de Janeiro.
+
+## Fortaleza
 
 ```{r acess acumulativa for}
 
@@ -91,6 +93,7 @@ access_ac_for_fim %>%
 
 ```
 
+## Belo Horizonte
 
 Para Belo Horizonte:
 
@@ -150,6 +153,8 @@ access_ac_bel_fim %>%
 
 ```
 
+## Rio de Janeiro
+
 Para o Rio de Janeiro:
 
 ```{r acess acumulativa rio}
@@ -202,7 +207,8 @@ access_ac_rio_fim %>%
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
   theme(legend.position = "bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))+
+    plot_layout(ncol = 1)
   
 
 ```
