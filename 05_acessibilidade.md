@@ -165,15 +165,14 @@ access_ac_rio_fim %>%
   ggplot()+
   geom_sf(aes(fill = saude_total))+
   theme_bw()+
-  theme(legend.position = "bottom")+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
 access_ac_rio_fim %>%
  select(-saude_total) %>%
   ggplot()+
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
-  theme(legend.position = "bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))+
+    plot_layout(ncol = 1)
 ```
 
 ![](05_acessibilidade_files/figure-markdown_github/viz%20rio-1.png)
