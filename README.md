@@ -13,7 +13,7 @@ Combinando dados de uso do solo, Censo Demográfico e de transporte (incluindo d
 O relatório do projeto com a explicação da metodologia e o código utilizado será disponibilizado na página principal do repositório e é dividido em:
 
 - ``01_tratamento``: documentação do tratamento inicial feito às bases de dados brutas de informações socieconômicas, de uso do solo e transporte;
-- ``02_agrupamento``: criação das unidades de agregação (hexágonos) e agragação das variáveis de transporte e uso do solo;
+- ``02_agrupamento``: criação das unidades de agregação (hexágonos) e agregação das variáveis de transporte e uso do solo;
 - ``03_otp``: configuração das pastas e arquivos do OpenTripPlanner;
 - ``04_matriz``: benchmark de funções de criação de matriz de tempo de viagem e aplicação;
 - ``05_acessibilidade``: cálculo dos indicadores de acessiblidade.
