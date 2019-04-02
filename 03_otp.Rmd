@@ -37,7 +37,7 @@ A função ``construir_graph`` constrói o arquivo ``Graph.obj``, que é necess�
 
 source("R/otp.R")
 
-construir_graph("fortaleza")
+construir_graph("for")
 construir_graph("bel")
 construir_graph("rio")
 
