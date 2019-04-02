@@ -25,21 +25,28 @@
 
 run_validator <- function(cidade) {
   
-  gtfs_files <- dir(paste0("../data-raw/gtfs/", cidade), pattern = "*.zip")[1]
+  gtfs_files <- dir(paste0("../data-raw/gtfs/", cidade), pattern = "*.zip$")
   
-  dir_output <- paste0("../", cidade, "/validator_", cidade, ".html")
+  validator_gtfs <- function(file, city) {
+    
+    dir_output <- paste0("../", city, "/validator_", file, ".html")
+    
+    dir_gtfs <- sprintf("../%s/%s", city, file)
+    
+    command <- sprintf("cd ../data-raw/gtfs/feedvalidator && feedvalidator -o %s %s", dir_output, dir_gtfs)
+    
+    shell(command, wait = FALSE)
+    
+  }
   
-  dir_gtfs <- sprintf("../%s/%s", cidade, gtfs_files)
+  purrr::walk(gtfs_files, validator_gtfs, cidade)
   
-  command <- sprintf("cd ../data-raw/gtfs/feedvalidator && feedvalidator -o %s %s", dir_output, dir_gtfs)
-  
-  shell(command)
   
 }
 
 # # aplicar
 # 
-# run_validator("for")
+run_validator("bel")
 
 
 
