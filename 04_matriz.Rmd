@@ -72,7 +72,7 @@ for_hex_centroids <- for_hex %>%
 
 # salvar
 
-write_csv(for_hex_centroids, "../otp/points.csv")
+write_csv(for_hex_centroids, "../otp/points/points_for.csv")
 
 ```
 
@@ -83,7 +83,7 @@ Agora rodando o comando para criar a matriz de tempo de viagem em python:
 
 setwd("../otp")
 
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  python_script_fortaleza.py"
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for.py"
 
 bench_py <- system.time(system(command))
 
@@ -95,7 +95,7 @@ system(command)
 
 Resultado: o método em python levou `r bench_r["elapsed"]` e o método em python levou `r bench_py["elapsed"]`.
 
-Aplicando o método em python para rioo Horizonte:
+Aplicando o método em python para Belo Horizonte:
 
 ```{r matriz bel}
 
@@ -109,7 +109,7 @@ read_rds("../data/hex_municipio/hex_bel.rds") %>%
   st_centroid() %>%
   sfc_as_cols(names = c("X","Y")) %>%
   rename(GEOID = id_hex)
-  write_csv("../otp/points_bel.csv")
+  write_csv("../otp/points/points_bel.csv")
 
 
 
@@ -117,15 +117,11 @@ read_rds("../data/hex_municipio/hex_bel.rds") %>%
 
 setwd("../otp")
 
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  python_script_bel.py"
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_bel.py"
 
 system(command)
 
 setwd("L:/Proj_acess_oport/acesso_oport_kaue")
-
-
-
-
 
 ```
 
@@ -143,7 +139,7 @@ read_rds("../data/hex_municipio/hex_rio.rds") %>%
   st_centroid() %>%
   sfc_as_cols(names = c("X","Y")) %>%
   rename(GEOID = id_hex) %>%
-  write_csv("../otp/points_rio.csv")
+  write_csv("../otp/points/points_rio.csv")
 
 
 
@@ -151,7 +147,7 @@ read_rds("../data/hex_municipio/hex_rio.rds") %>%
 
 setwd("../otp")
 
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  python_script_rio.py"
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_rio.py"
 
 system(command)
 
@@ -162,3 +158,21 @@ setwd("L:/Proj_acess_oport/acesso_oport_kaue")
 
 
 ```
+
+## Método para coleta de tempo de viagem a cada 15 minutos
+
+Para Fortaleza:
+
+```{r python loop for}
+
+
+setwd("../otp")
+
+command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_loopHM_for.py"
+
+system(command)
+
+# para todos pontos: Elapsed time was 277.288 seconds
+
+```
+
