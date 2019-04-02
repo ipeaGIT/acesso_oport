@@ -23,6 +23,7 @@ library(scales)
 library(sf)
 library(mapview)
 library(data.table)
+library(h3jsr)
 
 # source("R/agrupar_por_hex.R")
 ```
