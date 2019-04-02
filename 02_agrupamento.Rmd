@@ -2,9 +2,7 @@
 title: "Agrupamento dos dados"
 author: "Ipea"
 date: "27 de março de 2019"
-output: 
-  html_document:
-    keep_md: yes
+output: github_document
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = "UTF-8") })
 editor_options: 
