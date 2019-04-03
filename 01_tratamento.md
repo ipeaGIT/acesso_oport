@@ -13,6 +13,7 @@ Esse arquivo tem como objetivo tratar os dados brutos do projeto de acesso a opo
 -   `Grade censo`
 -   `Hospitais`
 -   `GTFS`
+-   `Elevação`
 
 Municípios
 ----------
@@ -100,7 +101,7 @@ write_csv(censo_escolar, "data/censo_escolar/censo_escolar_2015.csv")
 Grade censo
 -----------
 
-As grades do censo são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo `Tabela_UF_ID.csv` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento dessa arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco.
+As grades do censo são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo `Tabela_UF_ID.csv` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco.
 
 ``` r
 # TRATAMENTO DO ARQUIVO COM OS IDs
@@ -287,4 +288,21 @@ stop_times_new %>%
 
 
 data.table::fwrite(stop_times_new, "gtfs_teste/gtfs_rio_novo/stop_times.txt", quote = TRUE)
+```
+
+Elevação
+--------
+
+Os dados brutos de elevação são retirador do [Earth Explorer](https://earthexplorer.usgs.gov/). Lá, é necessário especificar a região e data que se quer extrair os dados de elevação. Na aba de *Select Your Data Set(s)*, seleciona-se `Digital Elevation` -&gt; `SRTM`. SRTM (*Shuttle Radar Topography Mission*) é um esforço de pesquisa internacional que obtém dados de elevação numa precisão de 30 metros. Os dados de elevação do SRTM são divididos por quadrículo de 1 grau de latidude e 1 longitude, então é necessário cortar os municípios desejados dessa área.
+
+A função `crop_save_raster` foi criada para tratar e salvar os dados de elevação, e requer dois argumentos: `municipio`, que é a sigla (três primeiras letras) do município desejado, e `bb`, que é o *bounding box* do município (pares de coordenadas que delimitam a área do município). Esse argumento pode ser extraído do [Bounding Box Tool](https://boundingbox.klokantech.com/), onde na aba de busca é pesquisada e selecionada a cidade em questão. Por fim, na parte inferior esquerda, é selecionada a opção `CSV RAW` na aba *Copy & Paste*, e as coordenadas são inseridas na função como um vetor.
+
+A função será aplicada para três cidades inicialmente: Fortaleza, Belo Horizonte e Rio de Janeiro.
+
+``` r
+source("R/tratar_elevation.R")
+
+crop_save_raster("for", bb = c(-38.63656796,-3.88812428,-38.40154132,-3.69197903))
+crop_save_raster("bel", bb = c(-44.06329161,-20.0594646,-43.85721992,-19.77654377))
+crop_save_raster("rio", bb = c(-43.79625205,-23.08270518,-43.09908114,-22.74608786))
 ```
