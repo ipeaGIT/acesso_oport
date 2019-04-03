@@ -105,6 +105,7 @@ criar_lisamaps <- function(municipio) {
     theme_bw()+
     theme(legend.position = "none") +
     scale_fill_manual(values = c("high-high" = "red", "low-low" = "blue", "not signif." = "grey95"))+
+    labs(title = "Clusters de acesso a oportunidades de educação (esquerda) e saúde (direita)")+
   access_for %>% 
     select(id_hex, quad_sig_saude) %>%
     ggplot()+
@@ -113,11 +114,12 @@ criar_lisamaps <- function(municipio) {
     # geom_polygon(color = "white", size = .05)  + 
     # coord_equal() + 
     theme_bw()+
-    theme(legend.position = "bottom")+
+    theme(legend.position = "bottom",
+          legend.title = element_blank())+
     scale_fill_manual(values = c("high-high" = "red", "low-low" = "blue", "not signif." = "grey95"))+
     plot_layout(ncol = 2)
   
 
   }
 
-criar_lisamaps("for")
+# criar_lisamaps("for")
