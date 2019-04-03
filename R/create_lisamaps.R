@@ -102,7 +102,8 @@ criar_lisamaps <- function(municipio) {
     # ggplot(aes(long, lat, group = group, fill = quad_sig)) + 
     # geom_polygon(color = "white", size = .05)  + 
     # coord_equal() + 
-    theme_bw()+ 
+    theme_bw()+
+    theme(legend.position = "none") +
     scale_fill_manual(values = c("high-high" = "red", "low-low" = "blue", "not signif." = "grey95"))+
   access_for %>% 
     select(id_hex, quad_sig_saude) %>%
@@ -111,11 +112,12 @@ criar_lisamaps <- function(municipio) {
     # ggplot(aes(long, lat, group = group, fill = quad_sig)) + 
     # geom_polygon(color = "white", size = .05)  + 
     # coord_equal() + 
-    theme_bw()+ 
+    theme_bw()+
+    theme(legend.position = "bottom")+
     scale_fill_manual(values = c("high-high" = "red", "low-low" = "blue", "not signif." = "grey95"))+
-    plot_layout(ncol = 1)
+    plot_layout(ncol = 2)
   
 
   }
 
-# criar_lisamaps("bel")
+criar_lisamaps("for")
