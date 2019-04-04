@@ -21,20 +21,37 @@ matriz_for <- read_csv("../data/output_ttmatrix/traveltime_matrix_for_python.csv
 hexagonos_for_sf <- read_rds("../data/hex_agregados/hex_agregado_for.rds") %>%
   ungroup()
 
-hexagonos_for <- hexagonos_for_sf %>%
-  st_set_geometry(NULL)
+# so populacao
+hexagonos_for_pop <- hexagonos_for_sf %>%
+  st_set_geometry(NULL) %>%
+  select(id_hex, pop_total)
+
+# outras variaveis
+hexagonos_for_vars <- hexagonos_for_sf %>%
+  st_set_geometry(NULL) %>%
+  select(-pop_total)
+
 
 # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
+# IDEIA: em de escolas, nao seria melhor considerar matriculas?
 
 access_ac_for <- matriz_for %>%
-  left_join(hexagonos_for, by = c("destination" = "id_hex")) %>%
-  group_by(origin) %>%
+  left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
+  left_join(hexagonos_for_pop, by = c("origin" = "id_hex")) %>%
+  group_by(origin, pop_total) %>%
   filter(travel_time < 40) %>%
   summarise_at(vars(saude_total, escolas_total), sum)
 
 access_ac_for_fim <- hexagonos_for_sf %>%
   select(id_hex) %>%
   left_join(access_ac_for, by = c("id_hex" = "origin"))
+
+# adicionar competicao
+
+# access_ac_for_fim %>%
+#   select(id_hex, pop_total, saude_total) %>%
+#   mutate(saude_por_pessoa = (saude_total/pop_total)*10) %>%
+#   View()
 
 
 # mapview(access_ac_for_fim, zcol = "saude_total")
