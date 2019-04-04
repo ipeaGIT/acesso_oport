@@ -4,7 +4,7 @@ construir_graph <- function(cidade) {
   
   # Os arquivos de gtfs e .obj devem estar na pasta "cidade"
   
-  otp_build_graph(otp = "../otp/programs/otp.jar", dir = "../otp", router = cidade) 
+  otp_build_graph(otp = "../otp/programs/otp.jar", dir = "../otp", router = cidade, memory = 6) 
   
 }
 
