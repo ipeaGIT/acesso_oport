@@ -95,14 +95,24 @@ matriz_bel <- read_csv("../data/output_ttmatrix/traveltime_matrix_bel_python.csv
 hexagonos_bel_sf <- read_rds("../data/hex_agregados/hex_agregado_bel.rds") %>%
   ungroup()
 
-hexagonos_bel <- hexagonos_bel_sf %>%
-  st_set_geometry(NULL)
+# so populacao
+hexagonos_bel_pop <- hexagonos_bel_sf %>%
+  st_set_geometry(NULL) %>%
+  select(id_hex, pop_total)
+
+# outras variaveis
+hexagonos_bel_vars <- hexagonos_bel_sf %>%
+  st_set_geometry(NULL) %>%
+  select(-pop_total)
+
 
 # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
+# IDEIA: em de escolas, nao seria melhor considerar matriculas?
 
 access_ac_bel <- matriz_bel %>%
-  left_join(hexagonos_bel, by = c("destination" = "id_hex")) %>%
-  group_by(origin) %>%
+  left_join(hexagonos_bel_vars, by = c("destination" = "id_hex")) %>%
+  left_join(hexagonos_bel_pop, by = c("origin" = "id_hex")) %>%
+  group_by(origin, pop_total) %>%
   filter(travel_time < 40) %>%
   summarise_at(vars(saude_total, escolas_total), sum)
 
@@ -153,14 +163,24 @@ matriz_rio <- read_csv("../data/output_ttmatrix/traveltime_matrix_rio_python.csv
 hexagonos_rio_sf <- read_rds("../data/hex_agregados/hex_agregado_rio.rds") %>%
   ungroup()
 
-hexagonos_rio <- hexagonos_rio_sf %>%
-  st_set_geometry(NULL)
+# so populacao
+hexagonos_rio_pop <- hexagonos_rio_sf %>%
+  st_set_geometry(NULL) %>%
+  select(id_hex, pop_total)
+
+# outras variaveis
+hexagonos_rio_vars <- hexagonos_rio_sf %>%
+  st_set_geometry(NULL) %>%
+  select(-pop_total)
+
 
 # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
+# IDEIA: em de escolas, nao seria melhor considerar matriculas?
 
 access_ac_rio <- matriz_rio %>%
-  left_join(hexagonos_rio, by = c("destination" = "id_hex")) %>%
-  group_by(origin) %>%
+  left_join(hexagonos_rio_vars, by = c("destination" = "id_hex")) %>%
+  left_join(hexagonos_rio_pop, by = c("origin" = "id_hex")) %>%
+  group_by(origin, pop_total) %>%
   filter(travel_time < 40) %>%
   summarise_at(vars(saude_total, escolas_total), sum)
 
