@@ -35,3 +35,16 @@ criar_lisamaps("bel")
 ```
 
 ![](06_clusters_files/figure-markdown_github/lisa%20bel-1.png)
+
+Rio de Janeiro
+--------------
+
+Para o Rio de Janeiro:
+
+``` r
+source("R/create_lisamaps.R")
+
+criar_lisamaps("rio", cols = 1)
+```
+
+![](06_clusters_files/figure-markdown_github/lisa%20rio-1.png)

@@ -58,6 +58,18 @@ criar_lisamaps("bel")
 
 ```
 
+## Rio de Janeiro
+
+Para o Rio de Janeiro:
+
+```{r lisa rio}
+
+source("R/create_lisamaps.R")
+
+criar_lisamaps("rio", cols = 1)
+
+```
+
 
 
 
