@@ -1,16 +1,31 @@
 # from https://stackoverflow.com/questions/37664728/create-a-map-of-spatial-clusters-lisa-in-r
 
-criar_lisamaps <- function(municipio) {
+criar_lisamaps <- function(municipio, cols = 2) {
   
   dir <- sprintf("../data/output_access/access_%s.rds", municipio)
   
   # load data
   access_for <- read_rds(dir) %>%
+    filter(pop_total > 0) %>%
     filter(!is.na(escolas_total),
            !is.na(saude_total))
   
   # create  Queens contiguity matrix
   spatmatrix <- poly2nb(access_for)
+  
+  # alguma zona que nao tenha nenhum vizinho?
+  nenhum_vizinho <- which(map_dbl(spatmatrix, sum) == 0)
+  
+  if (length(nenhum_vizinho) > 0) {
+  
+  # tirar essa zona que nao tem vizinho
+  access_for <- access_for %>%
+    slice(-nenhum_vizinho)
+  
+  # criar novamento matrix de vizinhanca
+  spatmatrix <- poly2nb(access_for)
+    
+  }
   
   # create a neighbours list with spatial weights
   listw <- nb2listw(spatmatrix)
@@ -117,7 +132,7 @@ criar_lisamaps <- function(municipio) {
     theme(legend.position = "bottom",
           legend.title = element_blank())+
     scale_fill_manual(values = c("high-high" = "red", "low-low" = "blue", "not signif." = "grey95"))+
-    plot_layout(ncol = 2)
+    plot_layout(ncol = cols)
   
 
   }
