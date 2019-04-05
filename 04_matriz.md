@@ -67,9 +67,7 @@ Matriz para Fortaleza
 Atestado que o método por python é mais veloz, é construida a matriz para Fortaleza:
 
 ``` r
-setwd("../otp")
-
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for.py"
+command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for.py"
 
 system(command)
 ```
@@ -96,13 +94,11 @@ read_rds("../data/hex_municipio/hex_bel.rds") %>%
 
 # aplicar
 
-setwd("../otp")
-
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_bel.py"
+command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_bel.py"
 
 system(command)
 
-setwd("L:/Proj_acess_oport/acesso_oport_kaue")
+# Elapsed time was 446.081 seconds
 ```
 
 Matriz para o Rio de Janeiro
@@ -127,13 +123,9 @@ read_rds("../data/hex_municipio/hex_rio.rds") %>%
 
 # aplicar
 
-setwd("../otp")
-
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_rio.py"
+command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_rio.py"
 
 system(command)
-
-setwd("L:/Proj_acess_oport/acesso_oport_kaue")
 
 # Elapsed time was 502.98 seconds
 ```
@@ -144,11 +136,7 @@ Método para coleta de tempo de viagem a cada 15 minutos
 Para Fortaleza:
 
 ``` r
-setwd("../otp")
-
-command <- "java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_loopHM_for.py"
+command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_loopHM_for.py"
 
 system(command)
-
-# para todos pontos: Elapsed time was 277.288 seconds
 ```
