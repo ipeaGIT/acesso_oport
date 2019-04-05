@@ -13,7 +13,7 @@ A função `construir_graph` constrói o arquivo `Graph.obj`, que é necessário
 ``` r
 source("R/otp.R")
 
-construir_graph("fortaleza")
+construir_graph("for")
 construir_graph("bel")
 construir_graph("rio")
 ```
@@ -29,7 +29,23 @@ Próxima etapa: baixar os arquivos .pbf a partir do pacote `osmdata`.
 ``` r
 getbb ("belo horizonte")
 
+vai <- available_tags("highway")
+
 q <- opq ("belo horizonte") %>%
-  add_osm_feature(key = "amenity", value = "") %>%
+  add_osm_feature(key = "highway", value = vai) %>%
   osmdata_sf()
+  
+opq ("belo horizonte") %>%
+  add_osm_feature(key = "highway", value = vai) %>%
+  osmdata_pbf()
+
+
+meu <- q[["osm_lines"]] %>%
+  st_sf()
+
+# Before that
+# sudo apt-get install sqlite3 libsqlite3-dev
+
+q %>%
+  st_write("teste_bel.pbf")
 ```
