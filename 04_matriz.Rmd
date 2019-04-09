@@ -26,6 +26,7 @@ library(purrr)
 library(httr)
 library(furrr)
 library(tidyr)
+library(lubridate)
 
 source("R/otp.R")
 source("R/matriz_acessibilidade.R")
@@ -94,15 +95,73 @@ system(command)
 
 Resultado: o método em python levou cerca de 8 minutos enquanto que o método em python levou 4,5 minutos.
 
+## Criar pontos de origem para todas as cidades
+
+Função para criação de pontos de origem para todas as cidades em todas as resoluções de hexágonos:
+
+```{r points res}
+
+source("R/sfc_as_cols.R")
+
+points_allres <- function(muni_shortname) {
+  
+  dir <- dir("../data/hex_municipio/", pattern = muni_shortname)
+  
+  res <- str_extract(dir, "\\d+")
+  
+  dir_muni <- paste0("../data/hex_municipio/hex_", muni_shortname, "_", res, ".rds")
+  
+  seila <- function(muni_res) {
+    
+    dir_muni <- muni_res
+    
+    res <- str_extract(dir_muni, "\\d+")
+    
+    # criar pontos
+    hex_muni <- readRDS(dir_muni) %>%
+      select(id_hex) %>%
+      st_centroid() %>%
+      sfc_as_cols(names = c("X","Y")) %>%
+      rename(GEOID = id_hex)
+    
+    
+    # salvar
+    dir_output <- sprintf("../otp/points/points_%s_%s.csv", muni_shortname, res)
+      
+    write_csv(hex_muni, dir_output)
+      
+  }
+  
+  walk(dir_muni, seila)
+  
+}
+
+
+```
+
+
 ## Matriz para Fortaleza
 
 Atestado que o método por python é mais veloz, é construida a matriz para Fortaleza:
 
 ```{r matriz for}
 
-command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for.py"
+source("R/criar_script_python.R")
 
-system(command)
+# criar pontos
+points_allres("for")
+
+# dia = 2018-10-05
+
+# criar arquivo python
+criar_script_python("for", "2018-10-05", "09")
+
+# criar comando
+command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for_2018-10-05_09.py"
+
+shell(command)
+
+# Para resolução 09: Elapsed time was 2898.65 seconds
 
 ```
 
@@ -131,7 +190,7 @@ read_rds("../data/hex_municipio/hex_bel.rds") %>%
 
 command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_bel.py"
 
-system(command)
+shell(command)
 
 # Elapsed time was 446.081 seconds
 
@@ -161,7 +220,7 @@ read_rds("../data/hex_municipio/hex_rio.rds") %>%
 
 command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_rio.py"
 
-system(command)
+shell(command)
 
 # Elapsed time was 502.98 seconds
 

@@ -22,6 +22,7 @@ library(sf)
 library(mapview)
 library(data.table)
 library(h3jsr)
+library(stringr)
 
 # source("R/agrupar_por_hex.R")
 ```
@@ -56,7 +57,7 @@ purrr::walk2(munis, ufs, shape_to_hexagon)
 
 ## Agrupamento das variáveis por hexágonos
 
-A função ``agrupar_variaveis`` aceita como _input_ o nome do município desejado e retorna um tabela com o shape dos hexágonos e a quantidade de estabelecimentos de saúde, educação e população agregados, salvos em disco.
+A função ``agrupar_variaveis`` aceita como _input_ o nome do município desejado e retorna uma tabela com o shape dos hexágonos, para cada resolução espacial, e a quantidade de estabelecimentos de saúde, educação e população agregados, salvos em disco.
 
 ```{r agregar variaveis}
 
@@ -65,7 +66,7 @@ source("R/agrupar_variaveis.R")
 
 # escolher cidades
 
-munis <- c("fortaleza", "rio de janeiro", "recife", "belo horizonte")
+munis <- c("rio", "rec", "bel")
 
 # aplicar funcao
 
