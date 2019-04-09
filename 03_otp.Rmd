@@ -68,12 +68,10 @@ getbb ("belo horizonte")
 vai <- available_tags("highway")
 
 q <- opq ("belo horizonte") %>%
-  add_osm_feature(key = "highway", value = vai) %>%
-  osmdata_sf()
+  add_osm_feature(key = "highway", value = vai)
+  # osmdata_sf()
   
-opq ("belo horizonte") %>%
-  add_osm_feature(key = "highway", value = vai) %>%
-  osmdata_pbf()
+osmdata_pbf(q, "bel_teste.osm.pbf")
 
 
 meu <- q[["osm_lines"]] %>%
@@ -82,9 +80,10 @@ meu <- q[["osm_lines"]] %>%
 # Before that
 # sudo apt-get install sqlite3 libsqlite3-dev
 
-q %>%
+meu %>%
   st_write("teste_bel.pbf")
 
+ooo <- st_read("../otp/graphs/for/fortaleza_export.pbf")
 
 
 ```
