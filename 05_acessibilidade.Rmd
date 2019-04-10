@@ -37,43 +37,62 @@ options(scipen = 999)
 
 Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de tempo de viagem calculadas entre os hexágonos, é hora da etapa de calcular o indicador de acessibilidade. Como projeto piloto, será calculado o indicador para as cidades de Fortaleza, Belo Horizonte e Rio de Janeiro.
 
+```{r fun}
+
+acess_acumu <- function(cidade, tempo) {
+  
+  dir_matriz <- sprintf("../data/output_ttmatrix/traveltime_matrix_%s_python.csv", cidade)
+    
+  # abrir matriz
+  matriz_for <- read_csv(dir_matriz) %>%
+    select(origin, destination, travel_time) %>%
+    mutate(travel_time = travel_time/60)
+  
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s.rds", cidade)
+  
+  # abrir oportunidades com hexagonos
+  hexagonos_for_sf <- read_rds(dir_hex) %>%
+    ungroup()
+  
+  # so populacao
+  hexagonos_for_pop <- hexagonos_for_sf %>%
+    st_set_geometry(NULL) %>%
+    select(id_hex, pop_total)
+  
+  # outras variaveis
+  hexagonos_for_vars <- hexagonos_for_sf %>%
+    st_set_geometry(NULL) %>%
+    select(-pop_total)
+  
+  
+  # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
+  # IDEIA: em de escolas, nao seria melhor considerar matriculas?
+  
+  access_ac_for <- matriz_for %>%
+    left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
+    left_join(hexagonos_for_pop, by = c("origin" = "id_hex")) %>%
+    group_by(origin, pop_total) %>%
+    filter(travel_time < tempo) %>%
+    summarise_at(vars(saude_total, escolas_total), sum) %>%
+    mutate(tempo_viagem = tempo)
+  
+  access_ac_for_fim <- hexagonos_for_sf %>%
+    select(id_hex) %>%
+    left_join(access_ac_for, by = c("id_hex" = "origin"))
+}
+
+
+```
+
+
 ## Fortaleza
 
 ```{r acess acumulativa for}
 
-# abrir matriz
-matriz_for <- read_csv("../data/output_ttmatrix/traveltime_matrix_for_python.csv") %>%
-  select(origin, destination, travel_time) %>%
-  mutate(travel_time = travel_time/60)
+acess_ac_for <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "for", tempo = .x))
 
-# abrir oportunidades com hexagonos
-hexagonos_for_sf <- read_rds("../data/hex_agregados/hex_agregado_for.rds") %>%
-  ungroup()
+write_rds(acess_ac_for, "../data/output_access/access_ac_for.rds")
 
-# so populacao
-hexagonos_for_pop <- hexagonos_for_sf %>%
-  st_set_geometry(NULL) %>%
-  select(id_hex, pop_total)
-
-# outras variaveis
-hexagonos_for_vars <- hexagonos_for_sf %>%
-  st_set_geometry(NULL) %>%
-  select(-pop_total)
-
-
-# quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
-# IDEIA: em de escolas, nao seria melhor considerar matriculas?
-
-access_ac_for <- matriz_for %>%
-  left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
-  left_join(hexagonos_for_pop, by = c("origin" = "id_hex")) %>%
-  group_by(origin, pop_total) %>%
-  filter(travel_time < 40) %>%
-  summarise_at(vars(saude_total, escolas_total), sum)
-
-access_ac_for_fim <- hexagonos_for_sf %>%
-  select(id_hex) %>%
-  left_join(access_ac_for, by = c("id_hex" = "origin"))
 
 # adicionar competicao
 
@@ -85,7 +104,6 @@ access_ac_for_fim <- hexagonos_for_sf %>%
 
 # mapview(access_ac_for_fim, zcol = "saude_total")
 
-# write_rds(access_ac_for_fim, "../data/output_access/access_for.rds")
 
 
 
@@ -119,40 +137,9 @@ Para Belo Horizonte:
 
 ```{r acess acumulativa bel}
 
-# abrir matriz
-matriz_bel <- read_csv("../data/output_ttmatrix/traveltime_matrix_bel_python.csv") %>%
-  select(origin, destination, travel_time) %>%
-  mutate(travel_time = travel_time/60)
+acess_ac_bel <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "bel", tempo = .x))
 
-# abrir oportunidades com hexagonos
-hexagonos_bel_sf <- read_rds("../data/hex_agregados/hex_agregado_bel.rds") %>%
-  ungroup()
-
-# so populacao
-hexagonos_bel_pop <- hexagonos_bel_sf %>%
-  st_set_geometry(NULL) %>%
-  select(id_hex, pop_total)
-
-# outras variaveis
-hexagonos_bel_vars <- hexagonos_bel_sf %>%
-  st_set_geometry(NULL) %>%
-  select(-pop_total)
-
-
-# quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
-# IDEIA: em de escolas, nao seria melhor considerar matriculas?
-
-access_ac_bel <- matriz_bel %>%
-  left_join(hexagonos_bel_vars, by = c("destination" = "id_hex")) %>%
-  left_join(hexagonos_bel_pop, by = c("origin" = "id_hex")) %>%
-  group_by(origin, pop_total) %>%
-  filter(travel_time < 40) %>%
-  summarise_at(vars(saude_total, escolas_total), sum)
-
-access_ac_bel_fim <- hexagonos_bel_sf %>%
-  select(id_hex) %>%
-  left_join(access_ac_bel, by = c("id_hex" = "origin"))
-
+write_rds(acess_ac_bel, "../data/output_access/access_ac_bel.rds")
 
 # mapview(access_ac_bel, zcol = "escolas_total")
 
@@ -189,44 +176,9 @@ Para o Rio de Janeiro:
 
 ```{r acess acumulativa rio}
 
-# abrir matriz
-matriz_rio <- read_csv("../data/output_ttmatrix/traveltime_matrix_rio_python.csv") %>%
-  select(origin, destination, travel_time) %>%
-  mutate(travel_time = travel_time/60)
+acess_ac_rio <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "rio", tempo = .x))
 
-# abrir oportunidades com hexagonos
-hexagonos_rio_sf <- read_rds("../data/hex_agregados/hex_agregado_rio.rds") %>%
-  ungroup()
-
-# so populacao
-hexagonos_rio_pop <- hexagonos_rio_sf %>%
-  st_set_geometry(NULL) %>%
-  select(id_hex, pop_total)
-
-# outras variaveis
-hexagonos_rio_vars <- hexagonos_rio_sf %>%
-  st_set_geometry(NULL) %>%
-  select(-pop_total)
-
-
-# quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
-# IDEIA: em de escolas, nao seria melhor considerar matriculas?
-
-access_ac_rio <- matriz_rio %>%
-  left_join(hexagonos_rio_vars, by = c("destination" = "id_hex")) %>%
-  left_join(hexagonos_rio_pop, by = c("origin" = "id_hex")) %>%
-  group_by(origin, pop_total) %>%
-  filter(travel_time < 40) %>%
-  summarise_at(vars(saude_total, escolas_total), sum)
-
-access_ac_rio_fim <- hexagonos_rio_sf %>%
-  select(id_hex) %>%
-  left_join(access_ac_rio, by = c("id_hex" = "origin"))
-  
-
-# mapview(access_ac_rio_fim, zcol = "saude_total")
-
-# write_rds(access_ac_rio_fim, "../data/output_access/access_rio.rds")
+write_rds(acess_ac_rio, "../data/output_access/access_ac_rio.rds")
 
 ```
 
