@@ -27,14 +27,16 @@ body,h1,h2,h3,h4,h5,h6 { font-family: 'Source Sans Pro', 'Inter UI', 'Helvetica 
     border-bottom: 1px solid #000000;
     border-right: 1px solid #000000;
     border-left: 1px solid #000000;
-    margin-bottom: 20px;
-    width: 100%;
     box-shadow: 0 3px 3px rgba(0,0,0,.1);
 }
 
 .box.box-warning {
     border-top-color: #000000;
     border-bottom-color: #000000;
+}
+
+.box.box-solid {
+    border-top: 3px solid #000000;
 }
 
 .selectize-input.full {
