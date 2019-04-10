@@ -1,0 +1,83 @@
+.nav-tabs > li > a, 
+.nav-tabs > li.active > a, 
+.nav-tabs > li.active > a:focus, 
+.nav-tabs > li.active > a:hover {
+    color: #fd7e14;
+}
+
+h2, h4 {
+  color: #fd7e14;
+}
+
+h3 {
+  color: #ff851b;
+}
+
+.well {
+  padding-top: 0px;
+}
+
+form.well {
+  padding-top: 19px;
+}
+
+.timevis {
+  box-shadow: 2px 2px 3px #444;
+}
+
+#med_history_timeline .vis-item.routine {
+  border-color: #1dade5;  
+  background-color: #1dade5;
+  color: #fff; 
+}
+
+#med_history_timeline .vis-item.med {
+  border-color: #158CBA;
+  background-color: #158CBA; 
+  color: #fff; 
+}
+
+#med_history_timeline .vis-item.test {
+  border-color: #75CAEB;  
+  background-color: #75CAEB; 
+  color: #fff; 
+}
+
+.vis-current-time {
+  background-color: #fd7e14;
+}
+
+#tl_button .btn {
+  margin-right: 7px;
+}
+
+#vaccine_history_timeline .vis-item.current {
+  border-color: #158CBA;
+  background-color: #158CBA;
+  color: #fff;
+}
+
+#vaccine_history_timeline .vis-item.past {
+  border-color: #999;
+  background-color: #999;
+  color: #fff; 
+}
+
+#med_history_timeline .vis-item.vis-line {
+  border-width: 2px;
+}
+
+#med_history_timeline .vis-item.vis-dot {
+  border-width: 5px;
+  border-radius: 5px;
+}
+
+#med_history_timeline .vis-item.vis-selected {
+  border-color: #fd9a47;
+  background-color: #fd9a47;
+}
+
+#vaccine_history_timeline .vis-item.vis-selected {
+  border-color: #fd9a47;
+  background-color: #fd9a47;
+}
