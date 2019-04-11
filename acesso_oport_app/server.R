@@ -5,6 +5,7 @@ library(leaflet)
 library(shinydashboard)
 library(readr)
 library(data.table)
+library(mapview)
 # library(hrbrthemes)
 # library(forcats)
 # library(sp)
@@ -16,6 +17,7 @@ library(data.table)
 acess <- read_rds("acess_junto.rds") %>%
   data.table()
 
+linhas <- read_rds("../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 
 
 
@@ -33,13 +35,13 @@ function(input, output) {
   atividade_filtrada <- reactive({
     if (input$atividade == "Saúde") {
       
-    cidade_filtrada()[, .(id_hex, saude_total, tempo_viagem, geometry)] %>% rename(atividade = saude_total)
+    cidade_filtrada()[, .(id_hex, pop_total, saude_total, tempo_viagem, geometry)] %>% rename(atividade = saude_total)
       
     } else if (input$atividade == "Educação")
       
     {
       
-    cidade_filtrada()[, .(id_hex, escolas_total, tempo_viagem, geometry)] %>% rename(atividade = escolas_total)
+    cidade_filtrada()[, .(id_hex, pop_total, escolas_total, tempo_viagem, geometry)] %>% rename(atividade = escolas_total)
       
     }
   })
@@ -54,7 +56,7 @@ function(input, output) {
   
   # Reactive para a cor do mapa
   colorpal <- reactive({
-    colorNumeric("inferno", tempo_filtrado()$atividade)
+    colorNumeric("BuPu", tempo_filtrado()$atividade)
   })
   
   
@@ -101,11 +103,38 @@ function(input, output) {
   observe({
     pal <- colorpal()
     
+    
+    linhas_cidade <- linhas %>%
+      filter(Cidade == input$cidade) %>%
+      filter(!st_is_empty(.))
+    
+    colorpal_linhas <- colorFactor("Accent", linhas_cidade$Modo)
+    
+    popup_hex <- paste0("<b>População: </b>", tempo_filtrado()$pop_total, "<br/>",
+                    "<b>Oportunidades: </b>", tempo_filtrado()$atividade, "<br/>")
+    
+    popup_linha <- paste0("<b>Tipo da linha</b>: ", linhas_cidade$Modo)
+    
+    names(linhas_cidade$geometry) <- NULL
+    
     leafletProxy("map", data = tempo_filtrado()) %>%
       clearShapes() %>%
-      addPolygons(stroke = FALSE, weight = 2, color = "black",
+      clearControls() %>%
+      addPolygons(stroke = TRUE, weight = 0.7, color = "black",
                   fillOpacity = 0.7,
-                  fillColor = ~pal(atividade))
+                  fillColor = ~pal(atividade),
+                  popup = popup_hex) %>%
+      addPolylines(data = linhas_cidade,
+                   opacity = 1,
+                   group = "Corredores de Alta e Média Capacidade", 
+                   popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
+      addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", 
+                       options = layersControlOptions(collapsed = FALSE)) %>%
+      addLegend(data = tempo_filtrado(), "bottomright", pal = pal, values = ~atividade,
+                title = sprintf("Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
+      addLegend(data = linhas_cidade, "topright", pal = colorpal_linhas, values = ~Modo,
+                title = "Modo da Linha", 
+                group = "Corredores de Alta e Média Capacidade")
       
   })
   
