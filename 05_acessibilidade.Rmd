@@ -89,7 +89,14 @@ acess_acumu <- function(cidade, tempo) {
 
 ```{r acess acumulativa for}
 
-acess_ac_for <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "for", tempo = .x))
+acess_ac_for <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "for", tempo = .x)) %>%
+  as_tibble() %>%
+  st_sf()
+
+acess_ac_for <- map_dfr(seq(15, 60, 5), ~ acess_acumu(cidade = "for", tempo = .x)) %>%
+  as_tibble() %>%
+  st_sf()
+
 
 write_rds(acess_ac_for, "../data/output_access/access_ac_for.rds")
 
@@ -113,21 +120,38 @@ Visualizar o indicador de acessibilidade para Fortaleza:
 
 ```{r viz for}
 
-access_ac_for_fim %>%
- select(-escolas_total) %>%
+acess_ac_for %>%
+ select(saude_total, tempo_viagem) %>%
+  filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = saude_total))+
   theme_bw()+
   theme(legend.position = "bottom")+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-access_ac_for_fim %>%
- select(-saude_total) %>%
+  facet_wrap(~tempo_viagem) +
+acess_ac_for %>%
+ select(escolas_total, tempo_viagem) %>%
+  filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
   theme(legend.position = "bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))
-  
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  facet_wrap(~tempo_viagem)
+
+# library(gganimate)
+# 
+# acess_ac_for %>%
+#  select(saude_total, tempo_viagem) %>%
+#   filter(!is.na(tempo_viagem)) %>%
+#   # filter(tempo_viagem %in% c(15, 20)) %>%
+#   ggplot()+
+#   geom_sf(aes(fill = saude_total))+
+#   theme_bw()+
+#   theme(legend.position = "bottom")+
+#   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+#   labs(title = "Tempo de viagem: {frame_time} minutos")+
+#   transition_time(as.integer(tempo_viagem))
 
 ```
 
@@ -137,14 +161,12 @@ Para Belo Horizonte:
 
 ```{r acess acumulativa bel}
 
-acess_ac_bel <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "bel", tempo = .x))
+acess_ac_bel <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "bel", tempo = .x)) %>%
+  as_tibble() %>%
+  st_sf()
 
 write_rds(acess_ac_bel, "../data/output_access/access_ac_bel.rds")
 
-# mapview(access_ac_bel, zcol = "escolas_total")
-
-
-# write_rds(access_ac_bel_fim, "../data/output_access/access_bel.rds")
 
 ```
 
@@ -152,20 +174,26 @@ Visualizar o indicador de acessibilidade para Belo Horizonte:
 
 ```{r viz bel}
 
-access_ac_bel_fim %>%
- select(-escolas_total) %>%
+acess_ac_bel %>%
+ select(saude_total, tempo_viagem) %>%
+  filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = saude_total))+
   theme_bw()+
   theme(legend.position = "bottom")+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-access_ac_bel_fim %>%
- select(-saude_total) %>%
+  facet_wrap(~tempo_viagem) +
+acess_ac_bel %>%
+  select(escolas_total, tempo_viagem) %>%
+  filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
   theme(legend.position = "bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  facet_wrap(~tempo_viagem)
+
+
   
 
 ```
@@ -176,7 +204,10 @@ Para o Rio de Janeiro:
 
 ```{r acess acumulativa rio}
 
-acess_ac_rio <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "rio", tempo = .x))
+acess_ac_rio <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "rio", tempo = .x)) %>%
+  as_tibble() %>%
+  st_sf()
+
 
 write_rds(acess_ac_rio, "../data/output_access/access_ac_rio.rds")
 
@@ -186,19 +217,75 @@ Visualizar o indicador de acessibilidade para Rio de Janeiro:
 
 ```{r viz rio}
 
-access_ac_rio_fim %>%
- select(-escolas_total) %>%
+acess_ac_rio %>%
+  select(saude_total, tempo_viagem) %>%
+  filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = saude_total))+
   theme_bw()+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-access_ac_rio_fim %>%
- select(-saude_total) %>%
+  facet_wrap(~tempo_viagem) +
+acess_ac_rio %>%
+  select(escolas_total, tempo_viagem) %>%
+  filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))+
-    plot_layout(ncol = 1)
+  facet_wrap(~tempo_viagem)
+    # plot_layout(ncol = 1)
   
 
 ```
+
+# Indicador de tempo mínimo até a oportunidade mais próxima
+
+```{r fun acess_min}
+
+acess_min <- function(cidade) {
+  
+  dir_matriz <- sprintf("../data/output_ttmatrix/traveltime_matrix_%s_python.csv", cidade)
+    
+  # abrir matriz
+  matriz_for <- read_csv(dir_matriz) %>%
+    select(origin, destination, travel_time) %>%
+    mutate(travel_time = travel_time/60)
+  
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s.rds", cidade)
+  
+  # abrir oportunidades com hexagonos
+  hexagonos_for_sf <- read_rds(dir_hex) %>%
+    ungroup()
+  
+  # so populacao
+  hexagonos_for_pop <- hexagonos_for_sf %>%
+    st_set_geometry(NULL) %>%
+    select(id_hex, pop_total)
+  
+  # outras variaveis
+  hexagonos_for_vars <- hexagonos_for_sf %>%
+    st_set_geometry(NULL) %>%
+    select(-pop_total)
+  
+  
+  # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
+  # IDEIA: em de escolas, nao seria melhor considerar matriculas?
+  
+  access_ac_for <- matriz_for %>%
+    left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
+    left_join(hexagonos_for_pop, by = c("origin" = "id_hex")) %>%
+    group_by(origin, pop_total) %>%
+    slice(which.min(travel_time))
+  
+  access_ac_for_fim <- hexagonos_for_sf %>%
+    select(id_hex) %>%
+    left_join(access_ac_for, by = c("id_hex" = "origin"))
+  
+}
+
+cidade <- "for"
+
+teste <- acess_min("for")
+
+```
+
