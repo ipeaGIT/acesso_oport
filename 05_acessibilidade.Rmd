@@ -249,9 +249,11 @@ acess_min <- function(cidade) {
   # abrir matriz
   matriz_for <- read_csv(dir_matriz) %>%
     select(origin, destination, travel_time) %>%
-    mutate(travel_time = travel_time/60)
+    mutate(travel_time = travel_time/60) %>%
+    # filter(!(origin == destination))
+    identity()
   
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s.rds", cidade)
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_08.rds", cidade)
   
   # abrir oportunidades com hexagonos
   hexagonos_for_sf <- read_rds(dir_hex) %>%
@@ -267,25 +269,31 @@ acess_min <- function(cidade) {
     st_set_geometry(NULL) %>%
     select(-pop_total)
   
-  
-  # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
-  # IDEIA: em de escolas, nao seria melhor considerar matriculas?
-  
   access_ac_for <- matriz_for %>%
     left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
-    left_join(hexagonos_for_pop, by = c("origin" = "id_hex")) %>%
-    group_by(origin, pop_total) %>%
-    slice(which.min(travel_time))
+    left_join(hexagonos_for_pop, by = c("origin" = "id_hex"))
+  
+  access_ac_for_long <- access_ac_for %>%
+    tidyr::gather(key = "atividade", value = "n", saude_total:escolas_total) %>%
+    filter(n != 0) %>%
+    group_by(origin, pop_total, atividade) %>%
+    slice(which.min(travel_time)) %>%
+    # se a atividade for na mesma zona, definir tempo de viagem de 10 minutos
+    mutate(travel_time = ifelse(origin == destination, 10, travel_time))
   
   access_ac_for_fim <- hexagonos_for_sf %>%
     select(id_hex) %>%
-    left_join(access_ac_for, by = c("id_hex" = "origin"))
+    left_join(access_ac_for_long, by = c("id_hex" = "origin"))
   
 }
 
 cidade <- "for"
 
 teste <- acess_min("for")
+
+access_ac_for_fim %>%
+  filter(atividade == "saude_total") %>%
+  mapview(zcol = "travel_time")
 
 ```
 
