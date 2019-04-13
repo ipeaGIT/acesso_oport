@@ -78,12 +78,14 @@ agrupar_variaveis <- function(muni_shortname) {
       summarise(pop_total = sum(POP)) %>%
       ungroup() %>%
       st_join(cnes) %>%
+      mutate(indice = ifelse(is.na(co_cnes), 0, 1)) %>%
       group_by(id_hex, pop_total) %>%
-      summarise(saude_total = n()) %>%
+      summarise(saude_total = sum(indice)) %>%
       ungroup() %>%
       st_join(escolas) %>%
+      mutate(indice = ifelse(is.na(cod_escola), 0, 1)) %>%
       group_by(id_hex, pop_total, saude_total) %>%
-      summarise(escolas_total = n())
+      summarise(escolas_total = sum(indice))
     
       
       dir_output <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", muni_shortname, res)
