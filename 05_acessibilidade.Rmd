@@ -39,7 +39,9 @@ Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de t
 
 ```{r fun}
 
-acess_acumu <- function(cidade, tempo) {
+acess_acumu <- function(cidade, tempo, res = 8) {
+  
+  res1 <- sprintf("0%s", res)
   
   dir_matriz <- sprintf("../data/output_ttmatrix/traveltime_matrix_%s_python.csv", cidade)
     
@@ -48,7 +50,7 @@ acess_acumu <- function(cidade, tempo) {
     select(origin, destination, travel_time) %>%
     mutate(travel_time = travel_time/60)
   
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s.rds", cidade)
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, res1)
   
   # abrir oportunidades com hexagonos
   hexagonos_for_sf <- read_rds(dir_hex) %>%
@@ -93,12 +95,12 @@ acess_ac_for <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "for", tempo =
   as_tibble() %>%
   st_sf()
 
-acess_ac_for <- map_dfr(seq(15, 60, 5), ~ acess_acumu(cidade = "for", tempo = .x)) %>%
-  as_tibble() %>%
-  st_sf()
+# acess_ac_for <- map_dfr(seq(15, 60, 5), ~ acess_acumu(cidade = "for", tempo = .x)) %>%
+#   as_tibble() %>%
+#   st_sf()
 
 
-write_rds(acess_ac_for, "../data/output_access/access_ac_for.rds")
+# write_rds(acess_ac_for, "../data/output_access/access_ac_for.rds")
 
 
 # adicionar competicao
@@ -165,7 +167,7 @@ acess_ac_bel <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "bel", tempo =
   as_tibble() %>%
   st_sf()
 
-write_rds(acess_ac_bel, "../data/output_access/access_ac_bel.rds")
+# write_rds(acess_ac_bel, "../data/output_access/access_ac_bel.rds")
 
 
 ```
@@ -209,7 +211,7 @@ acess_ac_rio <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "rio", tempo =
   st_sf()
 
 
-write_rds(acess_ac_rio, "../data/output_access/access_ac_rio.rds")
+# write_rds(acess_ac_rio, "../data/output_access/access_ac_rio.rds")
 
 ```
 
@@ -232,8 +234,8 @@ acess_ac_rio %>%
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))+
-  facet_wrap(~tempo_viagem)
-    # plot_layout(ncol = 1)
+  facet_wrap(~tempo_viagem)+
+    plot_layout(ncol = 1)
   
 
 ```
@@ -242,7 +244,9 @@ acess_ac_rio %>%
 
 ```{r fun acess_min}
 
-acess_min <- function(cidade) {
+acess_min <- function(cidade, res = 8) {
+  
+  res1 <- sprintf("0%s", res)
   
   dir_matriz <- sprintf("../data/output_ttmatrix/traveltime_matrix_%s_python.csv", cidade)
     
@@ -253,7 +257,7 @@ acess_min <- function(cidade) {
     # filter(!(origin == destination))
     identity()
   
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_08.rds", cidade)
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, res1)
   
   # abrir oportunidades com hexagonos
   hexagonos_for_sf <- read_rds(dir_hex) %>%
@@ -286,14 +290,80 @@ acess_min <- function(cidade) {
     left_join(access_ac_for_long, by = c("id_hex" = "origin"))
   
 }
-
-cidade <- "for"
-
-teste <- acess_min("for")
-
-access_ac_for_fim %>%
-  filter(atividade == "saude_total") %>%
-  mapview(zcol = "travel_time")
+# 
+# cidade <- "rio"
+# 
+# teste <- acess_min("for")
+# 
+# teste %>%
+#   filter(atividade == "saude_total") %>%
+#   mapview(zcol = "travel_time")
 
 ```
 
+## Aplicar para Fortaleza
+
+```{r acess_min_for}
+
+acess_min_for <- acess_min("for")
+
+```
+
+Visualizar:
+
+```{r viz acess_min_for}
+
+acess_min_for %>%
+  filter(!is.na(travel_time)) %>%
+  ggplot()+
+  geom_sf(aes(fill = travel_time))+
+  theme_bw()+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  facet_wrap(~atividade)
+
+
+```
+
+## Aplicar para Belo Horizonte
+
+```{r acess_min_bel}
+
+acess_min_bel <- acess_min("bel")
+
+```
+
+Visualizar:
+
+```{r viz acess_min_bel}
+
+acess_min_bel %>%
+  filter(!is.na(travel_time)) %>%
+  ggplot()+
+  geom_sf(aes(fill = travel_time))+
+  theme_bw()+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  facet_wrap(~atividade)
+
+```
+
+## Aplicar para o Rio de Janeiro
+
+```{r acess_min_rio}
+
+acess_min_rio <- acess_min("rio")
+
+```
+
+Visualizar:
+
+```{r viz acess_min_rio}
+
+acess_min_rio %>%
+  filter(!is.na(travel_time)) %>%
+  ggplot()+
+  geom_sf(aes(fill = travel_time))+
+  theme_bw()+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  facet_wrap(~atividade, ncol = 1)
+
+```
