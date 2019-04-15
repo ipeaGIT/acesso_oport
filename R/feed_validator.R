@@ -46,7 +46,7 @@ run_validator <- function(cidade) {
 
 # # aplicar
 # 
-run_validator("bel")
+# run_validator("bel")
 
 
 
