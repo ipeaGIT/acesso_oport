@@ -67,7 +67,7 @@ acess_ac_for <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "for", tempo =
 #   st_sf()
 
 
-# write_rds(acess_ac_for, "../data/output_access/access_ac_for.rds")
+# write_rds(acess_ac_for, "../data/output_access/acess_ac_for.rds")
 
 
 # adicionar competicao
@@ -132,7 +132,7 @@ acess_ac_bel <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "bel", tempo =
   as_tibble() %>%
   st_sf()
 
-# write_rds(acess_ac_bel, "../data/output_access/access_ac_bel.rds")
+# write_rds(acess_ac_bel, "../data/output_access/acess_ac_bel.rds")
 ```
 
 Visualizar o indicador de acessibilidade para Belo Horizonte:
@@ -171,7 +171,7 @@ acess_ac_rio <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "rio", tempo =
   st_sf()
 
 
-# write_rds(acess_ac_rio, "../data/output_access/access_ac_rio.rds")
+# write_rds(acess_ac_rio, "../data/output_access/acess_ac_rio.rds")
 ```
 
 Visualizar o indicador de acessibilidade para Rio de Janeiro:
@@ -184,6 +184,7 @@ acess_ac_rio %>%
   geom_sf(aes(fill = saude_total))+
   theme_bw()+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  # theme(legend.position = "bottom")+
   facet_wrap(~tempo_viagem) +
 acess_ac_rio %>%
   select(escolas_total, tempo_viagem) %>%
@@ -192,6 +193,7 @@ acess_ac_rio %>%
   geom_sf(aes(fill = escolas_total))+
   theme_bw()+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))+
+  # theme(legend.position = "bottom")+
   facet_wrap(~tempo_viagem)+
     plot_layout(ncol = 1)
 ```
@@ -263,6 +265,8 @@ Aplicar para Fortaleza
 
 ``` r
 acess_min_for <- acess_min("for")
+
+# write_rds(acess_min_for, "../data/output_access/acess_min_for.rds")
 ```
 
 Visualizar:
@@ -270,10 +274,13 @@ Visualizar:
 ``` r
 acess_min_for %>%
   filter(!is.na(travel_time)) %>%
+  mutate(travel_time_v1 = ifelse(travel_time > 45, 45, travel_time)) %>%
   ggplot()+
-  geom_sf(aes(fill = travel_time))+
+  geom_sf(aes(fill = travel_time_v1))+
   theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"),
+                       breaks = c(0, 15, 30, 45),
+                       labels = c("0", "15", "30", "45+")) +
   facet_wrap(~atividade)
 ```
 
@@ -284,6 +291,8 @@ Aplicar para Belo Horizonte
 
 ``` r
 acess_min_bel <- acess_min("bel")
+
+# write_rds(acess_min_bel, "../data/output_access/acess_min_bel.rds")
 ```
 
 Visualizar:
@@ -291,10 +300,13 @@ Visualizar:
 ``` r
 acess_min_bel %>%
   filter(!is.na(travel_time)) %>%
+  mutate(travel_time_v1 = ifelse(travel_time > 45, 45, travel_time)) %>%
   ggplot()+
-  geom_sf(aes(fill = travel_time))+
+  geom_sf(aes(fill = travel_time_v1))+
   theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"),
+                       breaks = c(0, 15, 30, 45),
+                       labels = c("0", "15", "30", "45+")) +
   facet_wrap(~atividade)
 ```
 
@@ -305,6 +317,8 @@ Aplicar para o Rio de Janeiro
 
 ``` r
 acess_min_rio <- acess_min("rio")
+
+# write_rds(acess_min_rio, "../data/output_access/acess_min_rio.rds")
 ```
 
 Visualizar:
@@ -312,10 +326,13 @@ Visualizar:
 ``` r
 acess_min_rio %>%
   filter(!is.na(travel_time)) %>%
+  mutate(travel_time_v1 = ifelse(travel_time > 60, 60, travel_time)) %>%
   ggplot()+
-  geom_sf(aes(fill = travel_time))+
+  geom_sf(aes(fill = travel_time_v1))+
   theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"),
+                       breaks = c(0, 15, 30, 45, 60),
+                       labels = c("0", "15", "30", "45","60+")) +
   facet_wrap(~atividade, ncol = 1)
 ```
 
