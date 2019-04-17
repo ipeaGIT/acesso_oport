@@ -23,7 +23,7 @@
 # FUNCAO!!!!!!!! ----------------------------------------------------------
 
 
-run_validator <- function(cidade) {
+run_validator <- function(cidade, wait = FALSE) {
   
   gtfs_files <- dir(paste0("../data-raw/gtfs/", cidade), pattern = "*.zip$")
   
@@ -35,7 +35,7 @@ run_validator <- function(cidade) {
     
     command <- sprintf("cd ../data-raw/gtfs/feedvalidator && feedvalidator -o %s %s", dir_output, dir_gtfs)
     
-    shell(command, wait = FALSE)
+    shell(command, wait = wait)
     
   }
   
