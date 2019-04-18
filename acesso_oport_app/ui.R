@@ -9,7 +9,7 @@ library(leaflet)
 library(dplyr)
 
 header <- dashboardHeader(
-  title = div(icon("bus"), " Indicadores de Acessibilidade Cumulativa"),
+  title = div(icon("bus"), " Acesso a Oportunidades"),
   # title = "Linhas de Transporte Público de Fortaleza",
   titleWidth = 400
 )
@@ -29,13 +29,28 @@ body <- dashboardBody(
                            label = "Escolha a atividade:", 
                            choices = c("Saúde", "Educação"), 
                            selected = "Saúde")),
-           box(width = NULL, 
+           box(width = NULL,
                status = "warning",
-               sliderInput(inputId = "tempo", 
-                            label = "Escolha o tempo de viagem:", 
-                            min = 15, max = 60, 
-                            step = 15, value = 15,
-                           animate = TRUE))),
+               radioButtons(inputId = "indicador", 
+                           label = "Escolha o indicador de acessibilidade:", 
+                           choices = c("Indicador Cumulativo", "Indicador de oportunidade mais próxima"), 
+                           selected = "Indicador Cumulativo")),
+           conditionalPanel(
+             condition = "input.indicador == 'Indicador Cumulativo'",
+             box(width = NULL,
+                 status = "warning",
+                 sliderInput(inputId = "tempo", 
+                             label = "Escolha o tempo de viagem:",
+                             min = 15, max = 60,
+                             step = 15, value = 15,
+                             animate = TRUE)))),
+           # box(width = NULL, 
+           #     status = "warning",
+           #     sliderInput(inputId = "tempo", 
+           #                  label = "Escolha o tempo de viagem:", 
+           #                  min = 15, max = 60, 
+           #                  step = 15, value = 15,
+           #                 animate = TRUE))),
     column(width = 9,
            box(width = NULL, 
                solidHeader = TRUE,

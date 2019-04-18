@@ -14,7 +14,10 @@ library(mapview)
 
 # abrir acessibilidade
 
-acess <- read_rds("acess_junto.rds") %>%
+acess_cum <- read_rds("acess_cum_junto.rds") %>%
+  data.table()
+
+acess_min <- read_rds("acess_min_junto.rds") %>%
   data.table()
 
 linhas <- read_rds("../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
@@ -27,9 +30,13 @@ function(input, output) {
   
   # Reactive expression for the data subsetted to what the user selected
   cidade_filtrada <- reactive({
-    ai <- acess[cidade_nome == input$cidade]
+    ai <- acess_cum[cidade_nome == input$cidade]
   })
   
+  # Reactive expression for the data subsetted to what the user selected
+  cidade_filtrada_min <- reactive({
+    ai <- acess_min[cidade_nome == input$cidade]
+  })
   
   # Reactive para a atividade
   atividade_filtrada <- reactive({
@@ -46,6 +53,24 @@ function(input, output) {
     }
   })
   
+  # Atividade filtrada para o indicador minimo
+  
+  atividade_filtrada_min <- reactive({
+    if (input$atividade == "Saúde") {
+      
+    cidade_filtrada_min()[, .(id_hex, pop_total, atividade, travel_time, geometry)] %>% 
+        filter(atividade == "saude_total") %>%
+        st_as_sf() 
+      
+    } else if (input$atividade == "Educação") {
+      
+    cidade_filtrada_min()[, .(id_hex, pop_total, atividade, travel_time, geometry)] %>% 
+        filter(atividade == "escolas_total") %>% 
+        st_as_sf() 
+      
+    }
+    
+  })
   
   # Reactive para o tempo
   tempo_filtrado <- reactive({
@@ -59,11 +84,14 @@ function(input, output) {
     colorNumeric("BuPu", tempo_filtrado()$atividade)
   })
   
+  colorpal_min <- reactive({
+    colorNumeric("BuPu", atividade_filtrada_min()$travel_time)
+  })
   
   # Mapa
   output$map <- renderLeaflet({
     
-    vai <- filter(acess, cidade_nome == input$cidade) %>% st_as_sf()
+    vai <- filter(acess_cum, cidade_nome == input$cidade) %>% st_as_sf()
     
     
     bounds <- st_bbox(vai)
@@ -101,7 +129,6 @@ function(input, output) {
   
   
   observe({
-    pal <- colorpal()
     
     
     linhas_cidade <- linhas %>%
@@ -110,31 +137,69 @@ function(input, output) {
     
     colorpal_linhas <- colorFactor("Accent", linhas_cidade$Modo)
     
-    popup_hex <- paste0("<b>População: </b>", tempo_filtrado()$pop_total, "<br/>",
-                    "<b>Oportunidades: </b>", tempo_filtrado()$atividade, "<br/>")
+    if (input$indicador == "Indicador Cumulativo") {
+      pal <- colorpal()
+      
+      popup_hex <- paste0("<b>População: </b>", tempo_filtrado()$pop_total, "<br/>",
+                      "<b>Oportunidades: </b>", tempo_filtrado()$atividade, "<br/>")
+      
+      popup_linha <- paste0("<b>Tipo da linha</b>: ", linhas_cidade$Modo)
+      
+      names(linhas_cidade$geometry) <- NULL
+      
+      leafletProxy("map", data = tempo_filtrado()) %>%
+        clearShapes() %>%
+        clearControls() %>%
+        addPolygons(stroke = TRUE, weight = 0.7, color = "black",
+                    fillOpacity = 0.7,
+                    fillColor = ~pal(atividade),
+                    popup = popup_hex) %>%
+        addPolylines(data = linhas_cidade,
+                     opacity = 1,
+                     group = "Corredores de Alta e Média Capacidade", 
+                     popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
+        addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", 
+                         options = layersControlOptions(collapsed = FALSE)) %>%
+        addLegend(data = tempo_filtrado(), "bottomright", pal = pal, values = ~atividade,
+                  title = sprintf("Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
+        addLegend(data = linhas_cidade, "topright", pal = colorpal_linhas, values = ~Modo,
+                  title = "Modo da Linha", 
+                  group = "Corredores de Alta e Média Capacidade")
+      
+      
+    } else if (input$indicador == "Indicador de oportunidade mais próxima") {
+      
+      pal <- colorpal_min()
+      
+      popup_hex <- paste0("<b>População: </b>", atividade_filtrada_min()$pop_total, "<br/>")
+      
+      popup_linha <- paste0("<b>Tipo da linha</b>: ", linhas_cidade$Modo)
+      
+      names(linhas_cidade$geometry) <- NULL
+      
+      leafletProxy("map", data = atividade_filtrada_min()) %>%
+        clearShapes() %>%
+        clearControls() %>%
+        addPolygons(stroke = TRUE, weight = 0.7, color = "black",
+                    fillOpacity = 0.7,
+                    fillColor = ~pal(travel_time),
+                    popup = popup_hex) %>%
+        addPolylines(data = linhas_cidade,
+                     opacity = 1,
+                     group = "Corredores de Alta e Média Capacidade", 
+                     popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
+        addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", 
+                         options = layersControlOptions(collapsed = FALSE)) %>%
+        addLegend(data = atividade_filtrada_min(), "bottomright", pal = pal, values = ~travel_time,
+                  title = c("Minutos atè a oportunidade mais próxima")) %>%
+        addLegend(data = linhas_cidade, "topright", pal = colorpal_linhas, values = ~Modo,
+                  title = "Modo da Linha", 
+                  group = "Corredores de Alta e Média Capacidade")
+      
+    }
+      
+      
     
-    popup_linha <- paste0("<b>Tipo da linha</b>: ", linhas_cidade$Modo)
-    
-    names(linhas_cidade$geometry) <- NULL
-    
-    leafletProxy("map", data = tempo_filtrado()) %>%
-      clearShapes() %>%
-      clearControls() %>%
-      addPolygons(stroke = TRUE, weight = 0.7, color = "black",
-                  fillOpacity = 0.7,
-                  fillColor = ~pal(atividade),
-                  popup = popup_hex) %>%
-      addPolylines(data = linhas_cidade,
-                   opacity = 1,
-                   group = "Corredores de Alta e Média Capacidade", 
-                   popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
-      addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", 
-                       options = layersControlOptions(collapsed = FALSE)) %>%
-      addLegend(data = tempo_filtrado(), "bottomright", pal = pal, values = ~atividade,
-                title = sprintf("Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
-      addLegend(data = linhas_cidade, "topright", pal = colorpal_linhas, values = ~Modo,
-                title = "Modo da Linha", 
-                group = "Corredores de Alta e Média Capacidade")
       
   })
   
