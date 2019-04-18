@@ -127,8 +127,7 @@ acess_ac_for %>%
   filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = saude_total))+
-  theme_bw()+
-  theme(legend.position = "bottom")+
+  theme_proj(legend.position ="bottom")+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
   facet_wrap(~tempo_viagem) +
 acess_ac_for %>%
@@ -136,8 +135,7 @@ acess_ac_for %>%
   filter(!is.na(tempo_viagem)) %>%
   ggplot()+
   geom_sf(aes(fill = escolas_total))+
-  theme_bw()+
-  theme(legend.position = "bottom")+
+  theme_proj()+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
   facet_wrap(~tempo_viagem)
 
