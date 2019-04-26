@@ -13,7 +13,8 @@ shape_to_hexagon <- function(municipio, uf_sigla, resolution = 8) {
     dir_muni <- paste0("../data/municipios/", "municipios_", uf_sigla, ".rds")
     
     muni <- read_rds(dir_muni) %>%
-      filter(NM_MUNICIP == toupper(gsub( "_", " ", municipio)))
+      filter(NM_MUNICIP == toupper(gsub( "_", " ", municipio))) %>%
+      st_buffer(dist = 0.003)
     
     # get the unique h3 ids of the hexagons intersecting your polygon at a given resolution
     hex_ids <- h3jsr::polyfill(muni, res = resolution, simple = FALSE)
