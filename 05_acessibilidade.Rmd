@@ -122,6 +122,8 @@ Visualizar o indicador de acessibilidade para Fortaleza:
 
 ```{r viz for}
 
+source("R/themes_ggplot.R")
+
 acess_ac_for %>%
  select(saude_total, tempo_viagem) %>%
   filter(!is.na(tempo_viagem)) %>%
