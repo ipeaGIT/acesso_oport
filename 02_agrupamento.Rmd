@@ -23,6 +23,8 @@ library(mapview)
 library(data.table)
 library(h3jsr)
 library(stringr)
+library(purrr)
+library(furrr)
 
 # source("R/agrupar_por_hex.R")
 ```
@@ -44,12 +46,17 @@ As cidade brasileiras analisadas serão dividadas em hexágonos. A função ``po
 
 ```{r hexagonos}
 
-source("R/poligono_para_hexagono.R")
+source("R/poligono_para_hexagono_allres.R")
 
 # # aplicando ---------------------------------------------------------------
 
 munis <- c("fortaleza", "rio de janeiro", "recife", "belo horizonte")
 ufs <- c("ce", "rj", "pe", "mg")
+
+shape_to_hexagon("porto alegre", "rs")
+shape_to_hexagon("curitiba", "pr")
+shape_to_hexagon("teresina", "pi")
+shape_to_hexagon("são paulo", "sp")
 
 purrr::walk2(munis, ufs, shape_to_hexagon)
 
@@ -70,7 +77,21 @@ munis <- c("for", "rio", "rec", "bel")
 
 # aplicar funcao
 
-purrr::walk(munis, agrupar_variaveis)
+agrupar_variaveis(munis)
 
 ```
+
+## Visualizar distribuição das oportunidades
+
+Para Teresina:
+
+```{r for}
+
+fort <- read_rds("../data/hex_agregados/hex_agregado_for_09.rds")
+
+
+mapview(fort, zcol = "empregos_total")
+
+```
+
 
