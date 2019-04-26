@@ -24,6 +24,8 @@ library(mapview)
 library(data.table)
 library(raster)
 library(rayshader)
+library(purrr)
+library(stringr)
 ```
 
 # Tratamento dos dados brutos
@@ -86,6 +88,155 @@ shp_to_rds <- function(shp) {
 walk(arquivos_shp, shp_to_rds)
 
 ```
+
+## Setores censitários
+
+Primeiramente os shapes dos setores são dividos por UF e guardados em formato .rds:
+
+```{r setores shapes}
+
+# ajeitar os setores
+
+
+arquivos <- dir("../data-raw/municipios", full.names = T, pattern = "_setores_censitarios.zip", recursive = T)
+
+out_dir <- paste0("../data-raw/municipios/", str_sub(arquivos, -26, -25))
+
+walk2(arquivos, out_dir, ~unzip(zipfile = .x, exdir = .y))
+
+# # criar pastas
+# walk(str_sub(arquivos, -17, -16), ~dir.create(paste0("../data/municipios/", .)))
+
+# nome dos arquivos .shp para abrir
+arquivos_shp <- dir("../data-raw/municipios", full.names = T, pattern = "^\\d{2}SEE.+.shp$", recursive = T)
+
+# funcao
+
+shp_to_rds <- function(shp) {
+  
+  shp_files <- st_read(shp, crs = 4326, options = "ENCODING=WINDOWS-1252") %>%
+    dplyr::select(cod_setor = CD_GEOCODI, muni = NM_MUNICIP) %>%
+    mutate(cod_setor = as.numeric(cod_setor))
+  
+  uf <- gsub(".+/(\\D{2})/.+", "\\1", shp)
+  
+  out_dir <- paste0("../data/setores/setores_", uf, ".rds")
+  
+  write_rds(shp_files, out_dir)
+  
+}
+
+
+walk(arquivos_shp, shp_to_rds)
+
+
+```
+
+Em seguida, os dados estatísticos do setores do censo são tratados: é feita a retirada das variáveis relacionadas à renda e à quantidade de pessoas, depois é feito o cálculo da renda por pessoa.
+
+```{r setores var}
+
+setores1 <- fread("../data-raw/setores_censitarios/dados_censo2010A.csv")
+
+names(setores1)
+
+# Renda 6.19 - variavel escolhida: V003 = Total do rendimento nominal mensal dos domicílios particulares permanentes
+setores_renda <-  setores1 %>% 
+  dplyr::select(cod_uf = Cod_UF, cod_muni = Cod_municipio, cod_setor = Cod_setor, renda_total = DomRend_V003)
+  
+# Moradores 6.3 - variavel escolhida: V002 = Moradores em domicílios particulares permanentes
+setores_moradores <- setores1 %>% 
+  dplyr::select(cod_setor = Cod_setor, moradores_total = Dom2_V002)
+
+# juntar
+
+setores_total <- setores_renda %>%
+  left_join(setores_moradores, by = "cod_setor") %>%
+  mutate(renda_per_capta = renda_total / moradores_total) %>%
+  mutate(cod_setor = as.numeric(cod_setor))
+
+# write_rds(setores_total, "../data/renda_por_setor/renda_por_setor.rds")
+
+```
+
+É feita então a junção dos shapes com as estatísticas, resultando numa base dos setores censitários georreferenciada, dividida por uf, com informações de renda e habitantes.
+
+```{r setores juncao}
+
+setores_total <- read_rds("../data/renda_por_setor/renda_por_setor.rds")
+
+# dividir por uf
+
+ufs <- tibble::tribble(
+  ~cod_uf,                     ~nome_uf,  ~uf,
+   11,              "Rondônia", "RO",
+   12,                  "Acre", "AC",
+   13,              "Amazonas", "AM",
+   14,               "Roraima", "RR",
+   15,                  "Pará", "PA",
+   16,                 "Amapá", "AP",
+   17,             "Tocantins", "TO",
+   21,              "Maranhão", "MA",
+   22,                 "Piauí", "PI",
+   23,                 "Ceará", "CE",
+   24,   "Rio Grande do Norte", "RN",
+   25,               "Paraíba", "PB",
+   26,            "Pernambuco", "PE",
+   27,               "Alagoas", "AL",
+   28,               "Sergipe", "SE",
+   29,                 "Bahia", "BA",
+   31,          "Minas Gerais", "MG",
+   32,        "Espírito Santo", "ES",
+   33,        "Rio de Janeiro", "RJ",
+   35,             "São Paulo", "SP",
+   41,                "Paraná", "PR",
+   42,        "Santa Catarina", "SC",
+   43, "Rio Grande do Sul (*)", "RS",
+   50,    "Mato Grosso do Sul", "MS",
+   51,           "Mato Grosso", "MT",
+   52,                 "Goiás", "GO",
+   53,      "Distrito Federal", "DF"
+  )
+
+# adicionar coluna para uf
+
+setores_total_v1 <- setores_total %>%
+  left_join(ufs, by = "cod_uf") %>%
+  mutate(uf = tolower(uf)) %>%
+  arrange(uf) %>%
+  split(.$uf)
+
+# abrir os shapes dos setores por uf
+
+files <- dir("../data/setores/", full.names = TRUE)
+
+setores_shapes <- map(files, read_rds)
+
+# funcao para criar arquivo para cada estado
+
+agregar_setores <- function(setores_variaveis1, setores_shapes1) {
+  
+  uf <- unique(setores_variaveis1$uf)[1]
+  
+  setores_fim <- setores_variaveis1 %>%
+    left_join(setores_shapes1, by = "cod_setor")
+  
+  # salvar
+  dir_out <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", uf)
+  
+  write_rds(setores_fim, dir_out)
+  
+  
+}
+
+# aplicar
+
+walk2(setores_total_v1, setores_shapes, agregar_setores)
+
+
+```
+
+
 
 
 ## Censo escolar
@@ -209,24 +360,24 @@ grade_para_municipio <- function(muni, uf_input) {
   
   grade_estado <- grades %>%
     mutate(id_grade = 1:n()) %>%
-    select(id_grade, MASC, FEM, POP, DOM_OCU)
+    dplyr::select(id_grade, MASC, FEM, POP, DOM_OCU)
   
-  grade_estado_centroids <- grade_estado %>%
-    st_centroid()
+  # grade_estado_centroids <- grade_estado %>%
+  #   st_centroid()
   
   cidade <- read_rds(dir_muni) %>%
     filter(NM_MUNICIP == municipio_ok) %>%
-    select(municipio = NM_MUNICIP)
+    dplyr::select(municipio = NM_MUNICIP)
   
   
   # geoprocessamento --------------------------------------------------------
   
-  vai <- st_join(grade_estado_centroids, cidade) %>%
+  vai <- st_join(grade_estado, cidade) %>%
     filter(!is.na(municipio))
   
   
   grade_municipio <- grade_estado %>%
-    filter(id_grade %in% vai$id_grade) %>%
+    dplyr::filter(id_grade %in% vai$id_grade) %>%
     mutate(municipio = municipio_ok)
   
   
@@ -252,10 +403,11 @@ A função é então aplicada primeiramente para três cidades: Fortaleza, Rio d
 
 ```{r aplicar grades}
 
-municipios <- c("fortaleza", "rio de janeiro", "belo horizonte")
-ufs <- c("ce", "rj", "mg")
+municipios <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "são paulo", "curitiba")
+ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
 
 walk2(municipios, ufs, grade_para_municipio)
+
 ```
 
 
@@ -269,6 +421,56 @@ walk2(municipios, ufs, grade_para_municipio)
 
 
 ```
+
+## Empregos
+
+Base da RAIS:
+
+```{r rais}
+
+rais_raw <- read_csv("../data-raw/rais/rais_2015_rafa_franco.csv")
+
+rais <- rais_raw %>%
+  # Excluir enderecos com 1 estrela
+  filter(PrecisionDepth != "1 Estrela") %>%
+  # Tirar acentos do endereco e transformar tudo para minusculo
+  mutate(MatchedAddress = iconv(MatchedAddress, to = "ASCII//TRANSLIT")) %>%
+  mutate(MatchedAddress = tolower(MatchedAddress)) %>%
+  # Extrair cidade
+  mutate(cidade_uf = gsub("(^.+,\\s)?(\\D+,\\s[[:alpha:]]{2})(,\\s\\d+$)?", "\\2", MatchedAddress, perl = TRUE)) %>%
+  # Selecionar colunas
+  select(id_estab, cidade_uf, lon = Longitude, lat = Latitude) %>%
+  # Tirar nulos
+  filter(!is.na(lon)) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+
+# Salvar
+
+write_rds(rais, "../data/rais/rais_2015.rds")
+
+```
+
+Analisar a qualidade do georreferenciamento para as grandes cidades:
+
+```{r rais geo}
+
+cidades <- c("fortaleza, ce", "recife, pe", "belo horizonte, mg", "rio de janeiro, rj",
+                                         "porto alegre, rs", "curitiba, pr", "teresina, pi")
+
+rais %>%
+  filter(cidade_uf %in% cidades) %>%
+  count(PrecisionDepth, cidades_uf) %>%
+  ggplot()+
+  geom_bar(aes(x = cidades_uf, y = n, fill = PrecisionDepth))
+  
+  
+
+```
+
+
+```
+
 
 ## GTFS
 
