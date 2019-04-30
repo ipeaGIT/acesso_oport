@@ -110,12 +110,15 @@ walk2(arquivos, out_dir, ~unzip(zipfile = .x, exdir = .y))
 # nome dos arquivos .shp para abrir
 arquivos_shp <- dir("../data-raw/municipios", full.names = T, pattern = "^\\d{2}SEE.+.shp$", recursive = T)
 
+# shp <- arquivos_shp[1]
+
 # funcao
 
 shp_to_rds <- function(shp) {
   
   shp_files <- st_read(shp, crs = 4326, options = "ENCODING=WINDOWS-1252") %>%
     dplyr::select(cod_setor = CD_GEOCODI, muni = NM_MUNICIP) %>%
+    mutate(cod_setor = as.character(cod_setor)) %>%
     mutate(cod_setor = as.numeric(cod_setor))
   
   uf <- gsub(".+/(\\D{2})/.+", "\\1", shp)
@@ -214,12 +217,15 @@ setores_shapes <- map(files, read_rds)
 
 # funcao para criar arquivo para cada estado
 
+setores_variaveis1 <- setores_total_v1[[1]]
+setores_shapes1 <- setores_shapes[[1]]
+
 agregar_setores <- function(setores_variaveis1, setores_shapes1) {
   
   uf <- unique(setores_variaveis1$uf)[1]
   
-  setores_fim <- setores_variaveis1 %>%
-    left_join(setores_shapes1, by = "cod_setor")
+  setores_fim <- setores_shapes1 %>%
+    left_join(setores_variaveis1, by = "cod_setor")
   
   # salvar
   dir_out <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", uf)
