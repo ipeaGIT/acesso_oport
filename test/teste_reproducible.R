@@ -18,23 +18,50 @@ mapview(setor)
 
 
 vai_setor <- setor %>%
-  filter(id_setor %in% c(2656, 2855, 2854))
+  filter(id_setor %in% c(2656, 2855, 2854)) %>%
+  rename(id_tract = id_setor, tract_incm = renda_total)
+
+mapview(vai_setor)
 
 bbox_setor <- st_bbox(vai_setor)
 
-vai_grade <- st_crop(grade, bbox_setor)
+vai_grade <- st_crop(grade, bbox_setor) %>%
+  rename(id_square = id_grade, square_pop = pop_total)
 
 mapview(vai_grade) + mapview(vai_setor)
+
+# dput
+dput(vai_setor)
+dput(vai_grade)
 
 
 # exportar
 
-test_setor <- write_rds(vai_setor, "test/test_setor.rds")
-test_grade <- write_rds(vai_grade, "test/test_grade.rds")
+test_setor <- st_write(vai_setor, "test/tracts.shp")
+test_grade <- st_write(vai_grade, "test/squares.shp")
+
+zip()
 
 
 # AGORA VAI ---------------------------------------------------------------
 
+download.file("https://github.com/ipeaGIT/acesso_oport/raw/master/test/test_setor.rds", "tracts.rds")
+download.file("https://github.com/ipeaGIT/acesso_oport/raw/master/test/test_grade.rds", "squares.rds")
+
 # Open census tracts
-census_tracts <- readRDS()
+census_tracts <- readr::read_rds("tracts.rds")
+squares <- readr::read_rds("squares.rds")
+
+# Open census tracts
+tempdir()
+unzip("test/squares.zip", exdir = "")
+
+tracts <- st_read("test/squares.zip")
+squares <- readr::read_rds("squares.rds")
+
+
+# testar ---------------------------------------------------------------
+
+
+                                 
 
