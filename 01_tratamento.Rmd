@@ -412,6 +412,9 @@ A função é então aplicada primeiramente para três cidades: Fortaleza, Rio d
 municipios <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "são paulo", "curitiba")
 ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
 
+grade_para_municipio("são paulo", "sp")
+grade_para_municipio("curitiba", "pr")
+
 walk2(municipios, ufs, grade_para_municipio)
 
 ```
