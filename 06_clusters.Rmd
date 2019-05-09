@@ -23,6 +23,7 @@ library(purrr)
 # devtools::install_local("misc/patchwork-master.zip")
 library(patchwork)
 library(spdep)
+library(mapview)
 
 options(scipen = 999)
 
