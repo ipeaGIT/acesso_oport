@@ -14,13 +14,13 @@ library(mapview)
 
 # abrir acessibilidade
 
-acess_cum <- read_rds("acess_cum_junto.rds") %>%
+acess_cum <- read_rds("../data/acess_cum_junto.rds") %>%
   data.table()
 
-acess_min <- read_rds("acess_min_junto.rds") %>%
+acess_min <- read_rds("../data/acess_min_junto.rds") %>%
   data.table()
 
-linhas <- read_rds("../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
+linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 
 
 
