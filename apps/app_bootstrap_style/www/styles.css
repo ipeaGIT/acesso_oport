@@ -1,0 +1,83 @@
+
+@import url("//fonts.googleapis.com/css?family=Roboto|Roboto+Condensed:400,700");
+@import url("//fonts.googleapis.com/css?family=Lobster");
+
+div.outer {
+  position: fixed;
+  top: 41px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+html {
+  width:100%;
+  height:100%;
+}
+
+body {
+  width:100%;
+  height:100%;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 18px;
+}
+
+h1 {
+  font: bold 20px 'Roboto Condensed', sans-serif;
+}
+
+#controls {
+/* Appearance */
+  background-color: white;
+  padding: 0 20px 20px 20px;
+  cursor: move;
+  /* Fade out while not hovering
+  opacity: 0.65;
+  zoom: 0.9;
+  transition: opacity 500ms 1s; */
+}
+
+
+/*#controls:hover {
+  /* Fade in while hovering */
+  /*opacity: 0.95;
+  transition-delay: 0;
+}*/
+
+.panel {
+  border: 1px solid transparent;
+  border-radius: 20px;
+  opacity: 0.7;
+}
+
+.panel-default {
+    border-color: transparent;
+}
+
+
+/*h1,h2,h3,h4,h5,h6,label,input,button,select { 
+  /*font-family: 'Helvetica', sans-serif;
+  
+} */
+
+.leaflet-container {
+  font: 14px "Roboto Condensed", sans-serif;
+}
+
+.info {
+  padding: 6px 8px;
+  font: 14px/16px "Roboto Condensed", sans-serif;
+}
+
+.leaflet-popup-content-wrapper{
+    /*background-color: transparent;*/
+    background-color: white;
+    opacity: 0.7;
+    border-radius: 2px;
+}
+
+.leaflet-popup-tip {
+    background: white;
+}

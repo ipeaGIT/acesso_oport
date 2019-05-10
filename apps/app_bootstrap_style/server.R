@@ -25,8 +25,6 @@ linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 limites <- read_rds("../data/limites_munis.rds")
 
 
-
-
 # Define a server for the Shiny app
 function(input, output) {
   
@@ -96,7 +94,6 @@ function(input, output) {
     vai <- filter(acess_cum, cidade_nome == input$cidade) %>% st_as_sf()
     limite <- filter(limites, NM_MUNICIP == toupper(input$cidade))
     
-    
     bounds <- st_bbox(vai)
     min_lon <- bounds["xmin"] %>% as.numeric()
     min_lat <- bounds["ymin"] %>% as.numeric()
@@ -107,7 +104,7 @@ function(input, output) {
       leaflet(data = vai) %>%
         addTiles() %>%
         fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat) %>%
-        addPolygons(data = limite)
+        addPolygons(data = limite, stroke = TRUE, color = "black", weight = 2)
       # addLegend(data = filter(access, cidade_nome == "Fortaleza"), 
       #           "bottomright", pal = pal, values = ~saude_total,
       #           title = "Oportunidade de saúde em<br/> até 40 minutos",
@@ -154,7 +151,7 @@ function(input, output) {
       leafletProxy("map", data = tempo_filtrado()) %>%
         clearShapes() %>%
         clearControls() %>%
-        addPolygons(stroke = TRUE, weight = 0.7, color = "black",
+        addPolygons(stroke = FALSE, weight = 0.7, color = "black",
                     fillOpacity = 0.7,
                     fillColor = ~pal(atividade),
                     popup = popup_hex) %>%
@@ -162,11 +159,11 @@ function(input, output) {
                      opacity = 1,
                      group = "Corredores de Alta e Média Capacidade", 
                      popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
-        addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", 
+        addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", position = "topleft",
                          options = layersControlOptions(collapsed = FALSE)) %>%
         addLegend(data = tempo_filtrado(), "bottomright", pal = pal, values = ~atividade,
                   title = sprintf("Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
-        addLegend(data = linhas_cidade, "topright", pal = colorpal_linhas, values = ~Modo,
+        addLegend(data = linhas_cidade, "topleft", pal = colorpal_linhas, values = ~Modo,
                   title = "Modo da Linha", 
                   group = "Corredores de Alta e Média Capacidade")
       
@@ -184,7 +181,7 @@ function(input, output) {
       leafletProxy("map", data = atividade_filtrada_min()) %>%
         clearShapes() %>%
         clearControls() %>%
-        addPolygons(stroke = TRUE, weight = 0.7, color = "black",
+        addPolygons(stroke = FALSE, weight = 0.7, color = "black",
                     fillOpacity = 0.7,
                     fillColor = ~pal(travel_time),
                     popup = popup_hex) %>%
@@ -192,11 +189,11 @@ function(input, output) {
                      opacity = 1,
                      group = "Corredores de Alta e Média Capacidade", 
                      popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
-        addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", 
+        addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", position = "topleft",
                          options = layersControlOptions(collapsed = FALSE)) %>%
         addLegend(data = atividade_filtrada_min(), "bottomright", pal = pal, values = ~travel_time,
                   title = c("Minutos atè a oportunidade mais próxima")) %>%
-        addLegend(data = linhas_cidade, "topright", pal = colorpal_linhas, values = ~Modo,
+        addLegend(data = linhas_cidade, "topleft", pal = colorpal_linhas, values = ~Modo,
                   title = "Modo da Linha", 
                   group = "Corredores de Alta e Média Capacidade")
       

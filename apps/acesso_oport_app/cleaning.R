@@ -63,3 +63,24 @@ acess_min_rio <- read_rds("../../data/output_access/acess_min_rio.rds") %>%
 acess_min_junto <- rbind(acess_min_bel, acess_min_for, acess_min_rio)
 
 write_rds(acess_min_junto, "acess_min_junto.rds")
+
+
+# LIMITE DOS MUNICIPIOS ---------------------------------------------------
+
+muni_for <- read_rds("../../../data/municipios/municipios_ce.rds") %>%
+  filter(NM_MUNICIP %in% toupper(cidades_lookup$cidade_nome))
+
+muni_bel <- read_rds("../../../data/municipios/municipios_mg.rds") %>%
+  filter(NM_MUNICIP %in% toupper(cidades_lookup$cidade_nome))
+
+muni_rio <- read_rds("../../../data/municipios/municipios_rj.rds") %>%
+  filter(NM_MUNICIP %in% toupper(cidades_lookup$cidade_nome))
+
+# juntar
+
+cidades_lookup <- cidades_lookup %>% mutate(cidade_nome = toupper(cidade_nome))
+
+munics <- rbind(muni_for, muni_bel, muni_rio) %>%
+  left_join(cidades_lookup, by = c("NM_MUNICIP" = "cidade_nome"))
+
+write_rds(munics, "../data/limites_munis.rds")
