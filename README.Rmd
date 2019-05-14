@@ -4,9 +4,9 @@ knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = "UTF-8") })
 ---
 
-# Projeto Acesso a Oportunidades
+<img align="right" src="figure/ipea.jpg" alt="ipea" width="250"> 
 
-<img src="figure/ipea.jpg" alt="ipea" width="250"> 
+# Projeto Acesso a Oportunidades
 
 Repositório com os códigos utilizados no projeto do Ipea Acesso a Oportunidades
 

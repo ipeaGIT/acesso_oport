@@ -1,8 +1,8 @@
 
+<img align="right" src="figure/ipea.jpg" alt="ipea" width="250">
+
 Projeto Acesso a Oportunidades
 ==============================
-
-<img src="figure/ipea.jpg" alt="ipea" width="250">
 
 Repositório com os códigos utilizados no projeto do Ipea Acesso a Oportunidades
 
