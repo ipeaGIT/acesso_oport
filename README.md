@@ -1,5 +1,7 @@
 # Projeto Acesso a Oportunidades
 
+![](figure/ipea.jpg)
+
 Repositório com os códigos utilizados no projeto do Ipea Acesso a Oportunidades.
 
 # Sobre o projeto
