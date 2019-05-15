@@ -59,23 +59,120 @@ system(command)
 # para todos pontos: Elapsed time was 277.288 seconds
 ```
 
-Resultado: o método em python levou cerca de 8 minutos enquanto que o método em python levou 4,5 minutos.
+<!-- Resultado: o método em python levou cerca de 8 minutos enquanto que o método em python levou 4,5 minutos. -->
+Metodologia para a construção da matriz
+---------------------------------------
 
-Matriz para Fortaleza
----------------------
+Atestado que o método por python é mais veloz, é estabelecido então o método para a construção das matrizes de tempo de viagem usando o script em Python. O processo é dividido em três etapas: criação dos pontos de origem e destino, criação do script em python e aplicação do comando para iniciar o OTP.
 
-Atestado que o método por python é mais veloz, é construida a matriz para Fortaleza:
+### Criar pontos de origem para todas as cidades
+
+É criada então uma função que gera os pontos de origem e destino e suas coordenadas (no formato requerido pelo OTP e script em Python), para cada uma das resoluções de hexágonos determinadas anteriormente. A partir do nome abreviado do município (`CIDADE`), a função extrai o centróide de cada hexágono para todas as resoluções (`RES`) e salva no disco o nome `points_CIDADE_RES.csv` na pasta `../otp/points`.
 
 ``` r
-command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for.py"
+source("R/sfc_as_cols.R")
 
-system(command)
+points_allres <- function(muni_shortname) {
+  
+  dir <- dir("../data/hex_municipio/", pattern = muni_shortname)
+  
+  res <- str_extract(dir, "\\d+")
+  
+  dir_muni <- paste0("../data/hex_municipio/hex_", muni_shortname, "_", res, ".rds")
+  
+  seila <- function(muni_res) {
+    
+    dir_muni <- muni_res
+    
+    res <- str_extract(dir_muni, "\\d+")
+    
+    # criar pontos
+    hex_muni <- readRDS(dir_muni) %>%
+      select(id_hex) %>%
+      st_centroid() %>%
+      sfc_as_cols(names = c("X","Y")) %>%
+      rename(GEOID = id_hex)
+    
+    
+    # salvar
+    dir_output <- sprintf("../otp/points/points_%s_%s.csv", muni_shortname, res)
+      
+    write_csv(hex_muni, dir_output)
+      
+  }
+  
+  walk(dir_muni, seila)
+  
+}
 ```
 
-Matriz para Belo Horizonte
---------------------------
+### Criar script em Python
 
-Aplicando o método em python para Belo Horizonte:
+A função `criar_script_python` cria um script em python na pasta `../otp/py` que é utilizado para gerar os tempos de viagem entre os pares OD, e precisa de três inputs:
+
+-   `municipio`: é a sigla do município desejado (três primeiras letras);
+-   `data`: é a data de análise. Essa data deve estar dentro do intervalo `start_date`e `end_date` de datas determinado no arquivo `calendar.txt` que está no GTFS que foi utilizado para construção do graph daquela cidade;
+-   `res`: é a resolução de hexágonos desejada.
+
+O formato final do script é `otp_CIDADE_DATA_RES.py`.
+
+``` r
+source("R/criar_script_python.R")
+
+# dia = 2018-10-05
+
+# criar arquivo python
+criar_script_python("for", "2018-10-05", "09")
+criar_script_python("for", "2018-10-05", "09")
+```
+
+### Aplicar comando para rodar OTP
+
+Por fim, é necessário criar o comando para aplicar o OTP com o script em python. A função `rodar_otp` monta o comando a ser encaminhado para o Prompt de Comando, e toma como input a cidade, a data e a resolução desejada.
+
+``` r
+aplicar_otp <- function(cidade, data, res = 8) {
+  
+  py_nome <- sprintf("otp_%s_%s_%s.py", cidade, data, res)
+  
+  comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar py/%s", py_nome)
+  
+  shell(comando)
+  
+  
+}
+
+
+# # criar comando
+# command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for_2018-10-05_09.py"
+
+
+# Para resolução 09: Elapsed time was 2898.65 seconds
+```
+
+Matriz de tempo de viagem
+-------------------------
+
+Por fim, para a construção da matriz de tempo de viagem, as três etapas da metodologia descritas acima são aplicadas. Primeiro são criados todos os pontos centróides dos hexágonos (para todas as resoluções), depois é criado o script em python, e por fim é rodado o OTP.
+
+### Matriz para Fortaleza
+
+Para Fortaleza:
+
+``` r
+# criar pontos
+points_allres("for")
+
+# criar arquivo python
+criar_script_python("for", "2018-10-05", "09")
+
+# aplicar otp
+aplicar_otp("for", "2018-10-05", "09")
+```
+
+### Matriz para Belo Horizonte
+
+Aplicando o método em python para Belo Horizonte (AINDA COM A METODOLOGIA ANTIGA):
 
 ``` r
 source("R/sfc_as_cols.R")
@@ -96,15 +193,14 @@ read_rds("../data/hex_municipio/hex_bel.rds") %>%
 
 command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_bel.py"
 
-system(command)
+shell(command)
 
 # Elapsed time was 446.081 seconds
 ```
 
-Matriz para o Rio de Janeiro
-----------------------------
+### Matriz para o Rio de Janeiro
 
-Aplicando para o Rio de Janeiro:
+Aplicando para o Rio de Janeiro (AINDA COM A METODOLOGIA ANTIGA):
 
 ``` r
 source("R/sfc_as_cols.R")
@@ -125,7 +221,7 @@ read_rds("../data/hex_municipio/hex_rio.rds") %>%
 
 command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_rio.py"
 
-system(command)
+shell(command)
 
 # Elapsed time was 502.98 seconds
 ```

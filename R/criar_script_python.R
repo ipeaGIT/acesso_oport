@@ -1,9 +1,9 @@
-criar_script_python <- function(city, data, res) {
+criar_script_python <- function(municipio, data, res) {
   
-  # arquivo_por_res <- function(city, data, res) {
+  # arquivo_por_res <- function(municipio, data, res) {
     
   # Start writing to an output file
-  output_file <- sprintf("../otp/py/python_script_%s_%s_%s.py", city, data, res)
+  output_file <- sprintf("../otp/py/otp_%s_%s_%s.py", municipio, data, res)
   
   sink(output_file)
   
@@ -19,7 +19,7 @@ from org.opentripplanner.scripting.api import OtpsEntryPoint
   
   cat("
 # Instantiate an OtpsEntryPoint",
-sprintf("otp = OtpsEntryPoint.fromArgs(['--graphs', 'graphs', '--router', '%s'])", city),
+sprintf("otp = OtpsEntryPoint.fromArgs(['--graphs', 'graphs', '--router', '%s'])", municipio),
 "
 ", sep = "\n")
   
@@ -35,7 +35,7 @@ start_time = time.time()
   
   cat(
 "# Get the default router",
-sprintf("router = otp.getRouter('%s')", city), 
+sprintf("router = otp.getRouter('%s')", municipio), 
 "
 ", sep = "\n")
   
@@ -65,7 +65,7 @@ req.setMaxTimeSec(7200)                   # set a limit to maximum travel time (
   cat(
 "# Read Points of Destination - The file points.csv contains the columns GEOID, X and Y.",
 sprintf("points = otp.loadCSVPopulation('points/points_%s_%s.csv', 'Y', 'X')
-dests = otp.loadCSVPopulation('points/points_%s_%s.csv', 'Y', 'X')", city, res, city, res), 
+dests = otp.loadCSVPopulation('points/points_%s_%s.csv', 'Y', 'X')", municipio, res, municipio, res), 
 "", sep = "\n")
   
   cat(
@@ -91,7 +91,7 @@ for origin in points:
 
   cat(
 "# Save the result",
-sprintf("matrixCsv.save('../data/output_ttmatrix/traveltime_matrix_%s_%s.csv')", city, res),
+sprintf("matrixCsv.save('../data/output_ttmatrix/traveltime_matrix_%s_%s.csv')", municipio, res),
 " 
 ", sep = "\n")
     

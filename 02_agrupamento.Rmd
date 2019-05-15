@@ -36,7 +36,7 @@ Esse arquivo tem como objetivo agrupar os dados pelas unidades de agregação es
 - Estabelecimentos de saúde;
 - Escolas;
 - População;
-- Empregos (_very soon_).
+- Empregos (RAIS).
 
 Primeiramente é necessário criar as unidades de agregação que serão utilizadas.
 

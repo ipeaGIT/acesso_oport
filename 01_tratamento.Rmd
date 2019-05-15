@@ -135,13 +135,14 @@ walk(arquivos_shp, shp_to_rds)
 
 ```
 
-Em seguida, os dados estatísticos do setores do censo são tratados: é feita a retirada das variáveis relacionadas à renda e à quantidade de pessoas, depois é feito o cálculo da renda por pessoa.
+Em seguida, os dados estatísticos dos setores do censo são tratados: é feita a retirada das variáveis relacionadas à renda e à quantidade de pessoas, depois é feito o cálculo da renda por pessoa. A tabela resultante é salva como``renda_por_setor.rds``, e tem as variáveis para todos os setores juntos.
 
 ```{r setores var}
 
 setores1 <- fread("../data-raw/setores_censitarios/dados_censo2010A.csv")
 
 names(setores1)
+
 
 # Renda 6.19 - variavel escolhida: V003 = Total do rendimento nominal mensal dos domicílios particulares permanentes
 setores_renda <-  setores1 %>% 
@@ -162,7 +163,7 @@ setores_total <- setores_renda %>%
 
 ```
 
-É feita então a junção dos shapes com as estatísticas, resultando numa base dos setores censitários georreferenciada, dividida por uf, com informações de renda e habitantes.
+É feita então a junção dos shapes com as estatísticas, resultando numa base dos setores censitários georreferenciada, dividida por uf, com informações de renda e habitantes. A paste final ``setores_agregados`` contém todos os setores (com as variaveis de população e renda) com um arquivo para cada uf de nome ``setores_agregados_UF.rds``.
 
 ```{r setores juncao}
 
@@ -204,26 +205,30 @@ ufs <- tibble::tribble(
 # adicionar coluna para uf
 
 setores_total_v1 <- setores_total %>%
+  # Join com a tabela com o codigo das ufs
   left_join(ufs, by = "cod_uf") %>%
+  # Transformar em minusculo
   mutate(uf = tolower(uf)) %>%
+  # Ordernar por uf
   arrange(uf) %>%
+  # Criar uma lista com um data.frame por UF
   split(.$uf)
 
 # abrir os shapes dos setores por uf
 
 files <- dir("../data/setores/", full.names = TRUE)
 
+# Abrir em forma de uma lista com um data.frame para cada UF
 setores_shapes <- map(files, read_rds)
 
-# funcao para criar arquivo para cada estado
-
-setores_variaveis1 <- setores_total_v1[[1]]
-setores_shapes1 <- setores_shapes[[1]]
+# Funcao para criar arquivo agregada (com as variaveis de renda e populacao) para uf
 
 agregar_setores <- function(setores_variaveis1, setores_shapes1) {
   
+  # Extrair a uf do data.frame em questao
   uf <- unique(setores_variaveis1$uf)[1]
   
+  # Join os shapes com o data.frame das variaveis
   setores_fim <- setores_shapes1 %>%
     left_join(setores_variaveis1, by = "cod_setor")
   
@@ -242,10 +247,26 @@ walk2(setores_total_v1, setores_shapes, agregar_setores)
 
 ```
 
-
-
-
 ## Censo escolar
+
+Dentre todas as variáveis disponíveis no censo escolar foram escolhidas as seguintes:
+
+- ``cod_escola``: código único da escola;
+- ``uf``: sigla da uf em questão;
+- ``municipio``: código do município;
+- ``rede``: informações se a escola pertence à rede estadual, municipal, federal, ou é privada;
+- ``num_funcionarios``: número total de funcionários da escola;
+- ``presencial``: se o ensino naquela escola é presencial ou não;
+- ``mat_infantil``: a quantidade de matrículas daquela escola no ensino infantil;
+- ``mat_fundamental``: a quantidade de matrículas daquela escola no ensino fundamental;
+- ``mat_medio``: a quantidade de matrículas daquela escola no ensino médio;
+- ``mat_profissional``: a quantidade de matrículas daquela escola no ensino profissional;
+- ``mat_eja``: a quantidade de matrículas daquela escola na educação de jovens e adultos;
+- ``mat_especial``: a quantidade de matrículas daquela escola no ensino especial;
+- ``docentes``: o número total de docentes naquela escola;
+- ``lon`` e ``lat``: coordenadas.
+
+Esse arquivo foi então salvo com o nome ``censo_escolar_2015.csv``.
 
 
 ```{r censo escolar}
@@ -270,7 +291,7 @@ censo_escolar <-
 
 # SALVAR
 
-write_csv(censo_escolar, "data/censo_escolar/censo_escolar_2015.csv")
+write_csv(censo_escolar, "../data/censo_escolar/censo_escolar_2015.csv")
 
 
 # # TIDYING UP!!!
@@ -285,7 +306,7 @@ write_csv(censo_escolar, "data/censo_escolar/censo_escolar_2015.csv")
 
 ## Grade censo
 
-As grades do censo são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo ``Tabela_UF_ID.csv`` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco. 
+As grades do censo são agregações espaciais estimadas de tamanho padrão que contém informações populacionais (população de homens e mulheres), e são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo ``Tabela_UF_ID.csv`` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco. 
 
 ```{r grade censo}
 
@@ -405,7 +426,7 @@ grade_para_municipio <- function(muni, uf_input) {
 
 ```
 
-A função é então aplicada primeiramente para três cidades: Fortaleza, Rio de Janeiro e Belo Horizonte.
+A função é então aplicada para as cidades desejadas:
 
 ```{r aplicar grades}
 
@@ -433,7 +454,12 @@ walk2(municipios, ufs, grade_para_municipio)
 
 ## Empregos
 
-Base da RAIS:
+Os empregos são extraídos da base da RAIS (Relação Anual de Informações Sociais). A base foi georreferenciada por um software que retorna as coordenadas de latitute e longitude com uma avalição da qualidade do georreferenciamento. Com isso, as etapas do tratamento dessa base foram:
+
+- Deletar observações que tiveram georreferenciamento de 1 estrela (só conseguiu achar a cidade). Isso garante uma precisão suficiente para as análises seguintes;
+- Selecionar as colunas de interesse: ``id_estab``, que é o id do estabelecimento, ``cidade_uf``, que é a cidade daquele emprego, e coordenadas.
+- Salvar para o arquivo ``rais_2015.rds``.
+
 
 ```{r rais}
 
@@ -474,9 +500,6 @@ rais %>%
   geom_bar(aes(x = cidades_uf, y = n, fill = PrecisionDepth))
   
   
-
-```
-
 
 ```
 

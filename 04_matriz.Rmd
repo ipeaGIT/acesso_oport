@@ -93,11 +93,15 @@ system(command)
 
 ```
 
-Resultado: o método em python levou cerca de 8 minutos enquanto que o método em python levou 4,5 minutos.
+<!-- Resultado: o método em python levou cerca de 8 minutos enquanto que o método em python levou 4,5 minutos. -->
 
-## Criar pontos de origem para todas as cidades
+## Metodologia para a construção da matriz
 
-Função para criação de pontos de origem para todas as cidades em todas as resoluções de hexágonos:
+Atestado que o método por python é mais veloz, é estabelecido então o método para a construção das matrizes de tempo de viagem usando o script em Python. O processo é dividido em três etapas: criação dos pontos de origem e destino, criação do script em python e aplicação do comando para iniciar o OTP.
+
+### Criar pontos de origem para todas as cidades
+
+É criada então uma função que gera os pontos de origem e destino e suas coordenadas (no formato requerido pelo OTP e script em Python), para cada uma das resoluções de hexágonos determinadas anteriormente. A partir do nome abreviado do município (``CIDADE``), a função extrai o centróide de cada hexágono para todas as resoluções (``RES``) e salva no disco o nome ``points_CIDADE_RES.csv`` na pasta ``../otp/points``.
 
 ```{r points res}
 
@@ -139,36 +143,80 @@ points_allres <- function(muni_shortname) {
 
 ```
 
+###  Criar script em Python
 
-## Matriz para Fortaleza
+A função ``criar_script_python`` cria um script em python na pasta ``../otp/py`` que é utilizado para gerar os tempos de viagem entre os pares OD, e precisa de três inputs: 
 
-Atestado que o método por python é mais veloz, é construida a matriz para Fortaleza:
+- ``municipio``: é a sigla do município desejado (três primeiras letras);
+- ``data``: é a data de análise. Essa data deve estar dentro do intervalo ``start_date``e ``end_date`` de datas determinado no arquivo ``calendar.txt`` que está no GTFS que foi utilizado para construção do graph daquela cidade;
+- ``res``: é a resolução de hexágonos desejada.
+
+O formato final do script é ``otp_CIDADE_DATA_RES.py``.
 
 ```{r matriz for}
 
 source("R/criar_script_python.R")
 
-# criar pontos
-points_allres("for")
-
 # dia = 2018-10-05
 
 # criar arquivo python
 criar_script_python("for", "2018-10-05", "09")
+criar_script_python("for", "2018-10-05", "09")
 
-# criar comando
-command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for_2018-10-05_09.py"
 
-shell(command)
+```
+
+### Aplicar comando para rodar OTP
+
+Por fim, é necessário criar o comando para aplicar o OTP com o script em python. A função ``rodar_otp`` monta o comando a ser encaminhado para o Prompt de Comando, e toma como input a cidade, a data e a resolução desejada.
+
+```{r fun_aplicar_otp}
+
+
+aplicar_otp <- function(cidade, data, res = 8) {
+  
+  py_nome <- sprintf("otp_%s_%s_%s.py", cidade, data, res)
+  
+  comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar py/%s", py_nome)
+  
+  shell(comando)
+  
+  
+}
+
+
+# # criar comando
+# command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for_2018-10-05_09.py"
+
 
 # Para resolução 09: Elapsed time was 2898.65 seconds
 
 ```
 
+## Matriz de tempo de viagem
 
-## Matriz para Belo Horizonte
+Por fim, para a construção da matriz de tempo de viagem, as três etapas da metodologia descritas acima são aplicadas. Primeiro são criados todos os pontos centróides dos hexágonos (para todas as resoluções), depois é criado o script em python, e por fim é rodado o OTP.
 
-Aplicando o método em python para Belo Horizonte:
+### Matriz para Fortaleza
+
+Para Fortaleza:
+
+```{r aplicar_otp_for}
+
+# criar pontos
+points_allres("for")
+
+# criar arquivo python
+criar_script_python("for", "2018-10-05", "09")
+
+# aplicar otp
+aplicar_otp("for", "2018-10-05", "09")
+
+```
+
+### Matriz para Belo Horizonte
+
+Aplicando o método em python para Belo Horizonte (AINDA COM A METODOLOGIA ANTIGA):
 
 ```{r matriz bel}
 
@@ -196,9 +244,9 @@ shell(command)
 
 ```
 
-## Matriz para o Rio de Janeiro
+### Matriz para o Rio de Janeiro
 
-Aplicando para o Rio de Janeiro:
+Aplicando para o Rio de Janeiro (AINDA COM A METODOLOGIA ANTIGA):
 
 ```{r matriz rio}
 
