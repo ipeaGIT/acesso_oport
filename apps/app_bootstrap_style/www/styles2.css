@@ -35,23 +35,14 @@ h1 {
   padding: 0 20px 20px 20px;
   border: 1px solid transparent;
   border-radius: 20px;
-  cursor: move;
-  /* Fade out while not hovering */
-  opacity: 0.4;
-  /*zoom: 0.9;*/
-  transition: opacity 300ms 0.5s; 
 }
 
-
-#controls:hover {
-  /* Fade in while hovering */
-  opacity: 0.95;
-  transition-delay: 0;
-}   
 
 /* Modificar o tamanho do mapa! */
 #map {
   height: calc(100vh - 80px) !important;
+  width: 1200px !important;
+  
 } 
 
 

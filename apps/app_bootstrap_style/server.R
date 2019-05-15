@@ -22,7 +22,7 @@ acess_min <- read_rds("../data/acess_min_junto.rds") %>%
 
 linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 
-limites <- read_rds("../data/limites_munis.rds")
+# limites <- read_rds("../data/limites_munis.rds")
 
 
 # Define a server for the Shiny app
@@ -85,14 +85,17 @@ function(input, output) {
   })
   
   colorpal_min <- reactive({
-    colorNumeric("BuPu", atividade_filtrada_min()$travel_time)
+        colorNumeric("BuPu", atividade_filtrada_min()$travel_time)
   })
   
   # Mapa
   output$map <- renderLeaflet({
     
     vai <- filter(acess_cum, cidade_nome == input$cidade) %>% st_as_sf()
-    limite <- filter(limites, NM_MUNICIP == toupper(input$cidade))
+    
+    limite <- vai %>%
+      mutate(ui = 1) %>%
+      count(ui)
     
     bounds <- st_bbox(vai)
     min_lon <- bounds["xmin"] %>% as.numeric()
@@ -103,8 +106,8 @@ function(input, output) {
     # cidade_filtrada() %>%
       leaflet(data = vai) %>%
         addTiles() %>%
-        fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat) %>%
-        addPolygons(data = limite, stroke = TRUE, color = "black", weight = 2)
+        addPolygons(data = limite, stroke = TRUE, color = "black", weight = 5, fill = FALSE)
+        # fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat)
       # addLegend(data = filter(access, cidade_nome == "Fortaleza"), 
       #           "bottomright", pal = pal, values = ~saude_total,
       #           title = "Oportunidade de saúde em<br/> até 40 minutos",
@@ -138,7 +141,7 @@ function(input, output) {
     
     colorpal_linhas <- colorFactor("Accent", linhas_cidade$Modo)
     
-    if (input$indicador == "Indicador Cumulativo") {
+    if (input$indicador == "Cumulativo") {
       pal <- colorpal()
       
       popup_hex <- paste0("<b>População: </b>", tempo_filtrado()$pop_total, "<br/>",
@@ -161,14 +164,14 @@ function(input, output) {
                      popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
         addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", position = "topleft",
                          options = layersControlOptions(collapsed = FALSE)) %>%
-        addLegend(data = tempo_filtrado(), "bottomright", pal = pal, values = ~atividade,
+        addLegend(data = tempo_filtrado(), "bottomleft", pal = pal, values = ~atividade,
                   title = sprintf("Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
         addLegend(data = linhas_cidade, "topleft", pal = colorpal_linhas, values = ~Modo,
                   title = "Modo da Linha", 
                   group = "Corredores de Alta e Média Capacidade")
       
       
-    } else if (input$indicador == "Indicador de oportunidade mais próxima") {
+    } else if (input$indicador == "Oportunidade mais próxima") {
       
       pal <- colorpal_min()
       
@@ -191,7 +194,7 @@ function(input, output) {
                      popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
         addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", position = "topleft",
                          options = layersControlOptions(collapsed = FALSE)) %>%
-        addLegend(data = atividade_filtrada_min(), "bottomright", pal = pal, values = ~travel_time,
+        addLegend(data = atividade_filtrada_min(), "bottomleft", pal = pal, values = ~travel_time,
                   title = c("Minutos atè a oportunidade mais próxima")) %>%
         addLegend(data = linhas_cidade, "topleft", pal = colorpal_linhas, values = ~Modo,
                   title = "Modo da Linha", 
