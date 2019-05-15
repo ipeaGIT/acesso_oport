@@ -33,11 +33,13 @@ library(stringr)
 Esse arquivo tem como objetivo tratar os dados brutos do projeto de acesso a oportunidades.
 As bases de dados tratadas aqui são:
 
-- ``Municípios``
-- ``Censo escolar``
-- ``Grade censo``
-- ``Hospitais``
-- ``GTFS``
+- ``Municípios``;
+- ``Setores Censitários``;
+- ``Renda``;
+- ``Censo escolar``;
+- ``Grade censo``;
+- ``Hospitais``;
+- ``GTFS``;
 - ``Elevação``
 
 ## Municípios
