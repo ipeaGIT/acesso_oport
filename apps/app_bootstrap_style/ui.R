@@ -1,30 +1,90 @@
 library(shiny)
 library(leaflet)
 library(RColorBrewer)
+library(shinyWidgets)
 
-bootstrapPage(
-  titlePanel(HTML("<h1>&emsp;Acesso a Oportunidades</h1>")), 
-  tags$head(includeCSS("www/styles.css")),
-  leafletOutput("map", width = "100%", height = "90%"),
-  absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE,
-                top = 60, right = 20, width = 300, height = 600,
-                selectInput(inputId = "cidade", 
-                            label = HTML("<h1>Escolha a cidade:</h1>"), 
-                            choices = c("Belo Horizonte", "Fortaleza", "Rio de Janeiro"), 
-                            selected = "Fortaleza"),
-                selectInput(inputId = "atividade", 
-                            label = HTML("<h1>Escolha a atividade</h1>"), 
-                            choices = c("Saúde", "Educação"), 
-                            selected = "Saúde"),
-                radioButtons(inputId = "indicador", 
-                             label = HTML("<h1>Escolha o indicador de acessibilidade:</h1>"), 
-                             choices = c("Indicador Cumulativo", "Indicador de oportunidade mais próxima"), 
-                             selected = "Indicador Cumulativo"),
-                conditionalPanel(condition = "input.indicador == 'Indicador Cumulativo'",
-                                 sliderInput(inputId = "tempo", 
-                                             label = HTML("<h1>Escolha o tempo de viagem:</h1>"),
-                                             min = 15, max = 60,
-                                             step = 15, value = 15,
-                                             animate = TRUE))
-  )
+
+# UI SO COM UMA ABA -------------------------------------------------------
+
+div(class = "navbar-default",
+    navbarPage("Acesso a Oportunidades",
+               tabPanel("Mapa",
+                        tags$head(includeCSS("www/styles.css")),
+                        # https://divadnojnarg.github.io/blog/customsliderinput/
+                        chooseSliderSkin("Modern"),
+                        # titlePanel(HTML("<h1>&emsp;Acesso a Oportunidades</h1>")),
+                        leafletOutput("map"),
+                        absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE,
+                                      top = 80, right = 20, width = 350, height = 600,
+                                      selectInput(inputId = "cidade",
+                                                  label = h1("Escolha a cidade:"),
+                                                  choices = c("Belo Horizonte", "Fortaleza", "Rio de Janeiro"),
+                                                  selected = "Fortaleza"),
+                                      selectInput(inputId = "atividade",
+                                                  label = h1("Escolha a atividade:"),
+                                                  choices = c("Saúde", "Educação"),
+                                                  selected = "Saúde"),
+                                      awesomeRadio(inputId = "indicador",
+                                                   label = h1("Escolha o indicador de acessibilidade:"),
+                                                   choices = c("Cumulativo", "Oportunidade mais próxima"),
+                                                   selected = "Cumulativo"),
+                                      conditionalPanel(condition = "input.indicador == 'Cumulativo'",
+                                                       sliderInput(inputId = "tempo",
+                                                                   label = h1("Escolha o tempo de viagem:"),
+                                                                   min = 15, max = 60,
+                                                                   step = 15, value = 15,
+                                                                   animate = TRUE))
+                        )
+               ),
+               tabPanel("Sobre o projeto",
+                        sidebarPanel(includeMarkdown("about.md"))
+               )
+
+    )
 )
+
+
+
+# TESTE -------------------------------------------------------------------
+
+
+# navbarPage("Acesso a Oportunidades",
+#            tabPanel("Visualização",
+#                     tags$head(includeCSS("www/styles2.css")),
+#                     # https://divadnojnarg.github.io/blog/customsliderinput/
+#                     chooseSliderSkin("Modern"),
+#                     sidebarPanel(id = "controls", class = "panel panel-default", width = 2,      
+#                                  selectInput(inputId = "cidade", 
+#                                              label = h1("Escolha a cidade:"), 
+#                                              choices = c("Belo Horizonte", "Fortaleza", "Rio de Janeiro"), 
+#                                              selected = "Fortaleza"),
+#                                  selectInput(inputId = "atividade", 
+#                                              label = h1("Escolha a atividade:"), 
+#                                              choices = c("Saúde", "Educação"),
+#                                              selected = "Saúde"),
+#                                  awesomeRadio(inputId = "indicador", 
+#                                               label = h1("Escolha o indicador de acessibilidade:"), 
+#                                               choices = c("Cumulativo", "Oportunidade mais próxima"), 
+#                                               selected = "Cumulativo"),
+#                                  conditionalPanel(condition = "input.indicador == 'Cumulativo'",
+#                                                   sliderInput(inputId = "tempo", 
+#                                                               label = h1("Escolha o tempo de viagem:"),
+#                                                               min = 15, max = 60,
+#                                                               step = 15, value = 15,
+#                                                               animate = TRUE))
+#                     ),
+#                     mainPanel(
+#                       
+#                       tabsetPanel(
+#                         tabPanel("Map",leafletOutput("map")),
+#                         tabPanel("Gráficos",
+#                                  div(id = "controls", class = "panel panel-default", 
+#                                      h1("So fazendo uns testes!"))   
+#                         )
+#                       )
+#                     )
+#            ),
+#            tabPanel("Sobre o projeto",
+#                     sidebarPanel(includeMarkdown("about.md")))
+# )
+  
