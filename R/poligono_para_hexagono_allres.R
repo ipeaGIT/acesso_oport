@@ -4,6 +4,10 @@
 
 # remotes::install_local("misc/h3jsr-master.zip")
 
+# Para testar:
+municipio <- "fortaleza"
+uf_sigla <- "ce"
+
 
 library(h3jsr)
 
@@ -20,6 +24,9 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
   
   res_todas <- c(7, 8, 9, 10)
   
+  # Teste:
+  resolution <- 8
+  
   make_hex <- function(resolution, muninho) {
     
     # get the unique h3 ids of the hexagons intersecting your polygon at a given resolution
@@ -35,17 +42,21 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
     # pass the h3 ids to return the hexagonal grid
     hex_grid <- unlist(hex_ids$h3_polyfillers) %>% 
       h3jsr::h3_to_polygon(simple = FALSE) %>%
-      mutate(id_hex = 1:n())
+      rename(id_hex = h3_address) %>%
+      as_tibble() %>% 
+      st_sf()
     
     
     
     # salvar ------------------------------------------------------------------
     
     municipio_nome_salvar <- substring(municipio, 1, 3)
+    if (nchar(resolution) == 1) res_fim <- paste0("0", resolution) else res_fim <- resolution
+      
     
     # salvar no disco
     write_rds(hex_grid, 
-              paste0("../data/hex_municipio/hex_", municipio_nome_salvar, "_0", resolution, ".rds"))
+              paste0("../data/hex_municipio/hex_", municipio_nome_salvar, "_", res_fim, ".rds"))
     
     
     
