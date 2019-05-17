@@ -29,22 +29,26 @@ extract_lowdensity_areas <- function(cidade) {
   
   udh_cur_fim <- udh_cur_shape %>%
     left_join(udh_cur_vars, by = "UDH_Atlas") %>%
-    select(UDH_Atlas, POP) %>%
-    # Calcular densidade populacional
-    mutate(area = st_area(.) %>% as.numeric()) %>%
-    mutate(area = area * 10^(-6)) %>%
-    mutate(pop_dens = POP/area)
+    select(UDH_Atlas)
+    # # Calcular densidade populacional
+    # mutate(area = st_area(.) %>% as.numeric()) %>%
+    # mutate(area = area * 10^(-6)) %>%
+    # mutate(pop_dens = POP/area)
   
   
   # ABRIR HEXAGONOS ---------------------------------------------------------
   
   hex_cur <- read_rds(hex_path) %>%
     mutate(pop_total = ifelse(is.na(pop_total), 0, pop_total)) %>%
-    # filter(pop_total > 0 | empregos_total > 0 | saude_total > 0 | escolas_total > 0) %>%
-    # Calcular densidade populacional
+    # mutate(empregos_total = ifelse(is.na(empregos_total), 0, pop_total)) %>%
+    filter(pop_total > 0 | empregos_total > 0 | saude_total > 0 | escolas_total > 0) %>%
+    # Calcular densidade de atividades!
     mutate(area = st_area(.) %>% as.numeric()) %>%
     mutate(area = area * 10^(-6)) %>%
-    mutate(pop_dens = pop_total/area)
+    # Somar todas as atividades
+    mutate(atividades_total = pmap_dbl(list(pop_total, empregos_total, saude_total, escolas_total), sum)) %>%
+    # Calcular densidade de atividades
+    mutate(atividade_dens = atividades_total/area)
   
     
     
@@ -58,7 +62,7 @@ extract_lowdensity_areas <- function(cidade) {
   
   # Qual o 10 percentil?
   
-  percentil <- quantile(hex_cur$pop_dens, 0.2, na.rm = TRUE)
+  percentil <- quantile(hex_cur$atividade_dens, 0.2, na.rm = TRUE)
   
   # # Filtrar as UDHs que estao abaixo desse percentil
   # 
@@ -68,7 +72,7 @@ extract_lowdensity_areas <- function(cidade) {
   # Filtrar os hexagonos que estao abaixo desse percentil
   
   hex_cur_low <- hex_cur %>%
-    filter(pop_dens <= percentil)
+    filter(atividade_dens <= percentil)
   
   # mapview(udh_cur_low)
   
@@ -87,7 +91,7 @@ extract_lowdensity_areas <- function(cidade) {
   
   hex_cur_fim <- hex_cur %>%
     filter(id_hex %nin% hex_cur_low$id_hex) %>%
-    select(- area, -pop_dens)
+    select(-area, -atividades_total, -atividade_dens)
   
   # Agrupar os hexagonos low
   hex_cur_low_group <- hex_cur_low_v1 %>%
@@ -133,3 +137,8 @@ mapview(novo_cur) + mapview(udh_cur_fim)
 
 st_write(novo_sao, "../data/temp/agregacoes_uber_sao.shp")  
 st_write(novo_cur, "../data/temp/agregacoes_uber_cur.shp")  
+
+# SALVAR SHP -----------------------------------------------------------
+
+st_write(novo_sao, "../data/temp/agregacoes_uber_sao_v3.shp")  
+st_write(novo_cur, "../data/temp/agregacoes_uber_cur_v3.shp")  
