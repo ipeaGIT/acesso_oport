@@ -23,7 +23,7 @@
 # FUNCAO!!!!!!!! ----------------------------------------------------------
 
 
-run_validator <- function(cidade, wait = FALSE) {
+run_validator <- function(cidade, wait = TRUE) {
   
   gtfs_files <- dir(paste0("../data-raw/gtfs/", cidade), pattern = "*.zip$")
   
@@ -49,4 +49,4 @@ run_validator <- function(cidade, wait = FALSE) {
 # run_validator("bel")
 
 
-
+run_validator("temp")
