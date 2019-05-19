@@ -33,11 +33,13 @@ library(stringr)
 Esse arquivo tem como objetivo tratar os dados brutos do projeto de acesso a oportunidades.
 As bases de dados tratadas aqui são:
 
-- ``Municípios``
-- ``Censo escolar``
-- ``Grade censo``
-- ``Hospitais``
-- ``GTFS``
+- ``Municípios``;
+- ``Setores Censitários``;
+- ``Renda``;
+- ``Censo escolar``;
+- ``Grade censo``;
+- ``Hospitais``;
+- ``GTFS``;
 - ``Elevação``
 
 ## Municípios
@@ -247,6 +249,60 @@ walk2(setores_total_v1, setores_shapes, agregar_setores)
 
 ```
 
+Há a necessidade de filtrar os setores agregados por uf nas cidades dos projetos:
+
+```{r setores_por_municipio}
+
+# nome do municipio completo, minusculo, sem acentos
+municipio_logname <- "fortaleza"
+uf <- "ce"
+
+setores_por_municipio <- function(municipio_logname, uf) {
+  
+  # Abrir setores da uf
+  path_setor_uf <- sprintf("../data/setores_agregados_uf/setores_agregados_%s.rds", uf)
+  setor_uf <- read_rds(path_setor_uf)
+  
+  # Abrir tabela com as siglas dos municipios
+  tabela_muni <- read_delim("../data-raw/tabela_muni_codigos_2010.csv", delim = ";", skip = 2, 
+                            locale = locale(encoding = 'WINDOWS-1252')) %>%
+    select(municipio, nome_municipio) %>%
+    # Mudar para minusculo
+    mutate(nome_municipio1 = tolower(nome_municipio)) %>%
+    # Tirar acentos do nome do municipio
+    # mutate(nome_municipio1 = rm_accent(nome_municipio1)) %>%
+    mutate(nome_municipio1 = trimws(nome_municipio1))
+    # # Determinar a sigla (tres primeiras letras)
+    # mutate(nome_municipio1 = substr(nome_municipio1, 1, 3))
+  
+  # Fazer juncao
+  muni_desejado <- tabela_muni %>%
+    filter(nome_municipio1 == municipio_logname)
+  
+  setor_municipio <- setor_uf %>%
+    filter(cod_muni %in% muni_desejado$municipio)
+  
+  # Salvar
+  muni_shortname <- substr(municipio_logname, 1, 3)
+  path_out <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", muni_shortname)
+  write_rds(setor_municipio, path_out)
+  
+}
+
+# Aplicar funcao
+
+municipio_logname <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "sao paulo", "curitiba")
+ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
+
+walk2(municipio_logname, ufs, setores_por_municipio)
+
+setores_por_municipio("teresina", "pi") 
+
+
+
+```
+
+
 ## Censo escolar
 
 Dentre todas as variáveis disponíveis no censo escolar foram escolhidas as seguintes:
@@ -358,7 +414,7 @@ A função para extrair os municípios das grades do IBGE requer dois inputs: o 
 - O geoprocessamento extrai somente as grades que estão inseridas dentro dos limites do município;
 - O resultado é salvo em disco.
 
-```{r funcao grade para municipio}
+```{r funcao_grade_p_municipio}
 
 
 grade_para_municipio <- function(muni, uf_input) {
@@ -435,6 +491,7 @@ ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
 
 grade_para_municipio("são paulo", "sp")
 grade_para_municipio("curitiba", "pr")
+grade_para_municipio("teresina", "pi")
 
 walk2(municipios, ufs, grade_para_municipio)
 
@@ -457,52 +514,36 @@ walk2(municipios, ufs, grade_para_municipio)
 Os empregos são extraídos da base da RAIS (Relação Anual de Informações Sociais). A base foi georreferenciada por um software que retorna as coordenadas de latitute e longitude com uma avalição da qualidade do georreferenciamento. Com isso, as etapas do tratamento dessa base foram:
 
 - Deletar observações que tiveram georreferenciamento de 1 estrela (só conseguiu achar a cidade). Isso garante uma precisão suficiente para as análises seguintes;
-- Selecionar as colunas de interesse: ``id_estab``, que é o id do estabelecimento, ``cidade_uf``, que é a cidade daquele emprego, e coordenadas.
+- Selecionar as colunas de interesse: ``id_estab``, que é o id do estabelecimento,  ``qt_vinc_ativos``, que é a quantidade de vínculos ativos, ``cod_mun``, que é o código do município, e coordenadas.
 - Salvar para o arquivo ``rais_2015.rds``.
 
 
 ```{r rais}
 
-rais_raw <- read_csv("../data-raw/rais/rais_2015_rafa_franco.csv")
+library(foreign)
 
-rais <- rais_raw %>%
-  # Excluir enderecos com 1 estrela
-  filter(PrecisionDepth != "1 Estrela") %>%
-  # Tirar acentos do endereco e transformar tudo para minusculo
-  mutate(MatchedAddress = iconv(MatchedAddress, to = "ASCII//TRANSLIT")) %>%
-  mutate(MatchedAddress = tolower(MatchedAddress)) %>%
-  # Extrair cidade
-  mutate(cidade_uf = gsub("(^.+,\\s)?(\\D+,\\s[[:alpha:]]{2})(,\\s\\d+$)?", "\\2", MatchedAddress, perl = TRUE)) %>%
-  # Selecionar colunas
-  select(id_estab, cidade_uf, lon = Longitude, lat = Latitude) %>%
-  # Tirar nulos
-  filter(!is.na(lon)) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+# Abrir RAIS (formato stata)
+rais_raw <- read.dta("../data-raw/rais/estab_2015_vinc_coord.dta")
+# Transformar em data.table
+setDT(rais_raw)
+# Deletar as localizacoes com precisao de 1 estrela
+rais_v1 <- rais_raw[Precison_original != "1 Estrela"]
+# Ajeitar as coordenadas
+rais_v1 <- rais_v1[, ':='(lon = as.numeric(gsub(",", ".", longitude)), lat = as.numeric(gsub(",", ".", latitude)))]
+# Selecionar as colunas de interesse
+rais_v1 <- rais_v1[, .(id_estab, qt_vinc_ativos, cod_mun = ibge_cod7, lon, lat)]
+# Dropar coordenadas NA
+rais_v1 <- na.omit(rais_v1, cols = c("lon", "lat"))
+# Transformar para sf
+rais_v1 <- st_as_sf(rais_v1, coords = c("lon", "lat"), crs = 4326)
 
 
 # Salvar
-
-write_rds(rais, "../data/rais/rais_2015.rds")
-
-```
-
-Analisar a qualidade do georreferenciamento para as grandes cidades:
-
-```{r rais geo}
-
-cidades <- c("fortaleza, ce", "recife, pe", "belo horizonte, mg", "rio de janeiro, rj",
-                                         "porto alegre, rs", "curitiba, pr", "teresina, pi")
-
-rais %>%
-  filter(cidade_uf %in% cidades) %>%
-  count(PrecisionDepth, cidades_uf) %>%
-  ggplot()+
-  geom_bar(aes(x = cidades_uf, y = n, fill = PrecisionDepth))
-  
-  
+write_rds(rais_v1, "../data/rais/rais_2015.rds")
 
 ```
 
+Sugestão futura: analisar a qualidade do georreferenciamento para as grandes cidades.
 
 ## GTFS
 

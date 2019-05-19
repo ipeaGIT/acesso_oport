@@ -37,7 +37,7 @@
 
 # FUNCAO!!!!!!!!!!!!!!!! --------------------------------------------------
 
-
+munis <- "for"
 
 agrupar_variaveis <- function(munis) {
   
@@ -77,10 +77,11 @@ agrupar_variaveis <- function(munis) {
     
     dir_muni <- paste0("../data/hex_municipio/hex_", munis, "_", res, ".rds")
     
-    dir_grade <- paste0("../data/grade_municipio/grade_", munis, ".rds")
+    dir_grade <- paste0("../data/grade_municipio_com_renda/grade_renda_", munis, ".rds")
     
     pop <- read_rds(dir_grade) %>%
-      dplyr::select(id_grade, POP) %>%
+      dplyr::select(id_grade, pop_total, renda) %>%
+      mutate(renda = as.numeric(renda)) %>%
       st_centroid()
     
     # Extrair o nome da cidade de acordo com a base da RAIS
@@ -89,6 +90,8 @@ agrupar_variaveis <- function(munis) {
     # setDT(empregos)
     # 
     # empregos_v1 <- empregos[cidade_uf == cidade_ufs]
+    
+    muni_res <- dir_muni[1]
     
     # FUNCAO PARA REALIZAR PARA TODAS AS RESOLUCOES ------------------------------
     
@@ -101,26 +104,28 @@ agrupar_variaveis <- function(munis) {
       hex_muni <- readRDS(dir_muni)
       
       hex_muni_fim <- hex_muni %>%
+        # Agrupar populacao e renda
         st_join(pop) %>%
         group_by(id_hex) %>%
-        summarise(pop_total = sum(POP)) %>%
+        summarise(pop_total = sum(pop_total), renda_total = sum(renda)) %>%
         ungroup() %>%
-        # Agrupar empregos
+        # Agrupar empregos (agora somando a quantidade de vinculos!)
         st_join(empregos) %>%
-        mutate(indice = ifelse(is.na(id_estab), 0, 1)) %>%
-        group_by(id_hex, pop_total) %>%
-        summarise(empregos_total = sum(indice)) %>%
+        # mutate(indice = ifelse(is.na(id_estab), 0, 1)) %>%
+        group_by(id_hex, pop_total, renda_total) %>%
+        summarise(empregos_total = sum(qt_vinc_ativos, na.rm = TRUE)) %>%
         ungroup() %>%
+        mutate(empregos_total = ifelse(is.na(empregos_total), 0, empregos_total)) %>%
         # agrupar saude
         st_join(cnes) %>%
         mutate(indice = ifelse(is.na(co_cnes), 0, 1)) %>%
-        group_by(id_hex, pop_total, empregos_total) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_total) %>%
         summarise(saude_total = sum(indice)) %>%
         ungroup() %>%
         # agrupar educacao
         st_join(escolas) %>%
         mutate(indice = ifelse(is.na(cod_escola), 0, 1)) %>%
-        group_by(id_hex, pop_total, empregos_total, saude_total) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_total, saude_total) %>%
         summarise(escolas_total = sum(indice)) %>%
         ungroup()
       
@@ -145,9 +150,9 @@ agrupar_variaveis <- function(munis) {
   
 }
 
-agrupar_variaveis(c("for", "rec", "bel", "rio", "por", "cur", "ter"))
-agrupar_variaveis("sao")
-agrupar_variaveis("cur")
-agrupar_variaveis("por")
+# agrupar_variaveis(c("for", "rec", "bel", "rio", "por", "cur", "ter"))
+# agrupar_variaveis("sao")
+# agrupar_variaveis("cur")
+# agrupar_variaveis("por")
 
 
