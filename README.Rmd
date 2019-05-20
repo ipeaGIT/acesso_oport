@@ -56,9 +56,9 @@ Um aplicativo web em Shiny com os resultados parciais do projeto está sendo des
 shiny::runApp(appDir = "apps/app_bootstrap_style/")
 ```
 
-```{r, eval = TRUE, echo = FALSE}
+<!-- ```{r, eval = TRUE, echo = FALSE} -->
 
-include_graphics("figure/gif_app.gif")
+<!-- include_graphics("figure/gif_app.gif") -->
 
-```
+<!-- ``` -->
 

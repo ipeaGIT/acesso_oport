@@ -70,4 +70,8 @@ aplicativo pode ser acessada pelo comando:
 shiny::runApp(appDir = "apps/app_bootstrap_style/")
 ```
 
-![](figure/gif_app.gif)<!-- -->
+<!-- ```{r, eval = TRUE, echo = FALSE} -->
+
+<!-- include_graphics("figure/gif_app.gif") -->
+
+<!-- ``` -->
