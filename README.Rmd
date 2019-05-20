@@ -4,6 +4,13 @@ knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = "UTF-8") })
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = FALSE)
+
+library(knitr)
+
+```
+
 <img align="right" src="figure/ipea.jpg" alt="ipea" width="250"> 
 
 # Projeto Acesso a Oportunidades
@@ -40,3 +47,18 @@ Pastas referentes aos dados que não estão presentes nesse repositório porque 
 - ``otp``: arquivos utilizados na construção do _router_ do OpenTripPlanner.
 
 Futuramente esses dados serão disponibilizados através de uma API.
+
+## Aplicativo Acesso a Oportunidades
+
+Um aplicativo web em Shiny com os resultados parciais do projeto está sendo desenvolvido paralelamente, com os códigos e dados disponíveis na pasta ``apps``. Após clonar o repositório, a versão mais atualizada do aplicativo pode ser acessada pelo comando:
+
+```{r}
+shiny::runApp(appDir = "apps/app_bootstrap_style/")
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+include_graphics("figure/gif_app.gif")
+
+```
+
