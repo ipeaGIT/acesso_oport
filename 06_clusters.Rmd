@@ -41,7 +41,7 @@ Aplicando para a capital cearense:
 
 ```{r lisa for}
 
-source("R/create_lisamaps.R")
+source("R/6-create_lisamaps.R")
 
 criar_lisamaps("for")
 
@@ -53,7 +53,7 @@ Aplicando para a capital mineira:
 
 ```{r lisa bel}
 
-source("R/create_lisamaps.R")
+source("R/6-create_lisamaps.R")
 
 criar_lisamaps("bel")
 
@@ -65,7 +65,7 @@ Para o Rio de Janeiro:
 
 ```{r lisa rio}
 
-source("R/create_lisamaps.R")
+source("R/6-create_lisamaps.R")
 
 criar_lisamaps("rio", cols = 1)
 

@@ -37,7 +37,7 @@
 
 # FUNCAO!!!!!!!!!!!!!!!! --------------------------------------------------
 
-munis <- "for"
+# munis <- "for"
 
 agrupar_variaveis <- function(munis) {
   
@@ -49,7 +49,7 @@ agrupar_variaveis <- function(munis) {
   
   # educacao
   escolas <- read_csv("../data/censo_escolar/censo_escolar_2015.csv") %>%
-    filter(!is.na(lon)) %>%
+    dplyr::filter(!is.na(lat)) %>%
     # mutate(municipio == tolower(municipio)) %>%
     # filter(municipio == muni) %>%
     st_as_sf(coords = c("lon", "lat"), crs = 4326)

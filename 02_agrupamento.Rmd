@@ -26,7 +26,6 @@ library(stringr)
 library(purrr)
 library(furrr)
 
-# source("R/agrupar_por_hex.R")
 ```
 
 # Agrupamento de dados socioeconômicos de uso do solo
@@ -46,7 +45,7 @@ As cidade brasileiras analisadas serão dividadas em hexágonos. A função ``po
 
 ```{r hexagonos}
 
-source("R/poligono_para_hexagono_allres.R")
+source("R/2-poligono_para_hexagono_allres.R")
 
 # # aplicando ---------------------------------------------------------------
 
@@ -126,8 +125,12 @@ renda_de_setor_p_grade <- function(cidade) {
 }
 
 # Aplicar funcao
-cidades <- c("for", "bel", "rio", "por", "cur", "ter", "sao")
-walk(cidades, renda_de_setor_p_grade)
+renda_de_setor_p_grade("for")
+renda_de_setor_p_grade("bel")
+renda_de_setor_p_grade("rio")
+renda_de_setor_p_grade("por")
+renda_de_setor_p_grade("cur")
+renda_de_setor_p_grade("sao")
 
 
 
@@ -142,16 +145,15 @@ A função ``agrupar_variaveis`` aceita como _input_ o nome do município deseja
 ```{r agregar variaveis}
 
 # abrir funcao
-source("R/agrupar_variaveis.R")
+source("R/2-agrupar_variaveis.R")
 
-# escolher cidades
-
-munis <- c("bel", "rio", "por", "cur", "ter", "sao")
-munis <- "for"
-
-# aplicar funcao
-
-agrupar_variaveis(munis)
+# Aplicar funcao
+agrupar_variaveis("for")
+agrupar_variaveis("bel")
+agrupar_variaveis("rio")
+agrupar_variaveis("por")
+agrupar_variaveis("cur")
+agrupar_variaveis("sao")
 
 ```
 

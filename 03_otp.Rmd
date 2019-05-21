@@ -35,7 +35,7 @@ A função ``construir_graph`` constrói o arquivo ``Graph.obj``, que é necess�
 
 ```{r graphs}
 
-source("R/otp.R")
+source("R/3-otp.R")
 
 construir_graph("for")
 construir_graph("bel")
@@ -49,7 +49,7 @@ Atestar qualidade do GTFS através do ``feedvalidator``:
 
 ```{r feedvalidator}
 
-source("R/feed_validator.R")
+source("R/3-feed_validator.R")
 
 
 

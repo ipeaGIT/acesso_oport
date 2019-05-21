@@ -28,8 +28,8 @@ library(furrr)
 library(tidyr)
 library(lubridate)
 
-source("R/otp.R")
-source("R/matriz_acessibilidade.R")
+source("R/3-otp.R")
+source("R/4-matriz_acessibilidade.R")
 ```
 
 # Matriz de tempo de viagem
@@ -155,7 +155,7 @@ O formato final do script é ``otp_CIDADE_DATA_RES.py``.
 
 ```{r matriz for}
 
-source("R/criar_script_python.R")
+source("R/4-criar_script_python.R")
 
 # dia = 2018-10-05
 
