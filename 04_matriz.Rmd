@@ -27,9 +27,18 @@ library(httr)
 library(furrr)
 library(tidyr)
 library(lubridate)
+library(stringr)
 
+source("R/sfc_as_cols.R")
+source("R/setup.R")
 source("R/3-otp.R")
 source("R/4-matriz_acessibilidade.R")
+source("R/4-criar_script_python.R")
+source("R/4-selecionar_data_gtfs.R")
+source("R/4-criar_pontos_allres.R")
+source("R/4-criar_script_python.R")
+source("R/4-aplicar_otp.R")
+
 ```
 
 # Matriz de tempo de viagem
@@ -103,66 +112,40 @@ Atestado que o método por python é mais veloz, é estabelecido então o métod
 
 É criada então uma função que gera os pontos de origem e destino e suas coordenadas (no formato requerido pelo OTP e script em Python), para cada uma das resoluções de hexágonos determinadas anteriormente. A partir do nome abreviado do município (``CIDADE``), a função extrai o centróide de cada hexágono para todas as resoluções (``RES``) e salva no disco o nome ``points_CIDADE_RES.csv`` na pasta ``../otp/points``.
 
-```{r points res}
-
-source("R/sfc_as_cols.R")
-
-points_allres <- function(muni_shortname) {
-  
-  dir <- dir("../data/hex_municipio/", pattern = muni_shortname)
-  
-  res <- str_extract(dir, "\\d+")
-  
-  dir_muni <- paste0("../data/hex_municipio/hex_", muni_shortname, "_", res, ".rds")
-  
-  seila <- function(muni_res) {
-    
-    dir_muni <- muni_res
-    
-    res <- str_extract(dir_muni, "\\d+")
-    
-    # criar pontos
-    hex_muni <- readRDS(dir_muni) %>%
-      select(id_hex) %>%
-      st_centroid() %>%
-      sfc_as_cols(names = c("X","Y")) %>%
-      rename(GEOID = id_hex)
-    
-    
-    # salvar
-    dir_output <- sprintf("../otp/points/points_%s_%s.csv", muni_shortname, res)
-      
-    write_csv(hex_muni, dir_output)
-      
-  }
-  
-  walk(dir_muni, seila)
-  
-}
+```{r fun_criar_pontos_allres, code = readLines("R/4-criar_pontos_allres.R")}
 
 
 ```
+
+```{r aplicar_criar_pontos_allres}
+
+# criar pontos
+points_allres("for")
+# criar pontos
+points_allres("bel")
+# criar pontos
+points_allres("rio")
+# criar pontos
+points_allres("cur")
+# criar pontos
+points_allres("por")
+# criar pontos
+points_allres("sao")
+
+```
+
 
 ###  Criar script em Python
 
 A função ``criar_script_python`` cria um script em python na pasta ``../otp/py`` que é utilizado para gerar os tempos de viagem entre os pares OD, e precisa de três inputs: 
 
 - ``municipio``: é a sigla do município desejado (três primeiras letras);
-- ``data``: é a data de análise. Essa data deve estar dentro do intervalo ``start_date``e ``end_date`` de datas determinado no arquivo ``calendar.txt`` que está no GTFS que foi utilizado para construção do graph daquela cidade;
+- ``data``: é a data de análise. Essa data deve estar dentro do intervalo ``start_date``e ``end_date`` de datas determinado no arquivo ``calendar.txt`` que está no GTFS que foi utilizado para construção do graph daquela cidade (AGORA É POSSÍVEL SELECIONAR A DATA AUTOMATICAMENTE ATRAVÉS DA FUNÇÃO ``selecionar_data_gtfs``);
 - ``res``: é a resolução de hexágonos desejada.
 
 O formato final do script é ``otp_CIDADE_DATA_RES.py``.
 
-```{r matriz for}
-
-source("R/4-criar_script_python.R")
-
-# dia = 2018-10-05
-
-# criar arquivo python
-criar_script_python("for", "2018-10-05", "09")
-criar_script_python("for", "2018-10-05", "09")
-
+```{r fun_criar_script_python}
 
 ```
 
@@ -170,26 +153,7 @@ criar_script_python("for", "2018-10-05", "09")
 
 Por fim, é necessário criar o comando para aplicar o OTP com o script em python. A função ``rodar_otp`` monta o comando a ser encaminhado para o Prompt de Comando, e toma como input a cidade, a data e a resolução desejada.
 
-```{r fun_aplicar_otp}
-
-
-aplicar_otp <- function(cidade, data, res = 8) {
-  
-  py_nome <- sprintf("otp_%s_%s_%s.py", cidade, data, res)
-  
-  comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar py/%s", py_nome)
-  
-  shell(comando)
-  
-  
-}
-
-
-# # criar comando
-# command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_for_2018-10-05_09.py"
-
-
-# Para resolução 09: Elapsed time was 2898.65 seconds
+```{r fun_aplicar_otp, code = readLines("R/4-aplicar_otp.R")}
 
 ```
 
@@ -203,86 +167,141 @@ Para Fortaleza:
 
 ```{r aplicar_otp_for}
 
-# criar pontos
-points_allres("for")
+# Selecionar o dia
+dia <- selecionar_data_gtfs("for")
 
 # criar arquivo python
-criar_script_python("for", "2018-10-05", "09")
+criar_script_python("for", dia, "08")
 
-# aplicar otp
-aplicar_otp("for", "2018-10-05", "09")
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
+criar_script_python_paral_modes("for", data = dia, res = "08", from = 7, until = 9, every = 30)
+
+# aplicar otp para todos os modos
+aplicar_otp("for", data = dia, res = "08", all_modes = TRUE)
+
+# Elapsed time was 362.011 seconds
 
 ```
+
+Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 362 segundos.
 
 ### Matriz para Belo Horizonte
 
-Aplicando o método em python para Belo Horizonte (AINDA COM A METODOLOGIA ANTIGA):
+Aplicando o método em python para Belo Horizonte:
 
 ```{r matriz bel}
 
-source("R/sfc_as_cols.R")
+# Selecionar o dia
+dia <- selecionar_data_gtfs("bel")
 
-# produzir pontos (centroids dos hexagonos)
-read_rds("../data/hex_municipio/hex_bel.rds") %>%
-  select(id_hex) %>%
-  # Gerar somente 100 pontos
-  # slice(1:100) %>%
-  st_centroid() %>%
-  sfc_as_cols(names = c("X","Y")) %>%
-  rename(GEOID = id_hex)
-  write_csv("../otp/points/points_bel.csv")
+# criar arquivo python
+criar_script_python("bel", dia, "08")
 
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
+criar_script_python_paral_modes("bel", data = dia, res = "08", from = 7, until = 9, every = 30)
 
+# aplicar otp para todos os modos
+aplicar_otp("bel", data = dia, res = "08", all_modes = TRUE)
 
-# aplicar
-
-command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_bel.py"
-
-shell(command)
-
-# Elapsed time was 446.081 seconds
+# Elapsed time was 777.629 seconds
 
 ```
+
+Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 777 segundos.
 
 ### Matriz para o Rio de Janeiro
 
-Aplicando para o Rio de Janeiro (AINDA COM A METODOLOGIA ANTIGA):
+Aplicando para o Rio de Janeiro:
 
 ```{r matriz rio}
 
-source("R/sfc_as_cols.R")
+# Selecionar o dia
+dia <- selecionar_data_gtfs("rio")
 
-# produzir pontos (centroids dos hexagonos)
-read_rds("../data/hex_municipio/hex_rio.rds") %>%
-  select(id_hex) %>%
-  # Gerar somente 100 pontos
-  # slice(1:100) %>%
-  st_centroid() %>%
-  sfc_as_cols(names = c("X","Y")) %>%
-  rename(GEOID = id_hex) %>%
-  write_csv("../otp/points/points_rio.csv")
+# criar arquivo python
+criar_script_python("rio", dia, "08")
 
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
+criar_script_python_paral_modes("rio", data = dia, res = "08", from = 7, until = 9, every = 30)
 
+# aplicar otp para todos os modos
+aplicar_otp("rio", data = dia, res = "08", all_modes = TRUE)
 
-# aplicar
-
-command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_rio.py"
-
-shell(command)
-
-# Elapsed time was 502.98 seconds
+# Elapsed time was 777.629 seconds
 
 ```
 
-## Método para coleta de tempo de viagem a cada 15 minutos
+Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 777 segundos.
 
-Para Fortaleza:
+## Matriz para Curitiba
 
-```{r python loop for}
+Para Curitiba:
 
-command <- "cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar  py/python_script_loopHM_for.py"
+```{r aplicar_otp_cur}
 
-system(command)
+# Selecionar o dia
+dia <- selecionar_data_gtfs("cur")
+
+# criar arquivo python
+criar_script_python("cur", dia, "08")
+
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, a cada 30 minutos, e para todos os modos
+criar_script_python_paral_modes("cur", data = dia, res = "08", from = 7, until = 9, every = 30)
+
+# aplicar otp
+aplicar_otp("cur", dia, "08", all_modes = TRUE)
+
+# Elapsed time was 407.342 seconds
+
+```
+
+Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 407 segundos.
+
+## Matriz para Porto Alegre
+
+Para Porto Alegre:
+
+```{r aplicar_otp_por}
+
+# Selecionar o dia
+dia <- selecionar_data_gtfs("por")
+
+# criar arquivo python
+criar_script_python("por", dia, "08")
+
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, a cada 30 minutos, e para todos os modos
+criar_script_python_paral_modes("por", data = dia, res = "08", from = 7, until = 9, every = 30)
+
+# aplicar otp
+aplicar_otp("por", dia, "08", all_modes = TRUE)
+
+# Elapsed time was 584.123 seconds
+
+```
+
+Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 584 segundos.
+
+## Matriz para São Paulo
+
+O dia de análise para São Paulo terá que ser selecionado manualmente, porque o graph da cidade é construído em cima de dois arquivos GTFS (um da SPTrans e outro da EMTU).
+
+Para São Paulo:
+
+```{r aplicar_otp_sao}
+
+# Selecionar o dia
+dia <- "2019-05-15"
+
+# criar arquivo python
+criar_script_python("sao", dia, "08")
+
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, a cada 30 minutos, e para todos os modos
+criar_script_python_paral_modes("sao", data = dia, res = "08", from = 7, until = 9, every = 30)
+
+# aplicar otp
+aplicar_otp("sao", dia, "08", all_modes = TRUE)
+
+# 
 
 ```
 
