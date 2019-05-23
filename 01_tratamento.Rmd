@@ -17,13 +17,9 @@ library(knitr)
 library(dplyr)
 library(readr)
 library(tidyr)
-library(readxl)
 library(scales)
 library(sf)
-library(mapview)
 library(data.table)
-library(raster)
-library(rayshader)
 library(purrr)
 library(stringr)
 ```
@@ -95,7 +91,7 @@ walk(arquivos_shp, shp_to_rds)
 
 Primeiramente os shapes dos setores são dividos por UF e guardados em formato .rds:
 
-```{r setores shapes}
+```{r setores_shapes}
 
 # ajeitar os setores
 
@@ -139,7 +135,7 @@ walk(arquivos_shp, shp_to_rds)
 
 Em seguida, os dados estatísticos dos setores do censo são tratados: é feita a retirada das variáveis relacionadas à renda e à quantidade de pessoas, depois é feito o cálculo da renda por pessoa. A tabela resultante é salva como``renda_por_setor.rds``, e tem as variáveis para todos os setores juntos.
 
-```{r setores var}
+```{r setores_var}
 
 setores1 <- fread("../data-raw/setores_censitarios/dados_censo2010A.csv")
 
@@ -167,7 +163,7 @@ setores_total <- setores_renda %>%
 
 É feita então a junção dos shapes com as estatísticas, resultando numa base dos setores censitários georreferenciada, dividida por uf, com informações de renda e habitantes. A paste final ``setores_agregados`` contém todos os setores (com as variaveis de população e renda) com um arquivo para cada uf de nome ``setores_agregados_UF.rds``.
 
-```{r setores juncao}
+```{r setores_juncao}
 
 setores_total <- read_rds("../data/renda_por_setor/renda_por_setor.rds")
 
@@ -326,7 +322,7 @@ Dentre todas as variáveis disponíveis no censo escolar foram escolhidas as seg
 Esse arquivo foi então salvo com o nome ``censo_escolar_2015.csv``.
 
 
-```{r censo escolar}
+```{r censo_escolar}
 
 source("R/1-converter_censo_coords.R")
 # ABRIR ARQUIVO
@@ -365,7 +361,7 @@ write_csv(censo_escolar, "../data/censo_escolar/censo_escolar_2015.csv")
 
 As grades do censo são agregações espaciais estimadas de tamanho padrão que contém informações populacionais (população de homens e mulheres), e são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo ``Tabela_UF_ID.csv`` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco. 
 
-```{r grade censo}
+```{r grade_censo}
 
 # TRATAMENTO DO ARQUIVO COM OS IDs
 
@@ -490,7 +486,7 @@ grade_para_municipio <- function(muni, uf_input) {
 
 A função é então aplicada para as cidades desejadas:
 
-```{r aplicar grades}
+```{r aplicar_grades}
 
 municipios <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "são paulo", "curitiba")
 ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
