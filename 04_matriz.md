@@ -213,6 +213,24 @@ aplicar_otp("for", data = dia, res = "08", all_modes = TRUE)
 Para a resolução 8, para todos os modos, e com partida a cada meia hora
 entre 7h e 9h, o tempo total foi de 362 segundos.
 
+Para a resolução 9:
+
+``` r
+# Selecionar o dia
+dia <- selecionar_data_gtfs("for")
+
+# criar arquivo python
+criar_script_python("for", dia, "09")
+
+# Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
+criar_script_python_paral_modes("for", data = dia, res = "09", from = 7, until = 8, every = 30)
+
+# aplicar otp para todos os modos
+aplicar_otp("for", data = dia, res = "09", all_modes = TRUE)
+
+# Elapsed time was 3113.68 seconds
+```
+
 ### Matriz para Belo Horizonte
 
 Aplicando o método em python para Belo Horizonte:

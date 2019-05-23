@@ -3,28 +3,30 @@ Tratamento dos dados - Acesso a Oportunidades
 Ipea
 19 de março de 2019
 
-Tratamento dos dados brutos
-===========================
+# Tratamento dos dados brutos
 
-Esse arquivo tem como objetivo tratar os dados brutos do projeto de acesso a oportunidades. As bases de dados tratadas aqui são:
+Esse arquivo tem como objetivo tratar os dados brutos do projeto de
+acesso a oportunidades. As bases de dados tratadas aqui são:
 
--   `Municípios`;
--   `Setores Censitários`;
--   `Renda`;
--   `Censo escolar`;
--   `Grade censo`;
--   `Hospitais`;
--   `GTFS`;
--   `Elevação`
+  - `Municípios`;
+  - `Setores Censitários`;
+  - `Renda`;
+  - `Censo escolar`;
+  - `Grade censo`;
+  - `Hospitais`;
+  - `GTFS`;
+  - `Elevação`
 
-Municípios
-----------
+## Municípios
 
-Os dados de município estão compactados em formato de *shapefile*, divididos por UF. O tratamento desse dados consiste em:
+Os dados de município estão compactados em formato de *shapefile*,
+divididos por UF. O tratamento desse dados consiste em:
 
--   Descompactação dos arquivos;
--   Leitura dos shapefiles municipais;
--   Salvos em disco em formato `rds`.
+  - Descompactação dos arquivos;
+  - Leitura dos shapefiles municipais;
+  - Salvos em disco em formato `rds`.
+
+<!-- end list -->
 
 ``` r
 # ajeitar os municipios
@@ -65,16 +67,16 @@ shp_to_rds <- function(shp) {
 walk(arquivos_shp, shp_to_rds)
 ```
 
-Setores censitários
--------------------
+## Setores censitários
 
-Primeiramente os shapes dos setores são dividos por UF e guardados em formato .rds:
+Primeiramente os shapes dos setores são dividos por UF e guardados em
+formato .rds:
 
 ``` r
 # ajeitar os setores
 
 
-arquivos <- dir("../data-raw/municipios", full.names = T, pattern = "_setores_censitarios.zip", recursive = T)
+arquivos <- dir("../data-raw/municipios", full.names = T, pattern = "*censitarios.zip$", recursive = T)
 
 out_dir <- paste0("../data-raw/municipios/", str_sub(arquivos, -26, -25))
 
@@ -109,7 +111,12 @@ shp_to_rds <- function(shp) {
 walk(arquivos_shp, shp_to_rds)
 ```
 
-Em seguida, os dados estatísticos dos setores do censo são tratados: é feita a retirada das variáveis relacionadas à renda e à quantidade de pessoas, depois é feito o cálculo da renda por pessoa. A tabela resultante é salva como`renda_por_setor.rds`, e tem as variáveis para todos os setores juntos.
+Em seguida, os dados estatísticos dos setores do censo são tratados: é
+feita a retirada das variáveis relacionadas à renda e à quantidade de
+pessoas, depois é feito o cálculo da renda por pessoa. A tabela
+resultante é salva como`renda_por_setor.rds`, e tem as variáveis para
+todos os setores
+juntos.
 
 ``` r
 setores1 <- fread("../data-raw/setores_censitarios/dados_censo2010A.csv")
@@ -135,7 +142,11 @@ setores_total <- setores_renda %>%
 # write_rds(setores_total, "../data/renda_por_setor/renda_por_setor.rds")
 ```
 
-É feita então a junção dos shapes com as estatísticas, resultando numa base dos setores censitários georreferenciada, dividida por uf, com informações de renda e habitantes. A paste final `setores_agregados` contém todos os setores (com as variaveis de população e renda) com um arquivo para cada uf de nome `setores_agregados_UF.rds`.
+É feita então a junção dos shapes com as estatísticas, resultando numa
+base dos setores censitários georreferenciada, dividida por uf, com
+informações de renda e habitantes. A paste final `setores_agregados`
+contém todos os setores (com as variaveis de população e renda) com um
+arquivo para cada uf de nome `setores_agregados_UF.rds`.
 
 ``` r
 setores_total <- read_rds("../data/renda_por_setor/renda_por_setor.rds")
@@ -204,7 +215,7 @@ agregar_setores <- function(setores_variaveis1, setores_shapes1) {
     left_join(setores_variaveis1, by = "cod_setor")
   
   # salvar
-  dir_out <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", uf)
+  dir_out <- sprintf("../data/setores_agregados_uf/setores_agregados_%s.rds", uf)
   
   write_rds(setores_fim, dir_out)
   
@@ -216,37 +227,43 @@ agregar_setores <- function(setores_variaveis1, setores_shapes1) {
 walk2(setores_total_v1, setores_shapes, agregar_setores)
 ```
 
-Há a necessidade de filtrar os setores agregados por uf nas cidades dos projetos:
+Há a necessidade de filtrar os setores agregados por uf nas cidades dos
+projetos:
 
 ``` r
-# nome do municipio completo, minusculo, sem acentos
-municipio_logname <- "fortaleza"
-uf <- "ce"
+# # nome do municipio completo, minusculo, sem acentos
+# municipio_logname <- "fortaleza"
+# uf <- "ce"
 
 setores_por_municipio <- function(municipio_logname, uf) {
   
+  
   # Abrir setores da uf
   path_setor_uf <- sprintf("../data/setores_agregados_uf/setores_agregados_%s.rds", uf)
-  setor_uf <- read_rds(path_setor_uf)
+  setor_uf <- read_rds(path_setor_uf) %>%
+    # transformar para minusculo o nome do municipio
+    mutate(muni = tolower(muni)) %>%
+    # tirar acentos do nome do municipio
+    mutate(muni = rm_accent(muni))
   
-  # Abrir tabela com as siglas dos municipios
-  tabela_muni <- read_delim("../data-raw/tabela_muni_codigos_2010.csv", delim = ";", skip = 2, 
-                            locale = locale(encoding = 'WINDOWS-1252')) %>%
-    select(municipio, nome_municipio) %>%
-    # Mudar para minusculo
-    mutate(nome_municipio1 = tolower(nome_municipio)) %>%
-    # Tirar acentos do nome do municipio
-    # mutate(nome_municipio1 = rm_accent(nome_municipio1)) %>%
-    mutate(nome_municipio1 = trimws(nome_municipio1))
-    # # Determinar a sigla (tres primeiras letras)
-    # mutate(nome_municipio1 = substr(nome_municipio1, 1, 3))
-  
-  # Fazer juncao
-  muni_desejado <- tabela_muni %>%
-    filter(nome_municipio1 == municipio_logname)
+  # # Abrir tabela com as siglas dos municipios
+  # tabela_muni <- read_delim("../data-raw/tabela_muni_codigos_2010.csv", delim = ";", skip = 2, 
+  #                           locale = locale(encoding = 'WINDOWS-1252')) %>%
+  #   select(municipio, nome_municipio) %>%
+  #   # Mudar para minusculo
+  #   mutate(nome_municipio1 = tolower(nome_municipio)) %>%
+  #   # Tirar acentos do nome do municipio
+  #   # mutate(nome_municipio1 = rm_accent(nome_municipio1)) %>%
+  #   mutate(nome_municipio1 = trimws(nome_municipio1))
+  #   # # Determinar a sigla (tres primeiras letras)
+  #   # mutate(nome_municipio1 = substr(nome_municipio1, 1, 3))
+  # 
+  # # Fazer juncao
+  # muni_desejado <- tabela_muni %>%
+  #   filter(nome_municipio1 == municipio_logname)
   
   setor_municipio <- setor_uf %>%
-    filter(cod_muni %in% muni_desejado$municipio)
+    filter(muni == municipio_logname)
   
   # Salvar
   muni_shortname <- substr(municipio_logname, 1, 3)
@@ -257,38 +274,43 @@ setores_por_municipio <- function(municipio_logname, uf) {
 
 # Aplicar funcao
 
-municipio_logname <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "sao paulo", "curitiba")
-ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
+municipio_logname <- c("fortaleza", "rio de janeiro", "belo horizonte", "teresina", "porto alegre", "sao paulo", "curitiba")
+ufs <- c("ce", "rj", "mg", "pi", "rs", "sp", "pr")
 
 walk2(municipio_logname, ufs, setores_por_municipio)
-
-setores_por_municipio("teresina", "pi") 
 ```
 
-Censo escolar
--------------
+## Censo escolar
 
-Dentre todas as variáveis disponíveis no censo escolar foram escolhidas as seguintes:
+Dentre todas as variáveis disponíveis no censo escolar foram escolhidas
+as seguintes:
 
--   `cod_escola`: código único da escola;
--   `uf`: sigla da uf em questão;
--   `municipio`: código do município;
--   `rede`: informações se a escola pertence à rede estadual, municipal, federal, ou é privada;
--   `num_funcionarios`: número total de funcionários da escola;
--   `presencial`: se o ensino naquela escola é presencial ou não;
--   `mat_infantil`: a quantidade de matrículas daquela escola no ensino infantil;
--   `mat_fundamental`: a quantidade de matrículas daquela escola no ensino fundamental;
--   `mat_medio`: a quantidade de matrículas daquela escola no ensino médio;
--   `mat_profissional`: a quantidade de matrículas daquela escola no ensino profissional;
--   `mat_eja`: a quantidade de matrículas daquela escola na educação de jovens e adultos;
--   `mat_especial`: a quantidade de matrículas daquela escola no ensino especial;
--   `docentes`: o número total de docentes naquela escola;
--   `lon` e `lat`: coordenadas.
+  - `cod_escola`: código único da escola;
+  - `uf`: sigla da uf em questão;
+  - `municipio`: código do município;
+  - `rede`: informações se a escola pertence à rede estadual, municipal,
+    federal, ou é privada;
+  - `num_funcionarios`: número total de funcionários da escola;
+  - `presencial`: se o ensino naquela escola é presencial ou não;
+  - `mat_infantil`: a quantidade de matrículas daquela escola no ensino
+    infantil;
+  - `mat_fundamental`: a quantidade de matrículas daquela escola no
+    ensino fundamental;
+  - `mat_medio`: a quantidade de matrículas daquela escola no ensino
+    médio;
+  - `mat_profissional`: a quantidade de matrículas daquela escola no
+    ensino profissional;
+  - `mat_eja`: a quantidade de matrículas daquela escola na educação de
+    jovens e adultos;
+  - `mat_especial`: a quantidade de matrículas daquela escola no ensino
+    especial;
+  - `docentes`: o número total de docentes naquela escola;
+  - `lon` e `lat`: coordenadas.
 
 Esse arquivo foi então salvo com o nome `censo_escolar_2015.csv`.
 
 ``` r
-source("R/converter_censo_coords.R")
+source("R/1-converter_censo_coords.R")
 # ABRIR ARQUIVO
 
 
@@ -319,10 +341,15 @@ write_csv(censo_escolar, "../data/censo_escolar/censo_escolar_2015.csv")
 # write_csv(censo_escolar_long, "data/censo_escolar/censo_escolar_2015_long.csv")
 ```
 
-Grade censo
------------
+## Grade censo
 
-As grades do censo são agregações espaciais estimadas de tamanho padrão que contém informações populacionais (população de homens e mulheres), e são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo `Tabela_UF_ID.csv` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco.
+As grades do censo são agregações espaciais estimadas de tamanho padrão
+que contém informações populacionais (população de homens e mulheres), e
+são divididas por ID, onde cada um desses pode encorporar vários
+municípios. O arquivo `Tabela_UF_ID.csv` contém uma tabela auxiliar que
+identifica os IDs contidos em cada estado. O tratamento desse arquivo
+corrige alguns erros e cria uma correspondência entre o nome e a sigla
+de cada UF, salvando o arquivo tratado em disco.
 
 ``` r
 # TRATAMENTO DO ARQUIVO COM OS IDs
@@ -365,17 +392,28 @@ write_csv(ids_corresp_v1, "../data-raw/lookup_grade_ufs.csv")
 # write_rds(ids_corresp_v1, "../data-raw/lookup_grade_ufs.rds")
 ```
 
-A função para extrair os municípios das grades do IBGE requer dois inputs: o `municipio` e a `uf`:
+A função para extrair os municípios das grades do IBGE requer dois
+inputs: o `municipio` e a `uf`:
 
--   Com a `uf` é feita uma seleção dos IDs que estão presentes na uf desejada daquele município;
--   É aberto então o shape do `municipio` desejado;
--   O geoprocessamento extrai somente as grades que estão inseridas dentro dos limites do município;
--   O resultado é salvo em disco.
+  - Com a `uf` é feita uma seleção dos IDs que estão presentes na uf
+    desejada daquele município;
+  - É aberto então o shape do `municipio` desejado;
+  - O geoprocessamento extrai somente as grades que estão inseridas
+    dentro dos limites do município;
+  - O resultado é salvo em disco.
+
+<!-- end list -->
 
 ``` r
+# muni <- "porto alegre"
+# uf_input <- "rs"
+
+
 grade_para_municipio <- function(muni, uf_input) {
   
   files <- read_csv("../data-raw/lookup_grade_ufs.csv") %>%
+    # Corrigir esse valor
+    mutate(Quadrante = ifelse(Quadrante == "id4", "id04", Quadrante)) %>%
     filter(uf == uf_input) %>%
     mutate(Quadrante = paste0("grade_", Quadrante)) %>%
     .$Quadrante
@@ -437,7 +475,8 @@ grade_para_municipio <- function(muni, uf_input) {
 }
 ```
 
-A função é então aplicada para as cidades desejadas:
+A função é então aplicada para as cidades
+desejadas:
 
 ``` r
 municipios <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "são paulo", "curitiba")
@@ -446,26 +485,34 @@ ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
 grade_para_municipio("são paulo", "sp")
 grade_para_municipio("curitiba", "pr")
 grade_para_municipio("teresina", "pi")
+grade_para_municipio("porto alegre", "rs")
 
 walk2(municipios, ufs, grade_para_municipio)
 ```
 
-Hospitais
----------
+## Hospitais
 
 ``` r
 # hospitais <- read_csv("../data-raw/hospitais/cnesnone_2018.csv") %>%
 #   st_as_sf(coords = c("long", "lat"), crs = 4326)
 ```
 
-Empregos
---------
+## Empregos
 
-Os empregos são extraídos da base da RAIS (Relação Anual de Informações Sociais). A base foi georreferenciada por um software que retorna as coordenadas de latitute e longitude com uma avalição da qualidade do georreferenciamento. Com isso, as etapas do tratamento dessa base foram:
+Os empregos são extraídos da base da RAIS (Relação Anual de Informações
+Sociais). A base foi georreferenciada por um software que retorna as
+coordenadas de latitute e longitude com uma avalição da qualidade do
+georreferenciamento. Com isso, as etapas do tratamento dessa base foram:
 
--   Deletar observações que tiveram georreferenciamento de 1 estrela (só conseguiu achar a cidade). Isso garante uma precisão suficiente para as análises seguintes;
--   Selecionar as colunas de interesse: `id_estab`, que é o id do estabelecimento, `qt_vinc_ativos`, que é a quantidade de vínculos ativos, `cod_mun`, que é o código do município, e coordenadas.
--   Salvar para o arquivo `rais_2015.rds`.
+  - Deletar observações que tiveram georreferenciamento de 1 estrela (só
+    conseguiu achar a cidade). Isso garante uma precisão suficiente para
+    as análises seguintes;
+  - Selecionar as colunas de interesse: `id_estab`, que é o id do
+    estabelecimento, `qt_vinc_ativos`, que é a quantidade de vínculos
+    ativos, `cod_mun`, que é o código do município, e coordenadas.
+  - Salvar para o arquivo `rais_2015.rds`.
+
+<!-- end list -->
 
 ``` r
 library(foreign)
@@ -490,12 +537,13 @@ rais_v1 <- st_as_sf(rais_v1, coords = c("lon", "lat"), crs = 4326)
 write_rds(rais_v1, "../data/rais/rais_2015.rds")
 ```
 
-Sugestão futura: analisar a qualidade do georreferenciamento para as grandes cidades.
+Sugestão futura: analisar a qualidade do georreferenciamento para as
+grandes cidades.
 
-GTFS
-----
+## GTFS
 
-O GTFS do Rio de Janeiro apresenta algumas inconsistências no arquivo `stop_times.txt`.
+O GTFS do Rio de Janeiro apresenta algumas inconsistências no arquivo
+`stop_times.txt`.
 
 ``` r
 # OTP RIO!!!!!!!!!1 -------------------------------------------------------
@@ -549,17 +597,33 @@ stop_times_new %>%
 data.table::fwrite(stop_times_new, "gtfs_teste/gtfs_rio_novo/stop_times.txt", quote = TRUE)
 ```
 
-Elevação
---------
+## Elevação
 
-Os dados brutos de elevação são retirados do [Earth Explorer](https://earthexplorer.usgs.gov/). Lá, é necessário especificar a região e data que se quer extrair os dados de elevação. Na aba de *Select Your Data Set(s)*, seleciona-se `Digital Elevation` -&gt; `SRTM`. SRTM (*Shuttle Radar Topography Mission*) é um esforço de pesquisa internacional que obtém dados de elevação numa precisão de 30 metros. Os dados de elevação do SRTM são divididos por quadrículo de 1 grau de latidude e 1 longitude, então é necessário cortar os municípios desejados dessa área.
+Os dados brutos de elevação são retirados do [Earth
+Explorer](https://earthexplorer.usgs.gov/). Lá, é necessário especificar
+a região e data que se quer extrair os dados de elevação. Na aba de
+*Select Your Data Set(s)*, seleciona-se `Digital Elevation` -\> `SRTM`.
+SRTM (*Shuttle Radar Topography Mission*) é um esforço de pesquisa
+internacional que obtém dados de elevação numa precisão de 30 metros. Os
+dados de elevação do SRTM são divididos por quadrículo de 1 grau de
+latidude e 1 longitude, então é necessário cortar os municípios
+desejados dessa área.
 
-A função `crop_save_raster` foi criada para tratar e salvar os dados de elevação, e requer dois argumentos: `municipio`, que é a sigla (três primeiras letras) do município desejado, e `bb`, que é o *bounding box* do município (pares de coordenadas que delimitam a área do município). Esse argumento pode ser extraído do [Bounding Box Tool](https://boundingbox.klokantech.com/), onde na aba de busca é pesquisada e selecionada a cidade em questão. Por fim, na parte inferior esquerda, é selecionada a opção `CSV RAW` na aba *Copy & Paste*, e as coordenadas são inseridas na função como um vetor.
+A função `crop_save_raster` foi criada para tratar e salvar os dados de
+elevação, e requer dois argumentos: `municipio`, que é a sigla (três
+primeiras letras) do município desejado, e `bb`, que é o *bounding box*
+do município (pares de coordenadas que delimitam a área do município).
+Esse argumento pode ser extraído do [Bounding Box
+Tool](https://boundingbox.klokantech.com/), onde na aba de busca é
+pesquisada e selecionada a cidade em questão. Por fim, na parte inferior
+esquerda, é selecionada a opção `CSV RAW` na aba *Copy & Paste*, e as
+coordenadas são inseridas na função como um vetor.
 
-A função será aplicada para três cidades inicialmente: Fortaleza, Belo Horizonte e Rio de Janeiro.
+A função será aplicada para três cidades inicialmente: Fortaleza, Belo
+Horizonte e Rio de Janeiro.
 
 ``` r
-source("R/tratar_elevation.R")
+source("R/1-tratar_elevation.R")
 
 crop_save_raster("for", bb = c(-38.63656796,-3.88812428,-38.40154132,-3.69197903))
 crop_save_raster("bel", bb = c(-44.06329161,-20.0594646,-43.85721992,-19.77654377))

@@ -3,25 +3,29 @@ Agrupamento dos dados
 Ipea
 27 de março de 2019
 
-Agrupamento de dados socioeconômicos de uso do solo
-===================================================
+# Agrupamento de dados socioeconômicos de uso do solo
 
-Esse arquivo tem como objetivo agrupar os dados pelas unidades de agregação espacial (hexágonos) e salvá-los em disco. As seguintes variáveis são agrupadas:
+Esse arquivo tem como objetivo agrupar os dados pelas unidades de
+agregação espacial (hexágonos) e salvá-los em disco. As seguintes
+variáveis são agrupadas:
 
--   Estabelecimentos de saúde;
--   Escolas;
--   População;
--   Empregos (RAIS).
+  - Estabelecimentos de saúde;
+  - Escolas;
+  - População;
+  - Empregos (RAIS).
 
-Primeiramente é necessário criar as unidades de agregação que serão utilizadas.
+Primeiramente é necessário criar as unidades de agregação que serão
+utilizadas.
 
-Criação de hexágonos
---------------------
+## Criação de hexágonos
 
-As cidade brasileiras analisadas serão dividadas em hexágonos. A função `poligono_para_hexagono` pega os municípios e cria hexágonos de acordo com a resolução preferida, que no caso foi uma resolução de 960 metros (comprimento da menor diagonal do hexágono).
+As cidade brasileiras analisadas serão dividadas em hexágonos. A função
+`poligono_para_hexagono` pega os municípios e cria hexágonos de acordo
+com a resolução preferida, que no caso foi uma resolução de 960 metros
+(comprimento da menor diagonal do hexágono).
 
 ``` r
-source("R/poligono_para_hexagono_allres.R")
+source("R/2-poligono_para_hexagono_allres.R")
 
 # # aplicando ---------------------------------------------------------------
 
@@ -38,10 +42,13 @@ shape_to_hexagon("são paulo", "sp")
 # purrr::walk2(munis, ufs, shape_to_hexagon)
 ```
 
-Agrupamento da renda dos setores censitários para a grade do censo
-------------------------------------------------------------------
+## Agrupamento da renda dos setores censitários para a grade do censo
 
-A grade do censo, tratada na etapa anterior, apresenta somente informação de população (homens e mulheres) por cada uma das entidades. Há então a necessidade de incorporar a variável da renda daquela grade. Para isso, será utilizada a informação de renda de cada setor censitário.
+A grade do censo, tratada na etapa anterior, apresenta somente
+informação de população (homens e mulheres) por cada uma das
+entidades. Há então a necessidade de incorporar a variável da renda
+daquela grade. Para isso, será utilizada a informação de renda de cada
+setor censitário.
 
 ``` r
 # cidade <- "bel"
@@ -100,31 +107,35 @@ renda_de_setor_p_grade <- function(cidade) {
 }
 
 # Aplicar funcao
-cidades <- c("for", "bel", "rio", "por", "cur", "ter", "sao")
-walk(cidades, renda_de_setor_p_grade)
+renda_de_setor_p_grade("for")
+renda_de_setor_p_grade("bel")
+renda_de_setor_p_grade("rio")
+renda_de_setor_p_grade("por")
+renda_de_setor_p_grade("cur")
+renda_de_setor_p_grade("sao")
 ```
 
-Agrupamento das variáveis por hexágonos
----------------------------------------
+## Agrupamento das variáveis por hexágonos
 
-A função `agrupar_variaveis` aceita como *input* o nome do município desejado e retorna uma tabela com o shape dos hexágonos, para cada resolução espacial, e a quantidade de estabelecimentos de saúde, educação e população agregados, salvos em disco.
+A função `agrupar_variaveis` aceita como *input* o nome do município
+desejado e retorna uma tabela com o shape dos hexágonos, para cada
+resolução espacial, e a quantidade de estabelecimentos de saúde,
+educação e população agregados, salvos em disco.
 
 ``` r
 # abrir funcao
-source("R/agrupar_variaveis.R")
+source("R/2-agrupar_variaveis.R")
 
-# escolher cidades
-
-munis <- c("bel", "rio", "por", "cur", "ter", "sao")
-munis <- "for"
-
-# aplicar funcao
-
-agrupar_variaveis(munis)
+# Aplicar funcao
+agrupar_variaveis("for")
+agrupar_variaveis("bel")
+agrupar_variaveis("rio")
+agrupar_variaveis("por")
+agrupar_variaveis("cur")
+agrupar_variaveis("sao")
 ```
 
-Visualizar distribuição das oportunidades
------------------------------------------
+## Visualizar distribuição das oportunidades
 
 Para Teresina:
 
