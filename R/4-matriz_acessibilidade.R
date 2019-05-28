@@ -4,7 +4,7 @@
 matriz_acessibilidade <- function(municipio, amostra = FALSE, ligar_otp = FALSE) {
   
   source("R/sfc_as_cols.R")
-  source("R/otp.R")
+  source("R/3-otp.R")
   
   
   # se ligar_otp for true, liga-lo antes
