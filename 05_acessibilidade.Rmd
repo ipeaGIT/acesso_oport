@@ -39,11 +39,12 @@ Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de t
 
 ```{r fun}
 
-acess_acumu <- function(cidade, tempo, res = 8) {
+acess_acumu <- function(cidade, modo, hora, tempo, res = "08") {
   
-  res1 <- sprintf("0%s", res)
+  # res1 <- sprintf("0%s", res)
+  res1 <- res
   
-  dir_matriz <- sprintf("../data/output_ttmatrix/traveltime_matrix_%s_python.csv", cidade)
+  dir_matriz <- sprintf("../data/output_ttmatrix/ttmatrix_%s_%s_%s_%s.csv", cidade, modo, res1, hora)
     
   # abrir matriz
   matriz_for <- read_csv(dir_matriz) %>%

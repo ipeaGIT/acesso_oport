@@ -17,7 +17,7 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
   dir_muni <- paste0("../data/municipios/", "municipios_", uf_sigla, ".rds")
   
   muni <- read_rds(dir_muni) %>%
-    filter(NM_MUNICIP == toupper(gsub( "_", " ", municipio))) %>%
+    dplyr::filter(NM_MUNICIP == toupper(gsub( "_", " ", municipio))) %>%
     # Buffer para extender a area do municipio e assim evitar que os hexagonos nao considerem areas de borda
     st_buffer(dist = 0.003)
   

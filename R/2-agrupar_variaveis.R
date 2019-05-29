@@ -91,7 +91,7 @@ agrupar_variaveis <- function(munis) {
     # 
     # empregos_v1 <- empregos[cidade_uf == cidade_ufs]
     
-    muni_res <- dir_muni[1]
+    # muni_res <- dir_muni[1]
     
     # FUNCAO PARA REALIZAR PARA TODAS AS RESOLUCOES ------------------------------
     
