@@ -277,7 +277,7 @@ aplicar_otp("rio", data = dia, res = "08", all_modes = TRUE)
 Para a resolução 8, para todos os modos, e com partida a cada meia hora
 entre 7h e 9h, o tempo total foi de 777 segundos.
 
-## Matriz para Curitiba
+### Matriz para Curitiba
 
 Para Curitiba:
 
@@ -300,7 +300,7 @@ aplicar_otp("cur", dia, "08", all_modes = TRUE)
 Para a resolução 8, para todos os modos, e com partida a cada meia hora
 entre 7h e 9h, o tempo total foi de 407 segundos.
 
-## Matriz para Porto Alegre
+### Matriz para Porto Alegre
 
 Para Porto Alegre:
 
@@ -323,7 +323,7 @@ aplicar_otp("por", dia, "08", all_modes = TRUE)
 Para a resolução 8, para todos os modos, e com partida a cada meia hora
 entre 7h e 9h, o tempo total foi de 584 segundos.
 
-## Matriz para São Paulo
+### Matriz para São Paulo
 
 O dia de análise para São Paulo terá que ser selecionado manualmente,
 porque o graph da cidade é construído em cima de dois arquivos GTFS (um
@@ -346,3 +346,255 @@ aplicar_otp("sao", dia, "08", all_modes = TRUE)
 
 # 
 ```
+
+## Avaliar qualidade dos resultados
+
+A avaliação da qualidade dos resultados retornados pelo OTP consiste na
+checagem se todos os pontos de origem e destino foram analisados
+corretamente.
+
+``` r
+# cidade <- "por"
+
+avaliar_qualidade_otp <- function(cidade) {
+  
+  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_08_.*.csv$", cidade)
+  pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_08.csv$", cidade)
+  
+  files_cidade_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_pt)
+  files_cidade_ative <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_ative)
+  
+  otp_matrix_pt <- map_dfr(files_cidade_pt, fread)
+    
+  # abrir os pontos
+  points_file <- sprintf("../otp/points/points_%s_08.csv", cidade)
+  points <- read_csv(points_file)
+  
+  # checar os pontos na matrix
+  origem_matrix_pt <- unique(otp_matrix_pt$origin)
+  destino_matrix_pt <- unique(otp_matrix_pt$destination)
+  
+  # quais pontos ficaram fora?
+  origem_fora <- setdiff(points$id_hex, origem_matrix_pt)
+  destino_fora <- setdiff(points$id_hex, destino_matrix_pt)
+  
+  fim <- data.frame(cidade = cidade, origem_fora = origem_fora, destino_fora = destino_fora) %>%
+    select(cidade, origem_fora)
+  
+  # SOON
+  # fim_spatial <- 
+    
+  fim_agreg <- data.frame(cidade = cidade, origem_fora = origem_fora, destino_fora = destino_fora) %>%
+    count(cidade) %>%
+    mutate(Percentual = n/nrow(points)) %>%
+    mutate(Percentual = scales::percent(Percentual))
+  
+  
+}
+
+# Aplicar funcao
+qualidade_otp <- map_dfr(c("for", "bel", "cur", "por"), avaliar_qualidade_otp)
+
+
+# # visualilzar os pontos que ficaram fora
+# 
+# # pontos de origem
+# points %>%
+#   dplyr::filter(id_hex %in% fim$origem_fora) %>%
+#   st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
+#   mapview()
+```
+
+Por enquanto a função é aplicada para quatro cidades: Fortaleza, Belo
+Horizonte, Curitiba e Porto Alegre. O `Percentual` representa o
+percentual de pontos que não foi roteado pelo OTP em relação ao total de
+pontos daquela cidade.
+
+``` r
+qualidade_otp %>%
+  mutate(Cidade = c("Fortaleza", "Belo Horizonte", "Curitiba", "Porto Alegre")) %>%
+  # mutate(Percentual = color_bar("red")(Percentual)) %>%
+  select(Cidade, n, Percentual) %>%
+  kable() %>%
+  # column_spec(3, width = "3cm") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+
+<thead>
+
+<tr>
+
+<th style="text-align:left;">
+
+Cidade
+
+</th>
+
+<th style="text-align:right;">
+
+n
+
+</th>
+
+<th style="text-align:left;">
+
+Percentual
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+Fortaleza
+
+</td>
+
+<td style="text-align:right;">
+
+7
+
+</td>
+
+<td style="text-align:left;">
+
+1.79%
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Belo Horizonte
+
+</td>
+
+<td style="text-align:right;">
+
+10
+
+</td>
+
+<td style="text-align:left;">
+
+2.14%
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Curitiba
+
+</td>
+
+<td style="text-align:right;">
+
+51
+
+</td>
+
+<td style="text-align:left;">
+
+7.61%
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Porto Alegre
+
+</td>
+
+<td style="text-align:right;">
+
+298
+
+</td>
+
+<td style="text-align:left;">
+
+33.9%
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+Próxima pergunta: onde estão esses pontos?
+
+Avaliar a qualidade do indicador de acessibilidade:
+
+``` r
+# cidade <- "bel"
+
+avaliar_qualidade_acess <- function(cidade) {
+  
+  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_08_.*.csv$", cidade)
+  pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_08.csv$", cidade)
+  
+  files_cidade_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_pt)
+  files_cidade_ative <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_ative)
+  
+  otp_matrix_pt <- map_dfr(files_cidade_pt, fread)
+  
+  # abrir oportunidades com hexagonos
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, "08")
+  hexagonos_for_sf <- read_rds(dir_hex) %>%
+    select(id_hex) %>%
+    ungroup()
+  
+  matriz_for <- otp_matrix_pt %>%
+    left_join(hexagonos_for_sf, by = c("origin" = "id_hex")) %>%
+    select(origin, destination, travel_time) %>%
+    mutate(travel_time = travel_time/60) %>%
+    mutate(empregos = 1) %>%
+    dplyr::filter(travel_time < 60) %>%
+    group_by(origin) %>%
+    summarise(empregos = sum(empregos))
+  
+  access_ac_for_fim <- hexagonos_for_sf %>%
+    select(id_hex) %>%
+    left_join(matriz_for, by = c("id_hex" = "origin"))
+  
+  
+  access_ac_for_fim %>%
+    ggplot() +
+    geom_sf(aes(fill=empregos), color="gray70") +
+    scale_fill_distiller( palette="Oranges", guide = "colorbar", name="Jobs\nDensity", direction = 1) +
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  # mapview(access_ac_for_fim, zcol = "empregos")
+  
+}
+
+avaliar_qualidade_acess("for") +
+avaliar_qualidade_acess("bel") +
+avaliar_qualidade_acess("por") +
+avaliar_qualidade_acess("cur") +
+  plot_layout(ncol = 2)
+```
+
+![](04_matriz_files/figure-gfm/avaliar_qualidade_acessibilidade-1.png)<!-- -->
