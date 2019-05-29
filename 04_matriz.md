@@ -190,6 +190,133 @@ da metodologia descritas acima são aplicadas. Primeiro são criados todos
 os pontos centróides dos hexágonos (para todas as resoluções), depois é
 criado o script em python, e por fim é rodado o OTP.
 
+A tabela abaixo mostra os parâmetros utilizados para o uso no roteamento
+do OTP, para todos os modos. Mais opções de parâmetros que não fora
+utilizadas podem ser encontradas no [OTP Planner
+Resource](http://dev.opentripplanner.org/apidoc/1.0.0/resource_PlannerResource.html).
+
+``` r
+tibble::tribble(
+  ~Parâmetro,                ~Valor,
+  "MaxTimeSec",                "3600",
+  "maxWalkDistance", "Ilimitado (default)",
+  "walkSpeed",     "3 mph (default)",
+  "bikeSpeed",    "11 mph (default)",
+  "walkReluctance",         "2 (default)"
+) %>%
+  kable() %>%
+  # column_spec(3, width = "3cm") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+<table class="table table-striped" style="width: auto !important; margin-left: auto; margin-right: auto;">
+
+<thead>
+
+<tr>
+
+<th style="text-align:left;">
+
+Parâmetro
+
+</th>
+
+<th style="text-align:left;">
+
+Valor
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+MaxTimeSec
+
+</td>
+
+<td style="text-align:left;">
+
+3600
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+maxWalkDistance
+
+</td>
+
+<td style="text-align:left;">
+
+Ilimitado (default)
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+walkSpeed
+
+</td>
+
+<td style="text-align:left;">
+
+3 mph (default)
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+bikeSpeed
+
+</td>
+
+<td style="text-align:left;">
+
+11 mph (default)
+
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+walkReluctance
+
+</td>
+
+<td style="text-align:left;">
+
+2 (default)
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
 ### Matriz para Fortaleza
 
 Para Fortaleza:

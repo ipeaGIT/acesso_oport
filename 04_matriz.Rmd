@@ -165,6 +165,27 @@ Por fim, é necessário criar o comando para aplicar o OTP com o script em pytho
 
 Por fim, para a construção da matriz de tempo de viagem, as três etapas da metodologia descritas acima são aplicadas. Primeiro são criados todos os pontos centróides dos hexágonos (para todas as resoluções), depois é criado o script em python, e por fim é rodado o OTP.
 
+A tabela abaixo mostra os parâmetros utilizados para o uso no roteamento do OTP, para todos os modos. Mais opções de parâmetros que não fora utilizadas podem ser encontradas no [OTP Planner Resource](http://dev.opentripplanner.org/apidoc/1.0.0/resource_PlannerResource.html).
+
+```{r tabela_parametros_otp, eval = TRUE}
+
+tibble::tribble(
+  ~Parâmetro,                ~Valor,
+  "MaxTimeSec",                "3600",
+  "maxWalkDistance", "Ilimitado (default)",
+  "walkSpeed",     "3 mph (default)",
+  "bikeSpeed",    "11 mph (default)",
+  "walkReluctance",         "2 (default)"
+) %>%
+  kable() %>%
+  # column_spec(3, width = "3cm") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+
+
+```
+
+
 ### Matriz para Fortaleza
 
 Para Fortaleza:
