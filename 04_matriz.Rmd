@@ -30,11 +30,10 @@ library(tidyr)
 library(lubridate)
 library(stringr)
 library(kableExtra)
-library(formattable)
 library(patchwork)
 
-source("R/sfc_as_cols.R")
-source("R/setup.R")
+source("R/fun/sfc_as_cols.R")
+source("R/fun/setup.R")
 source("R/3-otp.R")
 source("R/4-matriz_acessibilidade.R")
 source("R/4-criar_script_python.R")
@@ -204,7 +203,7 @@ criar_script_python_paral_modes("for", data = dia, res = "08", from = 7, until =
 # aplicar otp para todos os modos
 aplicar_otp("for", data = dia, res = "08", all_modes = TRUE)
 
-# Elapsed time was 362.011 seconds
+# Elapsed time was 649.622 seconds
 
 ```
 
@@ -249,7 +248,7 @@ criar_script_python_paral_modes("bel", data = dia, res = "08", from = 7, until =
 # aplicar otp para todos os modos
 aplicar_otp("bel", data = dia, res = "08", all_modes = TRUE)
 
-# Elapsed time was 777.629 seconds
+# Elapsed time was 1453.82 seconds
 
 ```
 

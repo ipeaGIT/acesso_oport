@@ -1,16 +1,8 @@
-# info on Uber's H3 hexagonal gird:  https://github.com/obrl-soil/h3jsr/blob/master/vignettes/intro-to-h3jsr.Rmd
-# https://github.com/uber/h3/issues/87
-
-
-# remotes::install_local("misc/h3jsr-master.zip")
-
-# Para testar:
-municipio <- "fortaleza"
-uf_sigla <- "ce"
-
-
-library(h3jsr)
-
+#' ## Criação de hexágonos
+#' 
+#' As cidade brasileiras analisadas serão dividadas em hexágonos. A função ``poligono_para_hexagono`` pega os municípios e cria hexágonos de acordo com a resolução preferida, que no caso foi uma resolução de 960 metros (comprimento da menor diagonal do hexágono).
+#' 
+## ----hexagonos-----------------------------------------------------------
 
 shape_to_hexagon <- function(municipio, uf_sigla) {
   
@@ -67,16 +59,19 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
   
 }
 
+# # aplicando ---------------------------------------------------------------
+
+shape_to_hexagon("fortaleza", "ce")
+shape_to_hexagon("rio de janeiro", "rj")
+shape_to_hexagon("belo horizonte", "mg")
+shape_to_hexagon("porto alegre", "rs")
+shape_to_hexagon("curitiba", "pr")
+shape_to_hexagon("teresina", "pi")
+shape_to_hexagon("são paulo", "sp")
 
 
-# # # aplicando ---------------------------------------------------------------
-# 
-# munis <- c("fortaleza", "rio de janeiro", "recife", "belo horizonte")
-# ufs <- c("ce", "rj", "pe", "mg")
-# 
+# # Eu poderia simplesmente usar walk...
 # purrr::walk2(munis, ufs, shape_to_hexagon)
-# # 
-# # # abrir
-# # 
-# # rj <- read_rds("../data/hex_municipio/hex_rio.rds")
-# # mapview::mapview(rj)
+
+
+#' 

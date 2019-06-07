@@ -49,4 +49,4 @@ run_validator <- function(cidade, wait = TRUE) {
 # run_validator("bel")
 
 
-run_validator("temp")
+# run_validator("temp")

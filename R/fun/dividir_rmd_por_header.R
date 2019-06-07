@@ -20,7 +20,7 @@ dividir_rmd_por_header <- function(input_file) {
   names <- janitor::make_clean_names(names)
   # names <- ifelse(names == lines[starts], '', paste0('_', names)) # clean if no chunk name
   # make nice file names with chunk number and name (if exists)
-  file_names <- paste0(capitulo, ".", seq_along(starts), "-", names, '.R')
+  file_names <- paste0("R/", capitulo, ".", seq_along(starts), "-", names, '.R')
   for(chunk in seq_along(starts)){    # loop over header rows
     # save the lines in the chunk to a file
     writeLines(lines[starts[chunk]:stops[chunk]], con = file_names[chunk])

@@ -1,10 +1,11 @@
+
 points_allres <- function(muni_shortname) {
   
-  dir <- dir("../data/hex_municipio/", pattern = muni_shortname)
+  dir <- dir("../data/hex_agregados/", pattern = muni_shortname)
   
   res <- str_extract(dir, "\\d+")
   
-  dir_muni <- paste0("../data/hex_municipio/hex_", muni_shortname, "_", res, ".rds")
+  dir_muni <- paste0("../data/hex_agregados/hex_agregado_", muni_shortname, "_", res, ".rds")
   
   seila <- function(muni_res) {
     
@@ -14,6 +15,9 @@ points_allres <- function(muni_shortname) {
     
     # criar pontos
     hex_muni <- readRDS(dir_muni) %>%
+      # Tirar hexagonos sem atividade
+      filter(!(pop_total == 0 & renda_total == 0 & empregos_total == 0 & saude_total == 0 & 
+                 escolas_total == 0)) %>%
       select(id_hex) %>%
       st_centroid() %>%
       sfc_as_cols(names = c("X","Y"))
