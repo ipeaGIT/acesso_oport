@@ -171,7 +171,7 @@ A tabela abaixo mostra os parâmetros utilizados para o uso no roteamento do OTP
 
 tibble::tribble(
   ~Parâmetro,                ~Valor,
-  "MaxTimeSec",                "3600",
+  "MaxTimeSec",                "7200",
   "maxWalkDistance", "Ilimitado (default)",
   "walkSpeed",     "3 mph (default)",
   "bikeSpeed",    "11 mph (default)",
@@ -273,11 +273,11 @@ criar_script_python_paral_modes("rio", data = dia, res = "08", from = 7, until =
 # aplicar otp para todos os modos
 aplicar_otp("rio", data = dia, res = "08", all_modes = TRUE)
 
-# Elapsed time was 777.629 seconds
+# Elapsed time was 1874.02 seconds
 
 ```
 
-Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 777 segundos.
+Para a resolução 8, para todos os modos, e com partida a cada meia hora entre 7h e 9h, o tempo total foi de 1874 segundos.
 
 ### Matriz para Curitiba
 
@@ -347,7 +347,7 @@ criar_script_python_paral_modes("sao", data = dia, res = "08", from = 7, until =
 # aplicar otp
 aplicar_otp("sao", dia, "08", all_modes = TRUE)
 
-# 
+# Elapsed time was 8098.53 seconds
 
 ```
 

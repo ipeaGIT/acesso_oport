@@ -116,7 +116,8 @@ print(\"Elapsed time was %g seconds\" % (time.time() - start_time))")
 # CRIAR SCRIPT PYTHON PARALELO ALL MODES! ---------------------------------
 
 
-criar_script_python_paral_modes <- function(municipio, data, res, from = 7, until = 9, every = 30) {
+criar_script_python_paral_modes <- function(municipio, data, res, from = 7, until = 9, every = 30, 
+                                            time_threshold = 7200) {
   
   
   
@@ -143,13 +144,13 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "# INPUT ###################################################################################################",
   "",
   "# max number of threads to use in parallel",
-  "max_threads = 5",
+  "max_threads = 10",
   "",
   "# Trips",
   sprintf("fromm = %s             # departure time start", from),
   sprintf("until = %s            # departure time end", until),
   sprintf("every = %s            # frequency (every 30 minutes)", every),
-  "time_threshold = 3600 # Max travel time in seconds | 1h = 3600 seconds , 2h = 7200 seconds",
+  sprintf("time_threshold = %s # Max travel time in seconds | 1h = 3600 seconds , 2h = 7200 seconds", time_threshold),
   "",
   "# date of trips",
   sprintf("year= %s", ano),
