@@ -67,7 +67,8 @@ pasta `apps`. Após clonar o repositório, a versão mais atualizada do
 aplicativo pode ser acessada pelo comando:
 
 ``` r
-shiny::runApp(appDir = "apps/app_bootstrap_style/")
+setwd("apps/app_bootstrap_style/")
+shiny::runApp()
 ```
 
 <!-- ```{r, eval = TRUE, echo = FALSE} -->
