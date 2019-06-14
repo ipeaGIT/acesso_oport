@@ -34,6 +34,9 @@ options(scipen=10000)
 
 #library(tmap)
 
+# Use GForce Optimisations in data.table operations
+  # details > https://jangorecki.gitlab.io/data.cube/library/data.table/html/datatable-optimize.html
+  options(datatable.optimize=Inf)
 
 
 to_spatial <- function(df1, coordenada = c("lon", "lat")) {
