@@ -2,7 +2,8 @@
 # adaptado de https://stackoverflow.com/questions/35855837/with-knitr-preserve-chunk-options-when-purling-chunks-into-separate-files
 # Essa funcao divide um arquivo .Rmd em diversos arquivos .R de acordo com o header numero 2 (##)
 
-# input_file <- "02_agrupamento.Rmd"
+input_file <- "04_matriz.Rmd"
+input_file <- "03_otp.Rmd"
 
 dividir_rmd_por_header <- function(input_file) {
   
@@ -12,7 +13,9 @@ dividir_rmd_por_header <- function(input_file) {
   capitulo <- substr(input_file, 1, 2)
   
   lines <- readLines(purled)    # read purled file into a character vector of lines
-  starts <- grep("#' ##", lines)    # use grep to find header row indices
+  # Deletar texto
+  lines <- lines[-grep("#' ([[:alpha:]]|-){1,}", lines)]
+  starts <- grep("#' #{2} ", lines)    # use grep to find header row indices
   stops <- c(starts[-1] - 1L, length(lines))   # end row indices
   # extract chunk names from headers
   names <- sub("^#' ## (.*)", '\\1', lines[starts])
