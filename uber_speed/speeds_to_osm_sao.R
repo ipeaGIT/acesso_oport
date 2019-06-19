@@ -220,6 +220,7 @@ write_rds(graph_fim_v1_dt, "../../data/uber_speed/sao_final.rds")
 
 # ROTEAMENTO ----------------------------------------------------------------------------------
 library(dodgr)
+options(scipen = 999)
 
 graph_fim_v1_dt <- read_rds("../../data/uber_speed/sao_final.rds")
 
@@ -237,16 +238,23 @@ graph_fim_v2_dt <- graph_fim_v1_dt %>%
   filter(!is.na(end_node_fim_ok_2)) %>%
   select(-end_node_fim_ok_2, -speed_kph_mean)
 
+# Adicionar componentes
+graph_fim_v3_dt <- dodgr_components(graph_fim_v2_dt)
+
+graph_fim_v3_dt %>%
+  count(component, sort = TRUE)
+
 from <- sample(graph_fim_v2_dt$from_id, size = 1000)
 to <- sample(graph_fim_v2_dt$to_id, size = 1000)
 
 # My coordinates
-coords_sao <- read_csv("../../otp/points/points_sao_08.csv")
+coords_sao <- read_csv("../../otp/points/points_sao_08.csv") %>%
+  select(X, Y)
 
-from <- as.matrix(coords_sao[, c("X", "Y")])
-to <- as.matrix(coords_sao[, c("X", "Y")])
+from <- as.matrix(coords_sao[, c("X", "Y")])[1:10,]
+to <- as.matrix(coords_sao[, c("X", "Y")])[1:10,]
 
-t_time <- dodgr_times (graph_fim_v2_dt, from = from, to = to, shortest = FALSE) # fastest paths
+t_time <- dodgr_times (graph_fim_v2_dt, from = coords_sao[10:20,], to = coords_sao[10:20,], shortest = FALSE) # fastest paths
 
 # teste
 vertices <- dodgr_vertices(graph_fim_v2_dt)
