@@ -144,7 +144,7 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "# INPUT ###################################################################################################",
   "",
   "# max number of threads to use in parallel",
-  "max_threads = 10",
+  "max_threads = 20",
   "",
   "# Trips",
   sprintf("fromm = %s             # departure time start", from),

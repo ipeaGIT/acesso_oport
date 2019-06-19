@@ -250,7 +250,7 @@ Há a necessidade de filtrar os setores agregados por uf nas cidades dos projeto
 ```{r setores_por_municipio}
 
 # # nome do municipio completo, minusculo, sem acentos
-# municipio_logname <- "fortaleza"
+# municipio_logname <- "brasilia"
 # uf <- "ce"
 
 setores_por_municipio <- function(municipio_logname, uf) {
@@ -297,6 +297,9 @@ ufs <- c("ce", "rj", "mg", "pi", "rs", "sp", "pr")
 
 walk2(municipio_logname, ufs, setores_por_municipio)
 
+# para brasilia
+source("R/fun/setup.R")
+setores_por_municipio("brasilia", "df")
 
 ```
 
