@@ -115,9 +115,14 @@ print(\"Elapsed time was %g seconds\" % (time.time() - start_time))")
 
 # CRIAR SCRIPT PYTHON PARALELO ALL MODES! ---------------------------------
 
+# Argumentos interessantes (mais informacoes http://dev.opentripplanner.org/apidoc/1.0.0/resource_PlannerResource.html):
+# waitReluctance: How much worse is waiting for a transit vehicle than being on a transit vehicle, as a multiplier. (df = 1)
+# walkReluctance: A multiplier for how bad walking is, compared to being in transit for equal lengths of time. (df = 2)
+# transferPenalty: An additional penalty added to boardings after the first,  roughly equivalent to seconds
 
 criar_script_python_paral_modes <- function(municipio, data, res, from = 7, until = 9, every = 30, 
-                                            time_threshold = 7200) {
+                                            time_threshold = 7200, max_walk_distance = 800
+                                            ) {
   
   
   
@@ -144,13 +149,14 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "# INPUT ###################################################################################################",
   "",
   "# max number of threads to use in parallel",
-  "max_threads = 20",
+  "max_threads = 4",
   "",
   "# Trips",
   sprintf("fromm = %s             # departure time start", from),
   sprintf("until = %s            # departure time end", until),
   sprintf("every = %s            # frequency (every 30 minutes)", every),
   sprintf("time_threshold = %s # Max travel time in seconds | 1h = 3600 seconds , 2h = 7200 seconds", time_threshold),
+  sprintf("max_walk_distance = %s # Max walk distance", max_walk_distance),
   "",
   "# date of trips",
   sprintf("year= %s", ano),
@@ -204,16 +210,18 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "  # Create a default request for a given time",
   "  req = otp.createRequest()",
   "  req.setDateTime(year, month, day, h, m, 00)",
-  "  req.setMaxTimeSec( time_threshold )",
+  "  req.setMaxTimeSec(7200)",
+  "  req.setMaxWalkDistance(800)",
   "  req.setModes('WALK,TRANSIT,BUS,TRAM,RAIL,SUBWAY')",
+  "  req.setClampInitialWait(0)",
   "",  
   "  # Create a CSV output",
   "  matrixCsv = otp.createCSVOutput()",
-  "  matrixCsv.setHeader([ 'city', 'mode', 'depart_time', 'origin', 'destination', 'walk_distance', 'travel_time' ])",
+  "  matrixCsv.setHeader([ 'city', 'mode', 'depart_time', 'origin', 'destination', 'walk_distance', 'travel_time', 'boardings' ])",
   "",
   "  # Start Loop",
   "  for origin in points:",
-  "    print \"Processing sto Transit: \", str(h)+\"-\"+str(m),\" \", origin.getStringData('id_hex'), 'on ',threading.current_thread()",
+  "    print \"Processing Transit: \", str(h)+\"-\"+str(m),\" \", origin.getStringData('id_hex'), 'on ',threading.current_thread()",
   "    req.setOrigin(origin)",
   "    spt = router.plan(req)",
   "    if spt is None: continue",
@@ -223,7 +231,7 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "",
   "    # Add a new row of result in the CSV output",
   "    for r in result:",
-  "      matrixCsv.addRow([ city, 'transit', str(h) + \":\" + str(m) + \":00\", origin.getStringData('id_hex'), r.getIndividual().getStringData('id_hex'), r.getWalkDistance() , r.getTime()])",
+  "      matrixCsv.addRow([ city, 'transit', str(h) + \":\" + str(m) + \":00\", origin.getStringData('id_hex'), r.getIndividual().getStringData('id_hex'), r.getWalkDistance() , r.getTime(), r.getBoardings()])",
   "",
   "  # Save the result",
   sprintf("  matrixCsv.save('ttmatrix_%s_pt_%s_'+ str(h)+\"-\"+str(m) + '.csv')", municipio, res),
@@ -292,7 +300,7 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "",
   "    # Start Loop",
   "    for origin in points:",
-  "      print \"Processing sto WALK\", str(h)+\"-\"+str(m),\" \", origin.getStringData('id_hex')",
+  "      print \"Processing WALK\", str(h)+\"-\"+str(m),\" \", origin.getStringData('id_hex')",
   "      req.setOrigin(origin)",
   "      spt = router.plan(req)",
   "      if spt is None: continue",
@@ -336,7 +344,7 @@ criar_script_python_paral_modes <- function(municipio, data, res, from = 7, unti
   "",
   "    # Start Loop",
   "    for origin in points:",
-  "      print \"Processing sto bike\", str(h)+\"-\"+str(m),\" \", origin.getStringData('id_hex')",
+  "      print \"Processing bike\", str(h)+\"-\"+str(m),\" \", origin.getStringData('id_hex')",
   "      req.setOrigin(origin)",
   "      spt = router.plan(req)",
   "      if spt is None: continue",

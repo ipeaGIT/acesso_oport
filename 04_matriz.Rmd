@@ -345,17 +345,9 @@ Por fim, é necessário criar o comando para aplicar o OTP com o script em pytho
 
 ```{r fun_aplicar_otp}
 
-aplicar_otp <- function(cidade, data, res = "08", all_modes = TRUE) {
+aplicar_otp <- function(cidade, data, res = "08") {
   
-  if (all_modes == FALSE) {
-    
-    py_nome <- sprintf("otp_%s_%s_%s.py", cidade, data, res) }
-  
-  else {
-    
-    py_nome <- sprintf("otp_%s_%s_%s_paral_allmodes.py", cidade, data, res)
-    
-  }
+  py_nome <- sprintf("otp_%s_%s_%s_paral_allmodes.py", cidade, data, res)
   
   comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar py/%s", py_nome)
   
@@ -419,7 +411,7 @@ dia <- selecionar_data_gtfs("for")
 criar_script_python_paral_modes("for", data = dia, res = "08", from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("for", data = dia, res = "08", all_modes = TRUE)
+aplicar_otp("for", data = dia, res = "08")
 
 # Elapsed time was 649.622 seconds
 
@@ -433,9 +425,6 @@ Para a resolução 9:
 
 # Selecionar o dia
 dia <- selecionar_data_gtfs("for")
-
-# criar arquivo python
-criar_script_python("for", dia, "09")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
 criar_script_python_paral_modes("for", data = dia, res = "09", from = 7, until = 8, every = 30)
@@ -664,7 +653,7 @@ A avaliação da qualidade dos resultados retornados pelo OTP consiste na checag
 
 ```{r avaliar_qualidade_otp, eval=TRUE}
 
-cidade <- "por"
+# cidade <- "por"
 
 avaliar_qualidade_otp <- function(cidade) {
   
@@ -706,7 +695,8 @@ avaliar_qualidade_otp <- function(cidade) {
     group_by(cidade, modo) %>%
     mutate(n = n()) %>%
     mutate(Percentual = n/nrow(points)) %>%
-    mutate(Percentual = scales::percent(Percentual))
+    mutate(Percentual = scales::percent(Percentual)) %>%
+    ungroup()
   
 }
 
@@ -714,6 +704,8 @@ avaliar_qualidade_otp <- function(cidade) {
 qualidade_otp_for <- avaliar_qualidade_otp("for")
 qualidade_otp_for <- avaliar_qualidade_otp("bel")
 qualidade_otp_for <- avaliar_qualidade_otp("por")
+qualidade_otp_for <- avaliar_qualidade_otp("rio")
+qualidade_otp_for <- avaliar_qualidade_otp("sao")
 
 qualidade_otp <- map_dfr(c("for", "bel", "cur", "por", "rio"), avaliar_qualidade_otp)
 
@@ -727,6 +719,35 @@ qualidade_otp %>%
   read_rds("../data/hex_municipio/hex_por_08.rds") %>% mapview()
 
 ```
+
+Porto Alegre apresentou um alto número de pontos fora do OTP:
+
+```{r por_erro}
+
+# abrir street network
+st_layers("../otp/graphs/por/por_export.pbf")
+por_network <- st_read("../otp/graphs/por/por_export.pbf", layer = "lines")
+
+# extrair pontos de porto alegre que nao foram roteados pelo otp
+por_points_fora <- avaliar_qualidade_otp("por") %>%
+  select(ponto_fora, X, Y) %>%
+  distinct(ponto_fora, .keep_all = TRUE)
+
+# fazer um buffer de 2km em relacao a esses pontos e pegar somente as ruas que estao nesse raio 
+points_buffer <- por_points_fora %>%
+  to_spatial(c("X", "Y")) %>%
+  st_transform(31984) %>%
+  st_buffer(1000) %>%
+  st_transform(4326)
+
+network_filtrada <- por_network %>% 
+  st_join(points_buffer, left = FALSE)
+
+# viz
+mapview(por_points_fora %>% to_spatial(c("X", "Y")), zcol = NULL) + mapview(network_filtrada)
+
+```
+
 
 Por enquanto a função é aplicada para quatro cidades: Fortaleza, Belo Horizonte, Curitiba e Porto Alegre. O ``Percentual`` representa o percentual de pontos que não foi roteado pelo OTP em relação ao total de pontos daquela cidade.
 
