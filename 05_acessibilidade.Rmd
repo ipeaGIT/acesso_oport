@@ -56,6 +56,13 @@ Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de t
 
 acess_acumu <- function(cidade, modo, hora, tempo, res = "08") {
   
+  # list .csv files in city folder
+  # lapply(files, fread) %>% rbindlist()
+  # calcula access 
+    # Ativa by origen, modo, horario
+    # Passiva by dest, modo, horario
+
+  
   # res1 <- sprintf("0%s", res)
   res1 <- res
   
