@@ -9,6 +9,21 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+***Usar esse ecript como ref*** >https://github.com/rafapereirabr/thesis/blob/master/Rscripts/chapter4/8%20origin-Accessibility_MAUP.R
+
+* 1 media dos tempos de viagm by (origin, destination , depart_time)
+* 2 merege to add land use data
+* 3 calcular medidas de acess
+
+
+
+|Medida de Acess|Modo|Horario|Atividade|Time threshold|
+|-----|-----|-----|-----|-----|
+|CMP, CMA, TMI, CPT|c, p, b, w|P,F|T, S, E|30, 60, 90|
+
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = FALSE, eval = TRUE)
 
