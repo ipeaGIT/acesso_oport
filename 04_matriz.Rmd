@@ -594,13 +594,13 @@ Para a resolução 9:
 dia <- selecionar_data_gtfs("por")
 
 # criar arquivo python
-criar_script_python("por", dia, "09")
+# criar_script_python("por", dia, "09")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
 criar_script_python_paral_modes("por", data = dia, res = "09", from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("por", data = dia, res = "09", all_modes = TRUE)
+aplicar_otp("por", data = dia, res = "09")
 
 # Elapsed time was 3113.68 seconds
 
