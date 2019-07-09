@@ -10,7 +10,7 @@ editor_options:
 ---
 
 
-***Usar esse ecript como ref*** >https://github.com/rafapereirabr/thesis/blob/master/Rscripts/chapter4/8%20origin-Accessibility_MAUP.R
+***Usar esse ecript como ref*** https://github.com/rafapereirabr/thesis/blob/master/Rscripts/chapter4/8%20origin-Accessibility_MAUP.R
 
 * 1 media dos tempos de viagm by (origin, destination , depart_time)
 * 2 merege to add land use data
@@ -44,8 +44,7 @@ library(furrr)
 # devtools::install_local("misc/patchwork-master.zip")
 library(patchwork)
 
-options(scipen = 999)
-
+source("R/fun/setup.R")
 ```
 
 # Indicador de acesso cumulativo a oportunidades
@@ -54,7 +53,18 @@ Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de t
 
 ```{r fun}
 
-acess_acumu <- function(cidade, modo, hora, tempo, res = "08") {
+# cidade <- "for"
+# res <- "09"
+
+# Juntar as ttmatrix -------------------------------------------------------------------------------
+
+juntar_ttmatrix <- function(cidade, res = "09") {
+  
+  
+  
+}
+
+calcular_acess <- function(cidade, res = "09") {
   
   # list .csv files in city folder
   # lapply(files, fread) %>% rbindlist()
@@ -62,49 +72,422 @@ acess_acumu <- function(cidade, modo, hora, tempo, res = "08") {
     # Ativa by origen, modo, horario
     # Passiva by dest, modo, horario
 
+  cidade_files <- dir("../data/output_ttmatrix/", 
+                      pattern = sprintf("^ttmatrix_%s_[[:lower:]]+_%s", cidade, res), 
+                      full.names = TRUE)
   
-  # res1 <- sprintf("0%s", res)
-  res1 <- res
+  # city,mode,depart_time,origin,destination,distance,travel_time
   
-  dir_matriz <- sprintf("../data/output_ttmatrix/ttmatrix_%s_%s_%s_%s.csv", cidade, modo, res1, hora)
-    
-  # abrir matriz
-  matriz_for <- read_csv(dir_matriz) %>%
-    select(origin, destination, travel_time) %>%
-    mutate(travel_time = travel_time/60)
+  # ttmatrix_files <- cidade_files[1]
   
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, res1)
+  # # Funcao para abrir arquivos e escolher colunas de interesse (e comuns)
+  # ler_ttmatrix <- function(ttmatrix_files) {
+  #   
+  #   ttmatrix <- fread(ttmatrix_files)
+  #   
+  #   ttmatrix <- ttmatrix[, .(city, mode, depart_time, origin, destination, travel_time)]
+  #   
+  #   # Gerar id (integer) para cada origin/destination
+  #   # teste <- ttmatrix[, origin1 := .GRP, by = .(origin)]
+  #   
+  # }
+  
+  # Abrir arquivos e juntar
+  ttmatrix_allmodes <- map(cidade_files, 
+                           fread, select = c("city", "mode", "depart_time", "origin", "destination", "travel_time")) %>%
+    rbindlist()
+  
+  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem (para qualquer modo) como 350s
+  ttmatrix_allmodes[, travel_time := ifelse(origin == destination, 
+                                            350,
+                                            travel_time)]
+  
+  # Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
+  # Primeiro, adicionar informacao se eh pico ou fora pico
+  ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 
+                                     1,
+                                     ifelse(depart_time %in% c("7:0:00", "7:30:00"),
+                                            1, 
+                                            0))]
+  # Adicionar id unico para cada par OD
+  ttmatrix_allmodes[, par_id := .GRP, by = .(origin, destination)]
+  
+  # Calcular a mediana agrupando por cidade, modo, origin, destination, pico
+  ttmatrix_median <- ttmatrix_allmodes[, .(origin = first(origin), 
+                                           destination = first(destination),
+                                           tt_median = median(travel_time, na.rm = TRUE)), 
+                                       by = .(city, mode, par_id, pico)]
+  
+  # Pegar arquivo com os hexagonos com as atividades
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, res)
   
   # abrir oportunidades com hexagonos
-  hexagonos_for_sf <- read_rds(dir_hex) %>%
+  hexagonos_sf <- read_rds(dir_hex) %>%
     ungroup()
   
-  # so populacao
-  hexagonos_for_pop <- hexagonos_for_sf %>%
+  # so populacao e renda
+  hexagonos_pop <- hexagonos_sf %>%
     st_set_geometry(NULL) %>%
-    select(id_hex, pop_total)
+    select(id_hex, pop_total, renda_total) %>%
+    setDT()
   
   # outras variaveis
-  hexagonos_for_vars <- hexagonos_for_sf %>%
+  hexagonos_vars <- hexagonos_sf %>%
     st_set_geometry(NULL) %>%
-    select(-pop_total)
+    select(-pop_total, -renda_total) %>%
+    setDT()
+  
+  # Juntar as variaveis de uso do solo com os tempos de viagem
+  # Trazer a populacao e renda (juncao pela ORIGEM!)
+  ttmatrix_variaveis <- ttmatrix_median[hexagonos_pop, on = c("origin" = "id_hex"),  
+                                        c('pop_total', 'renda_total') := list(i.pop_total, i.renda_total)]
+
+  # system.time(ttmatrix_variaveis <- merge(ttmatrix_median, hexagonos_pop,
+  #                             by.x = "origin",
+  #                             by.y = "id_hex",
+  #                             all.x = TRUE))
+
+  # Trazer as demais variaveis (juncao pelo DESTINO!)
+  ttmatrix_variaveis <- ttmatrix_median[hexagonos_vars, on = c("destination" = "id_hex"),  
+                                        c('empregos_total', 'saude_total', 'escolas_infantil', 
+                                          'escolas_fundamental', 'escolas_medio') := 
+                                          list(i.empregos_total, i.saude_total, i.escolas_infantil, 
+                                          i.escolas_fundamental, i.escolas_medio)]
+  
+  # system.time(ttmatrix_variaveis <- merge(ttmatrix_variaveis, hexagonos_vars,
+  #                             by.x = "destination",
+  #                             by.y = "id_hex",
+  #                             all.x = TRUE))
+  
+  # # Transformar NAs para 0
+  # ttmatrix_variaveis[, pop_total := ifelse(is.na(pop_total),
+  #                                          0,
+  #                                          pop_total)]
+  # 
+  # ttmatrix_variaveis[, renda_total := ifelse(is.na(renda_total),
+  #                                          0,
+  #                                          renda_total)]
+  
+  # Transformar o traveltime para minutos
+  ttmatrix_variaveis[, tt_median := tt_median/60]
+  
+  setorder(ttmatrix_variaveis, par_id)
+  
+  # Dicionario de variaveis:
+  # - CMA = Acessibilidade Cumulativa Ativa
+  # - CMP = Acessibilidade Cumulativa Passiva
+  # - CPT = 
+  # - TMI = Acessibilidade de Tempo Mínimo à Oportunidade
+  
+  # 1 - All accessible activities from each ORIGIN across they day
+  access <- ttmatrix_variaveis[, 
+                                  .(CMA_ST_15 = sum( saude_total[which( tt_median <= 15)], na.rm=T)
+                                   , CMA_ST_30 = sum( saude_total[which( tt_median <= 30)], na.rm=T)
+                                   , CMA_ST_60 = sum( saude_total[which( tt_median <= 60)], na.rm=T)
+                                   , CMA_ST_90 = sum( saude_total[which( tt_median <= 90)], na.rm=T)
+                                   , CMA_ST_120 = sum(saude_total[which( tt_median <= 120)], na.rm=T)
+                                   
+                                   , CMA_EI_15 = sum( escolas_infantil[which( tt_median <= 15)], na.rm=T)
+                                   , CMA_EI_30 = sum( escolas_infantil[which( tt_median <= 30)], na.rm=T)
+                                   , CMA_EI_60 = sum( escolas_infantil[which( tt_median <= 60)], na.rm=T)
+                                   , CMA_EI_90 = sum( escolas_infantil[which( tt_median <= 90)], na.rm=T)
+                                   , CMA_EI_120 = sum(escolas_infantil[which( tt_median <= 120)], na.rm=T)
+                                   
+                                   , CMA_EF_15 = sum( escolas_fundamental[which( tt_median <= 15)], na.rm=T)
+                                   , CMA_EF_30 = sum( escolas_fundamental[which( tt_median <= 30)], na.rm=T)
+                                   , CMA_EF_60 = sum( escolas_fundamental[which( tt_median <= 60)], na.rm=T)
+                                   , CMA_EF_90 = sum( escolas_fundamental[which( tt_median <= 90)], na.rm=T)
+                                   , CMA_EF_120 = sum(escolas_fundamental[which( tt_median <= 120)], na.rm=T)
+                                   
+                                   , CMA_EM_15 = sum( escolas_medio[which( tt_median <= 15)], na.rm=T)
+                                   , CMA_EM_30 = sum( escolas_medio[which( tt_median <= 30)], na.rm=T)
+                                   , CMA_EM_60 = sum( escolas_medio[which( tt_median <= 60)], na.rm=T)
+                                   , CMA_EM_90 = sum( escolas_medio[which( tt_median <= 90)], na.rm=T)
+                                   , CMA_EM_120 = sum(escolas_medio[which( tt_median <= 120)], na.rm=T)
+                                   
+                                   , CMA_TT_15 = sum( empregos_total[which( tt_median <= 15)], na.rm=T)
+                                   , CMA_TT_30 = sum( empregos_total[which( tt_median <= 30)], na.rm=T)
+                                   , CMA_TT_60 = sum( empregos_total[which( tt_median <= 60)], na.rm=T)
+                                   , CMA_TT_90 = sum( empregos_total[which( tt_median <= 90)], na.rm=T)
+                                   , CMA_TT_120 = sum(empregos_total[which( tt_median <= 120)], na.rm=T)
+                                   
+                                   , TMI_ST = min(tt_median[which(saude_total >= 1)])
+                                   , TMI_EI = min(tt_median[which(escolas_infantil >= 1)])
+                                   , TMI_EF = min(tt_median[which(escolas_fundamental >= 1)])
+                                   , TMI_EM = min(tt_median[which(escolas_medio >= 1)])
+  ),
+  by=.(city, mode, origin, pico) ]
+  
+  # # Nao faz mais sentido o timetrhresold ser menor para walk e bike?
+  # access_at <- ttmatrix_variaveis[mode %in% c("walk", "bike"), 
+  #                                 .(CMA_ST_10 = sum( saude_total[which( tt_median <= 10)], na.rm=T)
+  #                                  , CMA_ST_20 = sum( saude_total[which( tt_median <= 20)], na.rm=T)
+  #                                  , CMA_ST_30 = sum( saude_total[which( tt_median <= 30)], na.rm=T)
+  #                                  , CMA_ST_40 = sum( saude_total[which( tt_median <= 40)], na.rm=T)
+  #                                  , CMA_ST_50 = sum( saude_total[which( tt_median <= 50)], na.rm=T)
+  #                                  
+  #                                  , CMA_EI_10 = sum( escolas_infantil[which( tt_median <= 10)], na.rm=T)
+  #                                  , CMA_EI_20 = sum( escolas_infantil[which( tt_median <= 20)], na.rm=T)
+  #                                  , CMA_EI_30 = sum( escolas_infantil[which( tt_median <= 30)], na.rm=T)
+  #                                  , CMA_EI_40 = sum( escolas_infantil[which( tt_median <= 40)], na.rm=T)
+  #                                  , CMA_EI_50 = sum( escolas_infantil[which( tt_median <= 50)], na.rm=T)
+  #                                  
+  #                                  , CMA_EF_10 = sum( escolas_fundamental[which( tt_median <= 10)], na.rm=T)
+  #                                  , CMA_EF_20 = sum( escolas_fundamental[which( tt_median <= 20)], na.rm=T)
+  #                                  , CMA_EF_30 = sum( escolas_fundamental[which( tt_median <= 30)], na.rm=T)
+  #                                  , CMA_EF_40 = sum( escolas_fundamental[which( tt_median <= 40)], na.rm=T)
+  #                                  , CMA_EF_50 = sum( escolas_fundamental[which( tt_median <= 50)], na.rm=T)
+  #                                  
+  #                                  , CMA_EM_10 = sum( escolas_medio[which( tt_median <= 10)], na.rm=T)
+  #                                  , CMA_EM_20 = sum( escolas_medio[which( tt_median <= 20)], na.rm=T)
+  #                                  , CMA_EM_30 = sum( escolas_medio[which( tt_median <= 30)], na.rm=T)
+  #                                  , CMA_EM_40 = sum( escolas_medio[which( tt_median <= 40)], na.rm=T)
+  #                                  , CMA_EM_50 = sum( escolas_medio[which( tt_median <= 50)], na.rm=T)
+  #                                  
+  #                                  , CMA_TT_10 = sum( empregos_total[which( tt_median <= 10)], na.rm=T)
+  #                                  , CMA_TT_20 = sum( empregos_total[which( tt_median <= 20)], na.rm=T)
+  #                                  , CMA_TT_30 = sum( empregos_total[which( tt_median <= 30)], na.rm=T)
+  #                                  , CMA_TT_40 = sum( empregos_total[which( tt_median <= 40)], na.rm=T)
+  #                                  , CMA_TT_50 = sum( empregos_total[which( tt_median <= 50)], na.rm=T)
+  #                                  
+  #                                  , TMI_ST = min(tt_median[which(saude_total >= 1)])
+  #                                  , TMI_EI = min(tt_median[which(escolas_infantil >= 1)])
+  #                                  , TMI_EF = min(tt_median[which(escolas_fundamental >= 1)])
+  #                                  , TMI_EM = min(tt_median[which(escolas_medio >= 1)])
+  # ),
+  # by=.(city, mode, origin, pico) ]
+  
+  # # Juntar as bases
+  # access <- rbind(access_pt, access_at)
+  
+  # # Trazer de volta a geometria das origens
+  # 
+  # access_sf <- map(list(access_at, access_pt), merge, 
+  #                  setDT(hexagonos_sf)[, .(id_hex, geometry)],
+  #                  by.x = "origin", 
+  #                  by.y = "id_hex", 
+  #                  all.x = TRUE)
+  # 
+  # access_sf <- map(access_sf, st_sf)
+  # 
+  # names(access_sf) <- c("ativo", "transit")
+  # 
+  # return(access_sf)
+  
+  access_sf <- merge(access, setDT(hexagonos_sf)[, .(id_hex, geometry)],
+                                              by.x = "origin",
+                                              by.y = "id_hex",
+                                              all.x = TRUE) %>%
+    # Transformar para sf
+    st_sf()
+  
+  # Salvar
+  path_out <- sprintf("../data/output_access/acess_%s.rds", cidade)
+  write_rds(access_sf, path_out)
   
   
-  # quantas oportunidades de escolas podem ser acessadas em menos de 40 minutos?
-  # IDEIA: em de escolas, nao seria melhor considerar matriculas?
-  
-  access_ac_for <- matriz_for %>%
-    left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
-    left_join(hexagonos_for_pop, by = c("origin" = "id_hex")) %>%
-    group_by(origin, pop_total) %>%
-    filter(travel_time < tempo) %>%
-    summarise_at(vars(saude_total, escolas_total), sum) %>%
-    mutate(tempo_viagem = tempo)
-  
-  access_ac_for_fim <- hexagonos_for_sf %>%
-    select(id_hex) %>%
-    left_join(access_ac_for, by = c("id_hex" = "origin"))
 }
+
+
+```
+
+Função para produzir mapas de acessibilidade:
+
+```{r fun_criar_mapas}
+
+
+# Abrir linhas de alta/media capacidade
+linhas_hm <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%
+  mutate(city = substr(Cidade, 1, 3) %>% tolower())
+  
+
+# acess <- acess_for
+# indicador <- "CMA"
+# modo <- "walk"
+# atividade <- "ST"
+
+# Fazer mapas para cada uma das atividades, fazendo o facet_wrap pelo threshold --------------------
+fazer_mapa_acess_cidade <- function(acess, indicador, modo, atividade, salvar = FALSE, 
+                                    nrow = 1) {
+  
+  # Extrair string da cidade
+  cidade <- str_sub(deparse(substitute(acess)), -3, -1)
+  
+  # Filtra linhas hm
+  linhas_hm_cidade <- linhas_hm %>% filter(city %in% cidade)
+  
+  # Filtrar o modo
+  acess_modo <- acess %>% filter(mode == modo)
+  
+  # Filtrar indicador e fazer mapa
+  if (indicador == "TMI") {
+    
+    modo_title <- ifelse(modo == "walk", "caminhada", 
+                         ifelse(modo == "bike", "bicicleta", 
+                                ifelse(modo == "transit", "transporte público")))
+    
+    # title <- sprintf("Tempo mínimo até a oportunidade mais próxima por %s", modo_title)
+    
+    title <- bquote("Tempo mínimo até a oportunidade mais próxima por"~bold(.(modo_title)))
+    
+    
+    
+    fim <- acess_modo %>%
+      # Filtrar indicador
+      select(matches(indicador)) %>%
+      gather(atividade, acess_abs, -geometry) %>%
+      mutate(acess_discrete = ifelse(acess_abs >= 30, 30, acess_abs)) %>%
+      mutate(atividade1 = case_when(
+        atividade == "TMI_EF" ~ "Educação Fundamental",
+        atividade == "TMI_EI" ~ "Educação Infantil",
+        atividade == "TMI_EM" ~ "Educação Média",
+        atividade == "TMI_ST" ~ "Saúde"
+      )
+      ) %>%
+      mutate(atividade1 = factor(atividade1, 
+                                 levels = c("Saúde", "Educação Infantil", "Educação Fundamental", "Educação Média")))
+    
+    mapa <- 
+      ggplot(data = fim)+
+      # annotation_map_tile(zoomin = -1) +
+      geom_sf(aes(fill = acess_discrete), color = NA)+
+      geom_sf(data = linhas_hm_cidade, size=0.7, color="#2340e7")+
+      facet_wrap(~atividade1, nrow = nrow)+
+      viridis::scale_fill_viridis(option = "B", 
+                                  direction = -1, 
+                                  breaks = c(0, 10, 20, 30), labels = c("0", "10", "20", ">30")) +
+      theme_for_TMI()+
+      labs(fill = "Tempo até a oportunidade\n mais próxima",
+           title = title)
+    # for_tile
+    # guides(fill = guide_legend(title.position = 'top'))
+    
+  } else if (indicador == "CMA") {
+    
+    modo_title <- ifelse(modo == "walk", "caminhada", 
+                         ifelse(modo == "bike", "bicicleta", 
+                                ifelse(modo == "transit", "transporte público")))
+    
+    atividade_title <- ifelse(atividade == "ST", "saúde",
+                              ifelse(atividade == "TT", "trabalho",
+                                     ifelse(atividade == "EI", "educação infantil",
+                                            ifelse(atividade == "EM", "educação média",
+                                                   ifelse(atividade == "EF", "educação fundamental")))))
+    
+    
+    # title <- sprintf("Indicador cumulativo para oportunidades de %s\n %s", atividade_title, modo_title)
+    
+    title <- bquote("Indicador cumulativo para oportunidades de"~bold(.(atividade_title))~"por"~bold(.(modo_title)))
+    
+    if (modo %in% c("walk", "bike")) {
+      
+      fim <- acess_modo %>%
+        # Filtrar indicador
+        select(matches(indicador)) %>%
+        # Filtrar atividade
+        select(matches(atividade)) %>%
+        # Wide to long
+        gather(threshold, acess_abs, -geometry) %>%
+        mutate(threshold1 = as.integer(str_extract(threshold, "\\d+$"))) %>%
+        # Pegar somente esses threshoold
+        filter(threshold1 %in% c(15, 30, 60)) %>%
+        mutate(threshold_name = paste0(str_extract(threshold, "\\d+$"), " minutos")) %>%
+        mutate(threshold_name = forcats::fct_reorder(factor(threshold_name), threshold1))
+      
+      mapa <-
+        ggplot(data = fim)+
+        geom_sf(aes(fill = acess_abs), color = NA)+
+        geom_sf(data = linhas_hm_cidade, size=0.7, color="#2340e7")+
+        facet_wrap(~threshold_name, nrow = nrow) +
+        viridis::scale_fill_viridis(option = "B") +
+        # ggthemes::theme_map() + 
+        theme_for_CMA()+
+        labs(fill = "Quantidade de oportunidades\n acessíveis",
+             title = title)
+      # guides(fill = guide_legend(title.position = 'top'))
+      
+    } else if (modo == "transit") {
+      
+      fim <- acess_modo %>%
+        # Filtrar indicador
+        select(matches(indicador)) %>%
+        # Filtrar atividade
+        select(matches(atividade)) %>%
+        # Wide to long
+        gather(threshold, acess_abs, -geometry) %>%
+        mutate(threshold1 = as.integer(str_extract(threshold, "\\d+$"))) %>%
+        # Pegar somente esses threshoold
+        filter(threshold1 %in% c(30, 60, 90)) %>%
+        mutate(threshold_name = paste0(str_extract(threshold, "\\d+$"), " minutos")) %>%
+        mutate(threshold_name = forcats::fct_reorder(factor(threshold_name), threshold1))
+      
+      mapa <-
+        ggplot(data = fim)+
+        geom_sf(aes(fill = acess_abs), color = NA)+
+        geom_sf(data = linhas_hm_cidade, size=0.7, color="#2340e7")+
+        facet_wrap(~threshold_name, nrow = nrow) +
+        viridis::scale_fill_viridis(option = "B") +
+        # ggthemes::theme_map() + 
+        theme_for_CMA()+
+        labs(fill = "Quantidade de oportunidades\n acessíveis",
+             title = title)
+    }
+    
+  }
+  
+  
+  if (salvar == TRUE) {
+    
+    
+    path_out <- sprintf("figure/acess/%s_%s_P_%s_%s.png", cidade, indicador, modo, atividade)
+    
+    ggsave(plot = mapa, filename = path_out, dpi = 300, units = "cm", height = 9, width = 16)
+    
+  } else if (salvar == FALSE) {mapa}
+  
+  
+}
+
+# CRIAR TEMAS PARA CADA UMA DAS CIDADES ------------------------------------------------------------
+theme_for_CMA <- function(base_size) {
+  
+  theme_void(base_family="Roboto Condensed") %+replace%
+    
+    theme(
+      legend.position = "bottom",
+      plot.margin=unit(c(2,0,0,0),"mm"),
+      legend.key.width=unit(2,"line"),
+      legend.key.height = unit(0.2,"cm"),
+      legend.text=element_text(size=rel(0.5)),
+      legend.title=element_text(size=rel(0.5)),
+      plot.title = element_text(hjust = 0, vjust = 4)
+      
+      
+    )
+}
+
+theme_for_TMI <- function(base_size) {
+  
+  theme_void(base_family="Roboto Condensed") %+replace%
+    
+    theme(
+      legend.position = "bottom",
+      plot.margin=unit(c(2,0,0,0),"mm"),
+      legend.key.width=unit(1,"line"),
+      legend.key.height = unit(0.2,"cm"),
+      legend.text=element_text(size=rel(0.5)),
+      legend.title=element_text(size=rel(0.5)),
+      plot.title = element_text(hjust = 0, vjust = 4)
+      # legend.key.width=unit(0.5,"cm")
+      
+    )
+}
+
+# # Fazer mapas para cada uma das atividades, fazendo comparacao entre cidades -----------------------
+# 
+# fazer_mapa_acess_comparar <- function(variables) {
+#   
+# }
 
 
 ```
@@ -114,69 +497,77 @@ acess_acumu <- function(cidade, modo, hora, tempo, res = "08") {
 
 ```{r acess acumulativa for}
 
-acess_ac_for <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "for", tempo = .x)) %>%
-  as_tibble() %>%
-  st_sf()
 
-# acess_ac_for <- map_dfr(seq(15, 60, 5), ~ acess_acumu(cidade = "for", tempo = .x)) %>%
-#   as_tibble() %>%
-#   st_sf()
+# Aplicar
+# calcular_acess("for")
 
-
-# write_rds(acess_ac_for, "../data/output_access/acess_ac_for.rds")
+# Abrir
+acess_for <- read_rds("../data/output_access/acess_for.rds")
 
 
-# adicionar competicao
+# for_tile <- annotation_map_tile(data = acess_for$transit)
+# Fazer mapa para fortaleza ------------------------------------------------------------------------
+# Para indicador TMI
+fazer_mapa_acess_cidade(acess_for, indicador = "TMI", modo = "transit", atividade = "ST",
+                        salvar = TRUE)
 
-# access_ac_for_fim %>%
-#   select(id_hex, pop_total, saude_total) %>%
-#   mutate(saude_por_pessoa = (saude_total/pop_total)*10) %>%
-#   View()
+fazer_mapa_acess_cidade(acess_for, indicador = "TMI", modo = "walk", atividade = "ST",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "TMI", modo = "bike", atividade = "ST",
+                        salvar = TRUE)
+
+# Para indicador CMA
+# transit
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "transit", atividade = "ST",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "transit", atividade = "TT",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "transit", atividade = "EI",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "transit", atividade = "EF",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "transit", atividade = "EM",
+                        salvar = TRUE)
+
+# walk
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "walk", atividade = "ST",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "walk", atividade = "TT",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "walk", atividade = "EI",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "walk", atividade = "EF",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "walk", atividade = "EM",
+                        salvar = TRUE)
+
+# bike
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "bike", atividade = "ST",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "bike", atividade = "TT",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "bike", atividade = "EI",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "bike", atividade = "EF",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_for, indicador = "CMA", modo = "bike", atividade = "EM",
+                        salvar = TRUE)
 
 
-# mapview(access_ac_for_fim, zcol = "saude_total")
 
-
-
-
-```
-
-Visualizar o indicador de acessibilidade para Fortaleza:
-
-```{r viz for}
-
-source("R/themes_ggplot.R")
-
-acess_ac_for %>%
- select(saude_total, tempo_viagem) %>%
-  filter(!is.na(tempo_viagem)) %>%
-  ggplot()+
-  geom_sf(aes(fill = saude_total))+
-  theme_proj(legend.position ="bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-  facet_wrap(~tempo_viagem) +
-acess_ac_for %>%
- select(escolas_total, tempo_viagem) %>%
-  filter(!is.na(tempo_viagem)) %>%
-  ggplot()+
-  geom_sf(aes(fill = escolas_total))+
-  theme_proj()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-  facet_wrap(~tempo_viagem)
-
-# library(gganimate)
-# 
-# acess_ac_for %>%
-#  select(saude_total, tempo_viagem) %>%
-#   filter(!is.na(tempo_viagem)) %>%
-#   # filter(tempo_viagem %in% c(15, 20)) %>%
-#   ggplot()+
-#   geom_sf(aes(fill = saude_total))+
-#   theme_bw()+
-#   theme(legend.position = "bottom")+
-#   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-#   labs(title = "Tempo de viagem: {frame_time} minutos")+
-#   transition_time(as.integer(tempo_viagem))
 
 ```
 
@@ -186,40 +577,39 @@ Para Belo Horizonte:
 
 ```{r acess acumulativa bel}
 
-acess_ac_bel <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "bel", tempo = .x)) %>%
-  as_tibble() %>%
-  st_sf()
+# Aplicar
+# calcular_acess("bel")
 
-# write_rds(acess_ac_bel, "../data/output_access/acess_ac_bel.rds")
+# Abrir
+acess_bel <- read_rds("../data/output_access/acess_bel.rds")
 
+# Fazer mapa para bel ------------------------------------------------------------------------
+# Para indicador TMI
+fazer_mapa_acess_cidade(acess_bel, indicador = "TMI", modo = "transit", atividade = "ST",
+                        salvar = TRUE)
 
-```
+fazer_mapa_acess_cidade(acess_bel, indicador = "TMI", modo = "walk", atividade = "ST",
+                        salvar = TRUE)
 
-Visualizar o indicador de acessibilidade para Belo Horizonte:
+fazer_mapa_acess_cidade(acess_bel, indicador = "TMI", modo = "bike", atividade = "ST",
+                        salvar = TRUE)
 
-```{r viz bel}
+# Para indicador CMA
+fazer_mapa_acess_cidade(acess_bel, indicador = "CMA", modo = "transit", atividade = "ST",
+                        salvar = TRUE)
 
-acess_ac_bel %>%
- select(saude_total, tempo_viagem) %>%
-  filter(!is.na(tempo_viagem)) %>%
-  ggplot()+
-  geom_sf(aes(fill = saude_total))+
-  theme_bw()+
-  theme(legend.position = "bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-  facet_wrap(~tempo_viagem) +
-acess_ac_bel %>%
-  select(escolas_total, tempo_viagem) %>%
-  filter(!is.na(tempo_viagem)) %>%
-  ggplot()+
-  geom_sf(aes(fill = escolas_total))+
-  theme_bw()+
-  theme(legend.position = "bottom")+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-  facet_wrap(~tempo_viagem)
+fazer_mapa_acess_cidade(acess_bel, indicador = "CMA", modo = "transit", atividade = "TT",
+                        salvar = TRUE)
 
+fazer_mapa_acess_cidade(acess_bel, indicador = "CMA", modo = "transit", atividade = "EI",
+                        salvar = TRUE)
 
-  
+fazer_mapa_acess_cidade(acess_bel, indicador = "CMA", modo = "transit", atividade = "EF",
+                        salvar = TRUE)
+
+fazer_mapa_acess_cidade(acess_bel, indicador = "CMA", modo = "transit", atividade = "EM",
+                        salvar = TRUE)
+
 
 ```
 
@@ -229,181 +619,79 @@ Para o Rio de Janeiro:
 
 ```{r acess acumulativa rio}
 
-acess_ac_rio <- map_dfr(c(15, 30, 45, 60), ~ acess_acumu(cidade = "rio", tempo = .x)) %>%
-  as_tibble() %>%
-  st_sf()
+# Aplicar
+# calcular_acess("rio")
 
+# Abrir
+acess_rio <- read_rds("../data/output_access/acess_rio.rds")
 
-# write_rds(acess_ac_rio, "../data/output_access/acess_ac_rio.rds")
+# Fazer mapa para rio ------------------------------------------------------------------------
+# Para indicador TMI
+fazer_mapa_acess_cidade(acess_rio, indicador = "TMI", modo = "transit", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-```
+fazer_mapa_acess_cidade(acess_rio, indicador = "TMI", modo = "walk", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-Visualizar o indicador de acessibilidade para Rio de Janeiro:
+fazer_mapa_acess_cidade(acess_rio, indicador = "TMI", modo = "bike", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-```{r viz rio}
+# Para indicador CMA
+fazer_mapa_acess_cidade(acess_rio, indicador = "CMA", modo = "transit", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-acess_ac_rio %>%
-  select(saude_total, tempo_viagem) %>%
-  filter(!is.na(tempo_viagem)) %>%
-  ggplot()+
-  geom_sf(aes(fill = saude_total))+
-  theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd")) +
-  # theme(legend.position = "bottom")+
-  facet_wrap(~tempo_viagem) +
-acess_ac_rio %>%
-  select(escolas_total, tempo_viagem) %>%
-  filter(!is.na(tempo_viagem)) %>%
-  ggplot()+
-  geom_sf(aes(fill = escolas_total))+
-  theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"))+
-  # theme(legend.position = "bottom")+
-  facet_wrap(~tempo_viagem)+
-    plot_layout(ncol = 1)
-  
+fazer_mapa_acess_cidade(acess_rio, indicador = "CMA", modo = "transit", atividade = "TT",
+                        salvar = TRUE, nrow = 2)
 
-```
+fazer_mapa_acess_cidade(acess_rio, indicador = "CMA", modo = "transit", atividade = "EI",
+                        salvar = TRUE, nrow = 2)
 
-# Indicador de tempo mínimo até a oportunidade mais próxima
+fazer_mapa_acess_cidade(acess_rio, indicador = "CMA", modo = "transit", atividade = "EF",
+                        salvar = TRUE, nrow = 2)
 
-```{r fun acess_min}
-
-acess_min <- function(cidade, res = 8) {
-  
-  res1 <- sprintf("0%s", res)
-  
-  dir_matriz <- sprintf("../data/output_ttmatrix/traveltime_matrix_%s_python.csv", cidade)
-    
-  # abrir matriz
-  matriz_for <- read_csv(dir_matriz) %>%
-    select(origin, destination, travel_time) %>%
-    mutate(travel_time = travel_time/60) %>%
-    # filter(!(origin == destination))
-    identity()
-  
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, res1)
-  
-  # abrir oportunidades com hexagonos
-  hexagonos_for_sf <- read_rds(dir_hex) %>%
-    ungroup()
-  
-  # so populacao
-  hexagonos_for_pop <- hexagonos_for_sf %>%
-    st_set_geometry(NULL) %>%
-    select(id_hex, pop_total)
-  
-  # outras variaveis
-  hexagonos_for_vars <- hexagonos_for_sf %>%
-    st_set_geometry(NULL) %>%
-    select(-pop_total)
-  
-  access_ac_for <- matriz_for %>%
-    left_join(hexagonos_for_vars, by = c("destination" = "id_hex")) %>%
-    left_join(hexagonos_for_pop, by = c("origin" = "id_hex"))
-  
-  access_ac_for_long <- access_ac_for %>%
-    tidyr::gather(key = "atividade", value = "n", saude_total:escolas_total) %>%
-    filter(n != 0) %>%
-    group_by(origin, pop_total, atividade) %>%
-    slice(which.min(travel_time)) %>%
-    # se a atividade for na mesma zona, definir tempo de viagem de 10 minutos
-    mutate(travel_time = ifelse(origin == destination, 10, travel_time))
-  
-  access_ac_for_fim <- hexagonos_for_sf %>%
-    select(id_hex) %>%
-    left_join(access_ac_for_long, by = c("id_hex" = "origin"))
-  
-}
-# 
-# cidade <- "rio"
-# 
-# teste <- acess_min("for")
-# 
-# teste %>%
-#   filter(atividade == "saude_total") %>%
-#   mapview(zcol = "travel_time")
+fazer_mapa_acess_cidade(acess_rio, indicador = "CMA", modo = "transit", atividade = "EM",
+                        salvar = TRUE, nrow = 2)
 
 ```
 
-## Aplicar para Fortaleza
+## Curitiba
 
-```{r acess_min_for}
+Para o Curitiba:
 
-acess_min_for <- acess_min("for")
+```{r acess acumulativa rio}
 
-# write_rds(acess_min_for, "../data/output_access/acess_min_for.rds")
+# Aplicar
+# calcular_acess("cur")
 
-```
+# Abrir
+acess_cur <- read_rds("../data/output_access/acess_cur.rds")
 
-Visualizar:
+# Fazer mapa para cur ------------------------------------------------------------------------
+# Para indicador TMI
+fazer_mapa_acess_cidade(acess_cur, indicador = "TMI", modo = "transit", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-```{r viz acess_min_for}
+fazer_mapa_acess_cidade(acess_cur, indicador = "TMI", modo = "walk", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-acess_min_for %>%
-  filter(!is.na(travel_time)) %>%
-  mutate(travel_time_v1 = ifelse(travel_time > 45, 45, travel_time)) %>%
-  ggplot()+
-  geom_sf(aes(fill = travel_time_v1))+
-  theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"),
-                       breaks = c(0, 15, 30, 45),
-                       labels = c("0", "15", "30", "45+")) +
-  facet_wrap(~atividade)
+fazer_mapa_acess_cidade(acess_cur, indicador = "TMI", modo = "bike", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
+# Para indicador CMA
+fazer_mapa_acess_cidade(acess_cur, indicador = "CMA", modo = "transit", atividade = "ST",
+                        salvar = TRUE, nrow = 2)
 
-```
+fazer_mapa_acess_cidade(acess_cur, indicador = "CMA", modo = "transit", atividade = "TT",
+                        salvar = TRUE, nrow = 2)
 
-## Aplicar para Belo Horizonte
+fazer_mapa_acess_cidade(acess_cur, indicador = "CMA", modo = "transit", atividade = "EI",
+                        salvar = TRUE, nrow = 2)
 
-```{r acess_min_bel}
+fazer_mapa_acess_cidade(acess_cur, indicador = "CMA", modo = "transit", atividade = "EF",
+                        salvar = TRUE, nrow = 2)
 
-acess_min_bel <- acess_min("bel")
-
-# write_rds(acess_min_bel, "../data/output_access/acess_min_bel.rds")
-
-```
-
-Visualizar:
-
-```{r viz acess_min_bel}
-
-acess_min_bel %>%
-  filter(!is.na(travel_time)) %>%
-  mutate(travel_time_v1 = ifelse(travel_time > 45, 45, travel_time)) %>%
-  ggplot()+
-  geom_sf(aes(fill = travel_time_v1))+
-  theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"),
-                       breaks = c(0, 15, 30, 45),
-                       labels = c("0", "15", "30", "45+")) +
-  facet_wrap(~atividade)
+fazer_mapa_acess_cidade(acess_cur, indicador = "CMA", modo = "transit", atividade = "EM",
+                        salvar = TRUE, nrow = 2)
 
 ```
 
-## Aplicar para o Rio de Janeiro
-
-```{r acess_min_rio}
-
-acess_min_rio <- acess_min("rio")
-
-# write_rds(acess_min_rio, "../data/output_access/acess_min_rio.rds")
-
-```
-
-Visualizar:
-
-```{r viz acess_min_rio}
-
-acess_min_rio %>%
-  filter(!is.na(travel_time)) %>%
-  mutate(travel_time_v1 = ifelse(travel_time > 60, 60, travel_time)) %>%
-  ggplot()+
-  geom_sf(aes(fill = travel_time_v1))+
-  theme_bw()+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(6, "PuRd"),
-                       breaks = c(0, 15, 30, 45, 60),
-                       labels = c("0", "15", "30", "45","60+")) +
-  facet_wrap(~atividade, ncol = 1)
-
-```
