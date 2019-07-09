@@ -351,8 +351,8 @@ convert_coords <- function(coords) {
 
 censo_escolar <- 
   # Abrir e selecionar as colunas de interesse
-  fread("data-raw/censo_escolar/CAD_ESC_MAT_DOC_2015.csv", sep = ";",
-        select = c(17,3,6,14,128,138,144,150,165,187,196,201,206,27,28)) %>%
+  fread("../data-raw/censo_escolar/CAD_ESC_MAT_DOC_2015.csv", sep = ";",
+        select = c(17,3,6,7,14,128,138,144,150,165,187,196,201,206,27,28)) %>%
   # Renomear as colunas
   rename(cod_escola = CO_ENTIDADE,uf = SIGLA, municipio = NO_MUNICIPIO, rede = REDE, num_funcionarios = NU_FUNCIONARIOS,
          presencial = IN_MEDIACAO_PRESENCIAL, mat_infantil = MAT_INF, mat_fundamental = MAT_FUND,
@@ -544,10 +544,8 @@ Os empregos são extraídos da base da RAIS (Relação Anual de Informações So
 
 ```{r rais}
 
-library(foreign)
-
 # Abrir RAIS (formato stata)
-rais_raw <- read.dta("../data-raw/rais/estab_2015_vinc_coord.dta")
+rais_raw <- foreign::read.dta("../data-raw/rais/estab_2015_vinc_coord.dta")
 # Transformar em data.table
 setDT(rais_raw)
 # Deletar as localizacoes com precisao de 1 estrela
@@ -558,8 +556,8 @@ rais_v1 <- rais_v1[, ':='(lon = as.numeric(gsub(",", ".", longitude)), lat = as.
 rais_v1 <- rais_v1[, .(id_estab, qt_vinc_ativos, cod_mun = ibge_cod7, lon, lat)]
 # Dropar coordenadas NA
 rais_v1 <- na.omit(rais_v1, cols = c("lon", "lat"))
-# Transformar para sf
-rais_v1 <- st_as_sf(rais_v1, coords = c("lon", "lat"), crs = 4326)
+# # Transformar para sf
+# rais_v1 <- st_as_sf(rais_v1, coords = c("lon", "lat"), crs = 4326)
 
 
 # Salvar
