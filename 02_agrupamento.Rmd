@@ -254,6 +254,7 @@ agrupar_variaveis <- function(munis) {
     
     dir_grade <- paste0("../data/grade_municipio_com_renda/grade_renda_", munis, ".rds")
     
+    # Pegar a populacao do centroide de cada municipio
     pop <- read_rds(dir_grade) %>%
       dplyr::select(id_grade, pop_total, renda) %>%
       mutate(renda = as.numeric(renda)) %>%
@@ -287,6 +288,11 @@ agrupar_variaveis <- function(munis) {
       res <- str_extract(dir_muni, "\\d+")
       
       hex_muni <- readRDS(dir_muni)
+      
+      # A criaca da coluna de indice buscar dar valor 0 para se nao houver oportunidades e valor 1
+      # para o caso de houver
+      
+      # Dica para melhorar: fazer st_join, dps agrupar com o data.table, dps st_sf() e st_join de nv
       
       hex_muni_fim <- hex_muni %>%
         # Agrupar populacao e renda
@@ -363,7 +369,7 @@ agrupar_variaveis("cur")
 agrupar_variaveis("sao")
 
 # ou
-invisible(parallel::mclapply(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis, mc.cores = 6))
+invisible(parallel::mclapply(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis, mc.cores = 4))
 
 ```
 
