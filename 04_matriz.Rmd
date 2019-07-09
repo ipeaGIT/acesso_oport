@@ -309,7 +309,7 @@ O formato final do script é ``otp_CIDADE_DATA_RES.py``.
 selecionar_data_gtfs <- function(cidade) {
   
   path_zip <- sprintf("../otp/graphs/%s", cidade)
-  file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)
+  file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)[1]
   
   unzip(file_zip, files = "calendar.txt", exdir = "../data/temp")
   
@@ -496,7 +496,7 @@ criar_script_python("rio", dia, "08")
 criar_script_python_paral_modes("rio", data = dia, res = "08", from = 8, until = 9, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("rio", data = dia, res = "08", all_modes = TRUE)
+aplicar_otp("rio", data = dia, res = "08")
 
 # Elapsed time was 1874.02 seconds
 
@@ -518,7 +518,7 @@ criar_script_python("rio", dia, "09")
 criar_script_python_paral_modes("rio", data = dia, res = "09", from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("rio", data = dia, res = "09", all_modes = TRUE)
+aplicar_otp("rio", data = dia, res = "09")
 
 # Elapsed time was 3113.68 seconds
 
