@@ -58,7 +58,7 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
   res_todas <- c(7, 8, 9, 10)
   
   # Teste:
-  resolution <- 8
+  # resolution <- 8
   
   make_hex <- function(resolution, muninho) {
     
@@ -122,7 +122,7 @@ A grade do censo, tratada na etapa anterior, apresenta somente informação de p
 
 ```{r renda_de_setor_para_grade}
 
-# cidade <- "bel"
+# cidade <- "for"
 
 renda_de_setor_p_grade <- function(cidade) {
   
@@ -156,7 +156,7 @@ renda_de_setor_p_grade <- function(cidade) {
     mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
     # Calcular a proporcao de populacao de cada grade que esta dentro do setor
     group_by(id_setor) %>%
-    mutate(sum = sum(pop_prop_grade)) %>%
+    mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
     ungroup() %>%
     # Calcular a populacao proporcional de cada pedaco dentro do setor
     mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
@@ -168,7 +168,13 @@ renda_de_setor_p_grade <- function(cidade) {
     # Agrupar por grade e somar a renda
     group_by(id_grade, pop_total) %>%
     summarise(renda = sum(renda_pedaco, na.rm = TRUE)) %>%
-    mutate(renda_capta = renda/pop_total)
+    mutate(renda = as.numeric(renda)) %>%
+    ungroup()
+  
+  # # Juntar algumas grades que estao faltando
+  # um_fim_v2 <- ui_fim %>%
+  #   full_join(grade %>% select(id_grade, geometry),
+  #             by = "id_grade")
   
   path_out <- sprintf("../data/grade_municipio_com_renda/grade_renda_%s.rds", cidade)
   
@@ -197,20 +203,25 @@ A função ``agrupar_variaveis`` aceita como _input_ o nome do município deseja
 
 ```{r agregar variaveis}
 
+# munis <- "for"
+
 agrupar_variaveis <- function(munis) {
   
   # ABRIR ARQUIVOS COM AS OPORTUNIDADES -------------------------------------
   
   # saude 
-  cnes <- read_csv("../data-raw/hospitais/cnesnone_2018.csv") %>%
+  cnes <- fread("../data-raw/hospitais/cnesnone_2018.csv") %>%
     st_as_sf(coords = c("long", "lat"), crs = 4326)
   
   # educacao
   escolas <- read_csv("../data/censo_escolar/censo_escolar_2015.csv") %>%
     dplyr::filter(!is.na(lat)) %>%
-    # mutate(municipio == tolower(municipio)) %>%
-    # filter(municipio == muni) %>%
-    st_as_sf(coords = c("lon", "lat"), crs = 4326)
+    select(cod_escola, uf, municipio, cod_mun = CO_MUNICIPIO, rede, mat_infantil, mat_fundamental, mat_medio, lon, lat) %>%
+    gather(tipo, mat_n, mat_infantil:mat_medio)
+    # # Ajeitar nome do municipio
+    # mutate(municipio = tolower(municipio)) %>%
+    # mutate(municipio = iconv(municipio, to="UTF-8")) %>%
+    # mutate(municipio = iconv(municipio, to="ASCII//TRANSLIT")) %>%
   
   # empregos, por enquanto para 2015
   # deu problemas no fread, entao tentando com o readr
@@ -222,6 +233,12 @@ agrupar_variaveis <- function(munis) {
                            cidade_uf = c("fortaleza, ce", "recife, pe", "belo horizonte, mg", "rio de janeiro, rj",
                                          "porto alegre, rs", "curitiba, pr", "teresina, pi"))
   
+  # abrir tabela com o nome e codigo dos municipios
+  muni_codigos <- fread("../data-raw/tabela_muni_codigos_2010.csv")
+  muni_codigos <- muni_codigos[, .(cod_mun = municipio, nome_municipio)]
+  muni_codigos[, nome_municipio := tolower(nome_municipio)]
+  muni_codigos[, nome_municipio := iconv(nome_municipio, to="ASCII//TRANSLIT")]
+  muni_codigos[, nome_municipio := substr(nome_municipio, 1, 3)]
   
   
   
@@ -242,6 +259,16 @@ agrupar_variaveis <- function(munis) {
       mutate(renda = as.numeric(renda)) %>%
       st_centroid()
     
+    # Qual o codigo do municipio em questao?
+    cod_mun_ok <- muni_codigos[nome_municipio %in% munis]
+    
+    # Filtrar somente as atividades referentes a cada municipio
+    empregos_filtrado <- empregos[cod_mun %in% cod_mun_ok$cod_mun] %>% 
+      st_as_sf(coords = c("lon", "lat"), crs = 4326)
+    
+    escolas_filtrado <- setDT(escolas)[cod_mun %in% cod_mun_ok$cod_mun] %>% 
+      st_as_sf(coords = c("lon", "lat"), crs = 4326)
+    
     # Extrair o nome da cidade de acordo com a base da RAIS
     # cidade_ufs <- filter(cidades_lookup, municipio == munis) %>% .$cidade_uf
     
@@ -249,11 +276,11 @@ agrupar_variaveis <- function(munis) {
     # 
     # empregos_v1 <- empregos[cidade_uf == cidade_ufs]
     
-    # muni_res <- dir_muni[1]
+    # muni_res <- dir_muni[3]
     
     # FUNCAO PARA REALIZAR PARA TODAS AS RESOLUCOES ------------------------------
     
-    seila <- function(muni_res, cidade_uf) {
+    por_resolucao <- function(muni_res, cidade_uf) {
       
       dir_muni <- muni_res
       
@@ -265,11 +292,10 @@ agrupar_variaveis <- function(munis) {
         # Agrupar populacao e renda
         st_join(pop) %>%
         group_by(id_hex) %>%
-        summarise(pop_total = sum(pop_total), renda_total = sum(renda)) %>%
+        summarise(pop_total = sum(pop_total, na.rm = TRUE), renda_total = sum(renda, na.rm = TRUE)) %>%
         ungroup() %>%
         # Agrupar empregos (agora somando a quantidade de vinculos!)
-        st_join(empregos) %>%
-        # mutate(indice = ifelse(is.na(id_estab), 0, 1)) %>%
+        st_join(empregos_filtrado) %>%
         group_by(id_hex, pop_total, renda_total) %>%
         summarise(empregos_total = sum(qt_vinc_ativos, na.rm = TRUE)) %>%
         ungroup() %>%
@@ -281,10 +307,29 @@ agrupar_variaveis <- function(munis) {
         summarise(saude_total = sum(indice)) %>%
         ungroup() %>%
         # agrupar educacao
-        st_join(escolas) %>%
-        mutate(indice = ifelse(is.na(cod_escola), 0, 1)) %>%
+        # agrupar educacao infantil
+        st_join(escolas_filtrado %>% filter(tipo == "mat_infantil")) %>%
+        mutate(indice = ifelse(is.na(cod_escola), 0, 
+                               ifelse(mat_n == 0, 0, 
+                                      1))) %>%
         group_by(id_hex, pop_total, renda_total, empregos_total, saude_total) %>%
-        summarise(escolas_total = sum(indice)) %>%
+        summarise(escolas_infantil = sum(indice)) %>%
+        ungroup() %>%
+        # agrupar educacao fundamental
+        st_join(escolas_filtrado %>% filter(tipo == "mat_fundamental")) %>%
+        mutate(indice = ifelse(is.na(cod_escola), 0, 
+                               ifelse(mat_n == 0, 0, 
+                                      1))) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_total, saude_total, escolas_infantil) %>%
+        summarise(escolas_fundamental = sum(indice)) %>%
+        ungroup() %>%
+        # agrupar educacao media
+        st_join(escolas_filtrado %>% filter(tipo == "mat_medio")) %>%
+        mutate(indice = ifelse(is.na(cod_escola), 0, 
+                               ifelse(mat_n == 0, 0, 
+                                      1))) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_total, saude_total, escolas_infantil, escolas_fundamental) %>%
+        summarise(escolas_medio = sum(indice)) %>%
         ungroup()
       
       
@@ -296,7 +341,7 @@ agrupar_variaveis <- function(munis) {
     
     # aplicar para cada resolucao
     
-    walk(dir_muni, seila)
+    walk(dir_muni, por_resolucao)
     
   }
   
@@ -316,6 +361,9 @@ agrupar_variaveis("rio")
 agrupar_variaveis("por")
 agrupar_variaveis("cur")
 agrupar_variaveis("sao")
+
+# ou
+invisible(parallel::mclapply(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis, mc.cores = 6))
 
 ```
 
