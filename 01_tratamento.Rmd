@@ -565,6 +565,116 @@ write_rds(rais_v1, "../data/rais/rais_2015.rds")
 
 ```
 
+Para a RAIS 2017, com correção dos outliers:
+
+```{r rais_2017_outliers}
+
+# abrir rais georef
+# rais_raw <- foreign::read.dta("../data-raw/rais/rais_2017_georef.dta")
+# rais1 <- setDT(rais)[precisiondepth != "1 Estrela", .(precisiondepth, 
+#                                                       clas_cnae10,
+#                                                       lon = longitude, lat = latitude, codemun, qt_vinc_ativos,
+#                                                       cidade = BA_Nome_do_municipio)]
+# write_rds(rais1, "../data-raw/rais/rais_2017_raw.rds")
+# fwrite(rais1, "../data-raw/rais/rais_2017_raw.csv")
+
+# Abrir
+rais <- fread("../data-raw/rais/rais_2017_raw.csv")
+
+# LIMPEZA DOS DADOS DA RAIS 2017 -------------------------------------------------------------------
+
+# limpeza de estabelecimentos com total de empregos outliers _ do c??digo do Bruno
+
+# Extrair o cnae do setor
+rais <- setDT(rais)[, cnae.setor := substr(clas_cnae10, 1, 2)]
+
+# Extrair os setores desejados 
+rais.problema <- setDT(rais)[cnae.setor %in% c("40","41","60","62","74","90")]
+
+# Extrair somente os que tem vinculos ativos
+hist(rais.problema$qt_vinc_ativos)
+summary(rais.problema$qt_vinc_ativos)
+rais.problema <- rais.problema[qt_vinc_ativos > 0]
+# dessas, umas 7 mil n??o tinham v??nculos ativos
+
+# o valor no percentil 90
+quanti<-function(x){quantile(x,probs = 0.9)}
+# quantidade acima do percentil 90
+quant<-function(x){sum(x>=quantile(x,probs = 0.9))}
+# interquantile range s?? dos acima do percentil 90
+IQa<-function(x){IQR(x[x>=quantile(x,probs = 0.90)])}
+IQb<-function(x){3}
+#O valor do percentil 90 somado a 3 vezes o valor do interquantile range
+IQe<-function(x){quantile(x,probs = 0.90)+IQR(x[x>=quantile(x,probs = 0.90)])*3}
+#quantidade de casos acima desse threshold
+IQf<-function(x){sum(x>quantile(x,probs = 0.90)+IQR(x[x>=quantile(x,probs = 0.90)])*3)}
+
+iqa<-aggregate(rais.problema$qt_vinc_ativos, by=list(rais.problema$cnae.setor), IQa)
+q<-aggregate(rais.problema$qt_vinc_ativos, by=list(rais.problema$cnae.setor), quanti)
+qq<-aggregate(rais.problema$qt_vinc_ativos, by=list(rais.problema$cnae.setor), quant)
+iqb<-aggregate(rais.problema$qt_vinc_ativos, by=list(rais.problema$cnae.setor), IQb)
+iqe<-aggregate(rais.problema$qt_vinc_ativos, by=list(rais.problema$cnae.setor), IQe)
+iqf<-aggregate(rais.problema$qt_vinc_ativos, by=list(rais.problema$cnae.setor), IQf)
+
+# vai agregar essas informa????es na base
+
+
+# rais.problema<-data.table(rais.problema)
+rais.problema[,p90:=quantile(qt_vinc_ativos,0.90),by=cnae.setor]
+geral<-cbind.data.frame(q,qq[,2],iqa[,2],iqb[,2],iqe[,2],iqf[,2])
+names(geral)<-c("cnae.setor","quantil","freq","desviointerq","fator","corte","outliers")
+
+rais.problema2 <- merge(rais.problema, setDT(geral), 
+                        all.x = TRUE)
+
+rais.problema2$diff<-rep(0,nrow(rais.problema2))
+
+rais.problema2$diff[rais.problema2$qt_vinc_ativos>=rais.problema2$corte] <- 
+rais.problema2$qt_vinc_ativos[rais.problema2$qt_vinc_ativos>=rais.problema2$corte] - rais.problema2$corte[rais.problema2$qt_vinc_ativos>=rais.problema2$corte]
+
+dif<-aggregate(rais.problema2$diff, by=list(rais.problema2$cnae.setor), sum)
+
+geral2<-cbind.data.frame(q,qq[,2],iqa[,2],iqb[,2],iqe[,2],iqf[,2],dif[,2])
+
+names(geral2)<-c("cnae.setor","q","freq","desviointerq","fator","corte","outlier","perda")
+
+# criando nova vari??vel com valores de outliers corrigidos
+rais$qt_vinc_ativos2<-rais$qt_vinc_ativos
+
+#zerando empregos de administra????o p??blica
+rais$qt_vinc_ativos2<-ifelse(rais$cnae.setor=="75",0,rais$qt_vinc_ativos2)
+
+#tabela com valor de corte por setor
+geral3<-geral2[,c(1,6)]
+
+#colocando esse valor de corte na base
+rais<-left_join(rais,geral3,by="cnae.setor")
+
+#substituindo valores maiores que o corte pelo valor de corte
+rais$qt_vinc_ativos2<-ifelse(rais$cnae.setor %in% c("40","41","60","62","74","90") & rais$qt_vinc_ativos2>rais$corte,rais$corte,rais$qt_vinc_ativos2)
+
+# corrigir coordenadas
+setDT(rais)[, ':='(lon = str_replace(lon, ",", "."),
+                   lat = str_replace(lat, ",", "."))]
+
+setDT(rais)[, ':='(lon = as.numeric(lon),
+                   lat = as.numeric(lat))]
+
+rais_fim <- rais[qt_vinc_ativos2 > 0]
+
+# Salvar
+fwrite(rais_fim, "../data/rais/rais_2017_corrigido.csv")
+write_rds(rais_fim, "../data/rais/rais_2017_corrigido.rds")
+
+# Teste
+# setDT(rais)[cnae.setor=="75"]
+
+
+```
+
+
+
+
 Sugestão futura: analisar a qualidade do georreferenciamento para as grandes cidades.
 
 ## GTFS

@@ -226,7 +226,7 @@ agrupar_variaveis <- function(munis) {
   # empregos, por enquanto para 2015
   # deu problemas no fread, entao tentando com o readr
   # empregos <- fread("../data-raw/rais/rais_2015_rafa_franco.csv", fill = TRUE) %>%
-  empregos <- read_rds("../data/rais/rais_2015.rds") 
+  empregos <- read_rds("../data/rais/rais_2017_corrigido.rds")
   
   # Criar tabela de lookup
   cidades_lookup <- tibble(municipio = c("for", "rec", "bel", "rio", "por", "cur", "ter"),
@@ -257,14 +257,13 @@ agrupar_variaveis <- function(munis) {
     # Pegar a populacao do centroide de cada municipio
     pop <- read_rds(dir_grade) %>%
       dplyr::select(id_grade, pop_total, renda) %>%
-      mutate(renda = as.numeric(renda)) %>%
       st_centroid()
     
     # Qual o codigo do municipio em questao?
     cod_mun_ok <- muni_codigos[nome_municipio %in% munis]
     
     # Filtrar somente as atividades referentes a cada municipio
-    empregos_filtrado <- empregos[cod_mun %in% cod_mun_ok$cod_mun] %>% 
+    empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok$cod_mun, 1, 6)] %>% 
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     escolas_filtrado <- setDT(escolas)[cod_mun %in% cod_mun_ok$cod_mun] %>% 
@@ -303,7 +302,7 @@ agrupar_variaveis <- function(munis) {
         # Agrupar empregos (agora somando a quantidade de vinculos!)
         st_join(empregos_filtrado) %>%
         group_by(id_hex, pop_total, renda_total) %>%
-        summarise(empregos_total = sum(qt_vinc_ativos, na.rm = TRUE)) %>%
+        summarise(empregos_total = sum(qt_vinc_ativos2, na.rm = TRUE)) %>%
         ungroup() %>%
         mutate(empregos_total = ifelse(is.na(empregos_total), 0, empregos_total)) %>%
         # agrupar saude
@@ -369,7 +368,21 @@ agrupar_variaveis("cur")
 agrupar_variaveis("sao")
 
 # ou
-invisible(parallel::mclapply(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis, mc.cores = 4))
+
+# # Calculate the number of cores
+# no_cores <- 6
+# 
+# #  Initiate cluster
+# library(parallel)
+# cl <- parallel::makeCluster(no_cores)
+# 
+# clusterEvalQ(cl, {library(data.table); library(sf); library(dplyr)})
+# clusterExport(cl=cl, c('points_got', 'streets_buffer_got', 'snap_sf'), envir=environment())
+# 
+# invisible(parallel::parLapply(cl = cl, c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis))
+
+
+invisible(parallel::mclapply(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis, mc.cores = 6))
 
 ```
 
