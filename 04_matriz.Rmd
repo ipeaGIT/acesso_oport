@@ -253,13 +253,17 @@ Atestado que o método por python é mais eficiente, é estabelecido então o m�
 
 ```{r fun_criar_pontos_allres}
 
-points_allres <- function(muni_shortname) {
+# cidade <- "for"
+
+points_allres <- function(cidade) {
   
-  dir <- dir("../data/hex_agregados/", pattern = muni_shortname)
+  dir <- dir("../data/hex_agregados/", pattern = cidade)
   
   res <- str_extract(dir, "\\d+")
   
-  dir_muni <- paste0("../data/hex_agregados/hex_agregado_", muni_shortname, "_", res, ".rds")
+  dir_muni <- paste0("../data/hex_agregados/hex_agregado_", cidade, "_", res, ".rds")
+  
+  # muni_res <- dir_muni[3]
   
   seila <- function(muni_res) {
     
@@ -271,7 +275,7 @@ points_allres <- function(muni_shortname) {
     hex_muni <- readRDS(dir_muni) %>%
       # Tirar hexagonos sem atividade
       filter(!(pop_total == 0 & renda_total == 0 & empregos_total == 0 & saude_total == 0 & 
-                 escolas_total == 0)) %>%
+                 escolas_infantil == 0 & escolas_fundamental == 0 & escolas_medio == 0)) %>%
       select(id_hex) %>%
       st_centroid() %>%
       sfc_as_cols(names = c("X","Y"))
@@ -279,7 +283,7 @@ points_allres <- function(muni_shortname) {
     
     
     # salvar
-    dir_output <- sprintf("../otp/points/points_%s_%s.csv", muni_shortname, res)
+    dir_output <- sprintf("../otp/points/points_%s_%s.csv", cidade, res)
     
     write_csv(hex_muni, dir_output)
     
@@ -430,7 +434,7 @@ dia <- selecionar_data_gtfs("for")
 criar_script_python_paral_modes("for", data = dia, res = "09", from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("for", data = dia, res = "09", all_modes = TRUE)
+aplicar_otp("for", data = dia, res = "09")
 
 # Elapsed time was 4071.65 seconds
 
@@ -474,7 +478,7 @@ criar_script_python("bel", dia, "09")
 criar_script_python_paral_modes("bel", data = dia, res = "09", from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("bel", data = dia, res = "09", all_modes = TRUE)
+aplicar_otp("bel", data = dia, res = "09")
 
 # 
 
@@ -653,7 +657,7 @@ A avaliação da qualidade dos resultados retornados pelo OTP consiste na checag
 
 ```{r avaliar_qualidade_otp, eval=TRUE}
 
-# cidade <- "por"
+# cidade <- "for"
 
 avaliar_qualidade_otp <- function(cidade) {
   
@@ -688,10 +692,10 @@ avaliar_qualidade_otp <- function(cidade) {
   pontos_fora_walk <- intersect(origem_fora_walk, destino_fora_walk)
   
   fim <- cbind(cidade = cidade, 
-               ponto_fora = c(pontos_fora_pt, pontos_fora_walk), 
+               id_hex = c(pontos_fora_pt, pontos_fora_walk), 
                modo = rep(c("pt", "walk"), times = c(length(pontos_fora_pt), length(pontos_fora_walk)))) %>%
     as.data.frame() %>%  
-    left_join(points, by = c("ponto_fora" = "id_hex")) %>%
+    left_join(points, by = "id_hex") %>%
     group_by(cidade, modo) %>%
     mutate(n = n()) %>%
     mutate(Percentual = n/nrow(points)) %>%
@@ -700,23 +704,177 @@ avaliar_qualidade_otp <- function(cidade) {
   
 }
 
-# Aplicar funcao
-qualidade_otp_for <- avaliar_qualidade_otp("for")
-qualidade_otp_for <- avaliar_qualidade_otp("bel")
-qualidade_otp_for <- avaliar_qualidade_otp("por")
-qualidade_otp_for <- avaliar_qualidade_otp("rio")
-qualidade_otp_for <- avaliar_qualidade_otp("sao")
+# # Aplicar funcao
+# qualidade_otp_for <- avaliar_qualidade_otp("for")
+# qualidade_otp_for <- avaliar_qualidade_otp("bel")
+# qualidade_otp_for <- avaliar_qualidade_otp("por")
+# qualidade_otp_for <- avaliar_qualidade_otp("rio")
+# qualidade_otp_for <- avaliar_qualidade_otp("sao")
+# 
+# qualidade_otp <- map_dfr(c("for", "bel", "cur", "por", "rio"), avaliar_qualidade_otp)
 
-qualidade_otp <- map_dfr(c("for", "bel", "cur", "por", "rio"), avaliar_qualidade_otp)
+# visualilzar os pontos que ficaram fora♥
 
-# visualilzar os pontos que ficaram fora
+# # para porto alegre
+# qualidade_otp %>%
+#   dplyr::filter(cidade == "por") %>%
+#   st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
+#   mapview() +
+#   read_rds("../data/hex_municipio/hex_por_08.rds") %>% mapview()
 
-# para porto alegre
-qualidade_otp %>%
-  dplyr::filter(cidade == "por") %>%
+```
+
+Verificação desses pontos para Fortaleza:
+
+```{r for_erro}
+
+# abrir street network
+path_network <- dir("../otp/graphs/for", full.names = TRUE, pattern = "*.pbf$")
+st_layers(path_network)
+network <- st_read(path_network, layer = "lines") %>%
+  # Selecionar somente vias
+  filter(!is.na(highway))
+
+
+# extrair pontosque nao foram roteados pelo otp
+points_fora <- avaliar_qualidade_otp("for") %>%
+  select(id_hex, X, Y) %>%
+  distinct(id_hex, .keep_all = TRUE)
+
+# fazer um buffer de 2km em relacao a esses pontos e pegar somente as ruas que estao nesse raio 
+points_buffer <- points_fora %>%
   st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
-  mapview() +
-  read_rds("../data/hex_municipio/hex_por_08.rds") %>% mapview()
+  st_transform(31984) %>%
+  st_buffer(1000) %>%
+  st_transform(4326)
+
+network_filtrada <- network %>% 
+  st_join(points_buffer, left = FALSE)
+
+# viz
+mapview(points_fora %>% st_as_sf(coords = c("X", "Y"), crs = 4326), zcol = NULL) + mapview(network_filtrada)
+
+# checar atividades nesse ponto
+atividades <- read_rds("../data/hex_agregados/hex_agregado_for_09.rds") %>%
+  filter(id_hex %in% points_fora$id_hex)
+
+# Diagnostico: o unico que ficou fora está localizado no mar, mas tem população
+  
+
+# aplicar funcao?
+source("R/fun/snap_point_to_road.R")
+
+teste <- lapply(points_fora$id_hex, 
+                snap_sf, 
+                points_to_correct = points_fora, streets_buffer = network_buffer)
+
+network_filtrada <- por_network %>% 
+  st_join(points_buffer, left = FALSE)
+
+# viz
+mapview(por_points_fora %>% to_spatial(c("X", "Y")), zcol = NULL) + mapview(network_filtrada)
+
+```
+
+
+Verificação desses pontos para Belo Horizonte:
+
+```{r for_erro}
+
+# abrir street network
+path_network <- dir("../otp/graphs/bel", full.names = TRUE, pattern = "*.pbf$")
+st_layers(path_network)
+network <- st_read(path_network, layer = "lines") %>%
+  # Selecionar somente vias
+  filter(!is.na(highway))
+
+
+# extrair pontosque nao foram roteados pelo otp
+points_fora <- avaliar_qualidade_otp("bel") %>%
+  select(id_hex, X, Y) %>%
+  distinct(id_hex, .keep_all = TRUE)
+
+# fazer um buffer de 2km em relacao a esses pontos e pegar somente as ruas que estao nesse raio 
+points_buffer <- points_fora %>%
+  st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
+  st_transform(31984) %>%
+  st_buffer(1000) %>%
+  st_transform(4326)
+
+network_filtrada <- network %>% 
+  st_join(points_buffer, left = FALSE)
+
+# viz
+mapview(points_fora %>% st_as_sf(coords = c("X", "Y"), crs = 4326), zcol = NULL) + mapview(network_filtrada)
+
+# checar atividades nesses pontos
+atividades <- read_rds("../data/hex_agregados/hex_agregado_bel_09.rds") %>%
+  filter(id_hex %in% points_fora$id_hex)
+
+# Diagnostico: o unico que ficou fora está localizado no mar, mas tem população
+  
+
+# aplicar funcao?
+source("R/fun/snap_point_to_road.R")
+
+teste <- lapply(points_fora$id_hex, 
+                snap_sf, 
+                points_to_correct = points_fora, streets_buffer = network_buffer)
+
+network_filtrada <- por_network %>% 
+  st_join(points_buffer, left = FALSE)
+
+# viz
+mapview(por_points_fora %>% to_spatial(c("X", "Y")), zcol = NULL) + mapview(network_filtrada)
+
+```
+
+
+
+
+```{r for_erro_novo}
+
+# Funcao para abrir resultado da matrix
+
+cidade <- "for"
+
+abrir_resultado_matrix <- function(cidade) {
+  
+  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_09_.*.csv$", cidade)
+  # pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_09.csv$", cidade)
+  pattern_cidade_walk <- sprintf("ttmatrix_%s_walk_09.csv$", cidade)
+  
+  files_cidade_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_pt)[1]
+  
+  fim <- fread(files_cidade_pt)
+}
+
+ttmatrix_for <- abrir_resultado_matrix("for")
+
+# Quais hexagonos tiverem distancias de caminhada maior que 2000 metros?
+hex_problematicos <- ttmatrix_for[walk_distance > 2000] %>%
+  .[, .(.N), by = origin] %>%
+  .[N > 1000]
+
+# Qual a localizacao deles?
+hex_problematicos_sf <- ttmatrix_for %>%
+  setDT() %>%
+  .[origin %in% hex_problematicos$origin]
+
+hex_problematicos_sf <- unique(hex_problematicos_sf, by = "origin")
+
+# abrir os pontos
+points_file <- sprintf("../otp/points/points_%s_09.csv", cidade)
+points <- fread(points_file)
+
+hex_problematicos_sf <- merge(hex_problematicos_sf, setDT(points),
+                              by.x = "origin",
+                              by.y = "id_hex",
+                              all.x = TRUE)
+
+hex_problematicos_sf %>%
+  st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
+  mapview()
 
 ```
 

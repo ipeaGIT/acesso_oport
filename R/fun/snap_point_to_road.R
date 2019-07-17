@@ -9,10 +9,10 @@ snap_sf <- function(i, points_to_correct, streets_buffer){
   # i = 16
   
   # select a point
-  temp_point <- subset(points_to_correct, idhex== i)
+  temp_point <- subset(points_to_correct, id_hex == i)
   
   # subset street buffer around that point
-  temp_buffer <- subset(streets_buffer, idhex== i)
+  temp_buffer <- subset(streets_buffer, id_hex == i)
   
   # make sure streets are walkable and driveable
   table(temp_buffer$type)
@@ -40,33 +40,33 @@ snap_sf <- function(i, points_to_correct, streets_buffer){
     nrst <- st_nearest_points(temp_point, temp_buffer) # find closest distance to all streets in buffer
     nrst <- nrst[which.min(st_length(nrst))] # keep the closest of all
     nearest_snap = st_cast(nrst, "POINT")[2] # get second point of that line distance and convert it to a point
-    nearest_snap <-  st_sf( data.frame( idhex =  i, geom=nearest_snap)) # convert to sf object
+    nearest_snap <-  st_sf( data.frame( id_hex =  i, geom=nearest_snap)) # convert to sf object
     return(nearest_snap)
   }
 }
 
 
 
-# Make function work in parallel
-
-# Calculate the number of cores
-no_cores <- parallel::detectCores() - 1
-
-
-
-
-#  Initiate cluster 
-cl <- makeCluster(no_cores)
-clusterEvalQ(cl, {library(data.table); library(sf); library(dplyr)})
-clusterExport(cl=cl, c('points_got', 'streets_buffer_got', 'snap_sf'), envir=environment())
-
-
-system.time(
-  correct_got <- parallel::parLapply(cl=cl, 
-                                     X=  points_got$idhex, #list(16,   37,   68,   69,   70, 2366, 2370),  
-                                     points_to_correct= points_got, 
-                                     streets_buffer = streets_buffer_got,
-                                     fun=snap_sf
-  )  %>% data.table::rbindlist() %>% sf::st_as_sf() 
-)
-stopCluster(cl)
+# # Make function work in parallel
+# 
+# # Calculate the number of cores
+# no_cores <- parallel::detectCores() - 1
+# 
+# 
+# 
+# 
+# #  Initiate cluster 
+# cl <- makeCluster(no_cores)
+# clusterEvalQ(cl, {library(data.table); library(sf); library(dplyr)})
+# clusterExport(cl=cl, c('points_got', 'streets_buffer_got', 'snap_sf'), envir=environment())
+# 
+# 
+# system.time(
+#   correct_got <- parallel::parLapply(cl=cl, 
+#                                      X=  points_got$idhex, #list(16,   37,   68,   69,   70, 2366, 2370),  
+#                                      points_to_correct= points_got, 
+#                                      streets_buffer = streets_buffer_got,
+#                                      fun=snap_sf
+#   )  %>% data.table::rbindlist() %>% sf::st_as_sf() 
+# )
+# stopCluster(cl)
