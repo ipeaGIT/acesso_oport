@@ -25,6 +25,7 @@ library(h3jsr)
 library(stringr)
 library(purrr)
 library(furrr)
+library(tidyr)
 
 ```
 
@@ -223,10 +224,9 @@ agrupar_variaveis <- function(munis) {
     # mutate(municipio = iconv(municipio, to="UTF-8")) %>%
     # mutate(municipio = iconv(municipio, to="ASCII//TRANSLIT")) %>%
   
-  # empregos, por enquanto para 2015
-  # deu problemas no fread, entao tentando com o readr
-  # empregos <- fread("../data-raw/rais/rais_2015_rafa_franco.csv", fill = TRUE) %>%
-  empregos <- read_rds("../data/rais/rais_2017_corrigido.rds")
+  # empregos
+  empregos <- read_rds("../data/rais/rais_2015.rds") # para 2015
+  # empregos <- read_rds("../data/rais/rais_2017_corrigido.rds") # para 2017
   
   # Criar tabela de lookup
   cidades_lookup <- tibble(municipio = c("for", "rec", "bel", "rio", "por", "cur", "ter"),
@@ -263,8 +263,12 @@ agrupar_variaveis <- function(munis) {
     cod_mun_ok <- muni_codigos[nome_municipio %in% munis]
     
     # Filtrar somente as atividades referentes a cada municipio
-    empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok$cod_mun, 1, 6)] %>% 
+    # Para RAIS 2015
+    empregos_filtrado <- empregos[cod_mun %in% cod_mun_ok$cod_mun] %>% 
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
+    # para rais 2017
+    # empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok$cod_mun, 1, 6)] %>% 
+    #   st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     escolas_filtrado <- setDT(escolas)[cod_mun %in% cod_mun_ok$cod_mun] %>% 
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
@@ -302,7 +306,8 @@ agrupar_variaveis <- function(munis) {
         # Agrupar empregos (agora somando a quantidade de vinculos!)
         st_join(empregos_filtrado) %>%
         group_by(id_hex, pop_total, renda_total) %>%
-        summarise(empregos_total = sum(qt_vinc_ativos2, na.rm = TRUE)) %>%
+        # summarise(empregos_total = sum(qt_vinc_ativos2, na.rm = TRUE)) %>% # para rais 2017
+        summarise(empregos_total = sum(qt_vinc_ativos, na.rm = TRUE)) %>% # para rais 2015
         ungroup() %>%
         mutate(empregos_total = ifelse(is.na(empregos_total), 0, empregos_total)) %>%
         # agrupar saude
@@ -346,7 +351,7 @@ agrupar_variaveis <- function(munis) {
     
     # aplicar para cada resolucao
     
-    walk(dir_muni, por_resolucao)
+    walk(dir_muni[1:3], por_resolucao)
     
   }
   
@@ -368,6 +373,8 @@ agrupar_variaveis("cur")
 agrupar_variaveis("sao")
 
 # ou
+plan(multiprocess)
+furrr::future_map(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis)
 
 # # Calculate the number of cores
 # no_cores <- 6
