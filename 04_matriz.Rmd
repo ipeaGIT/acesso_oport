@@ -431,7 +431,7 @@ Para a resolução 9:
 dia <- selecionar_data_gtfs("for")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("for", data = dia, res = "09", from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("for", data = dia, res = "09", from = 7, until = 8, every = 15)
 
 # aplicar otp para todos os modos
 aplicar_otp("for", data = dia, res = "09")
@@ -665,8 +665,13 @@ avaliar_qualidade_otp <- function(cidade) {
   # pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_09.csv$", cidade)
   pattern_cidade_walk <- sprintf("ttmatrix_%s_walk_09.csv$", cidade)
   
-  files_cidade_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_pt)[1]
-  files_cidade_walk <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_walk)
+  files_cidade_pt <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+                         full.names = TRUE, 
+                         pattern = pattern_cidade_pt)[1]
+  
+  files_cidade_walk <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+                           full.names = TRUE, 
+                           pattern = pattern_cidade_walk)
   
   otp_matrix_pt <- map_dfr(files_cidade_pt, fread)
   otp_matrix_walk <- map_dfr(files_cidade_walk, fread)
@@ -724,112 +729,78 @@ avaliar_qualidade_otp <- function(cidade) {
 
 ```
 
-Verificação desses pontos para Fortaleza:
+Função para fazer o snap dos pontos que não foram roteados para o segmento mais próximo:
 
-```{r for_erro}
+```{r}
 
-# abrir street network
-path_network <- dir("../otp/graphs/for", full.names = TRUE, pattern = "*.pbf$")
-st_layers(path_network)
-network <- st_read(path_network, layer = "lines") %>%
-  # Selecionar somente vias
-  filter(!is.na(highway))
+cidade <- "for"
 
-
-# extrair pontosque nao foram roteados pelo otp
-points_fora <- avaliar_qualidade_otp("for") %>%
-  select(id_hex, X, Y) %>%
-  distinct(id_hex, .keep_all = TRUE)
-
-# fazer um buffer de 2km em relacao a esses pontos e pegar somente as ruas que estao nesse raio 
-points_buffer <- points_fora %>%
-  st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
-  st_transform(31984) %>%
-  st_buffer(1000) %>%
-  st_transform(4326)
-
-network_filtrada <- network %>% 
-  st_join(points_buffer, left = FALSE)
-
-# viz
-mapview(points_fora %>% st_as_sf(coords = c("X", "Y"), crs = 4326), zcol = NULL) + mapview(network_filtrada)
-
-# checar atividades nesse ponto
-atividades <- read_rds("../data/hex_agregados/hex_agregado_for_09.rds") %>%
-  filter(id_hex %in% points_fora$id_hex)
-
-# Diagnostico: o unico que ficou fora está localizado no mar, mas tem população
+snap_points_to_roads <- function(cidade) {
   
+  path_network_in <- sprintf("../otp/graphs/%s", cidade)
+  
+  # abrir street network
+  path_network <- dir(path_network_in, full.names = TRUE, pattern = "*.pbf$")
+  network <- st_read(path_network, layer = "lines") %>%
+    # Selecionar somente vias
+    filter(!is.na(highway)) %>%
+    filter(highway %nin% c("trunk","trunk_link","motorway","motorway_link","construction"))
+  
+  # extrair pontos que nao foram roteados pelo otp
+  points_fora <- avaliar_qualidade_otp(cidade) %>%
+    distinct(id_hex, X, Y) %>%
+    to_spatial(c("X", "Y"))
+  
+  # pegar hexagonos
+  path_hex_in <- sprintf("../data/hex_municipio/hex_%s_09.rds", cidade)
+  hex <- read_rds(path_hex_in) %>%
+    # filtrar somente hexagonos problematicos
+    filter(id_hex %in% points_fora$id_hex)
+  
+  # filtrar somente as ruas que tem intersecoes com os hexagonos
+  network_filtrada <- network %>% 
+    st_join(hex, left = FALSE)
+  
+  source("R/fun/snap_point_to_road.R")
+  
+  points_snap <- map_dfr(points_fora$id_hex, 
+                         snap_sf, 
+                         points_to_correct = points_fora, streets_buffer = network_filtrada) %>%
+    as_tibble() %>%
+    st_sf(crs = 4326) %>%
+    sfc_as_cols(names = c("X", "Y"))
+  
+  # Juntar com os pontos totais
+  path_points_in <- sprintf("../otp/points/points_%s_09.csv", cidade)
+  points_new <- fread(path_points_in) %>%
+    filter(id_hex %nin% points_snap$id_hex) %>%
+    rbind(points_snap)
+  
+  # salvar corrigido
+  path_out <- sprintf("../otp/points_corrigidos/points_corrigido_%s_09.csv", cidade)
+  fwrite(points_new, path_out)
+  
+  
+  
+}
 
-# aplicar funcao?
-source("R/fun/snap_point_to_road.R")
-
-teste <- lapply(points_fora$id_hex, 
-                snap_sf, 
-                points_to_correct = points_fora, streets_buffer = network_buffer)
-
-network_filtrada <- por_network %>% 
-  st_join(points_buffer, left = FALSE)
-
-# viz
-mapview(por_points_fora %>% to_spatial(c("X", "Y")), zcol = NULL) + mapview(network_filtrada)
 
 ```
 
 
-Verificação desses pontos para Belo Horizonte:
+Correção desses pontos para Fortaleza:
 
 ```{r for_erro}
 
-# abrir street network
-path_network <- dir("../otp/graphs/bel", full.names = TRUE, pattern = "*.pbf$")
-st_layers(path_network)
-network <- st_read(path_network, layer = "lines") %>%
-  # Selecionar somente vias
-  filter(!is.na(highway))
+snap_points_to_roads("for") # ok
+snap_points_to_roads("bel") # ok
+snap_points_to_roads("rio") # ok
+snap_points_to_roads("sao")
+snap_points_to_roads("cur") # ok
+snap_points_to_roads("por") # ok
 
-
-# extrair pontosque nao foram roteados pelo otp
-points_fora <- avaliar_qualidade_otp("bel") %>%
-  select(id_hex, X, Y) %>%
-  distinct(id_hex, .keep_all = TRUE)
-
-# fazer um buffer de 2km em relacao a esses pontos e pegar somente as ruas que estao nesse raio 
-points_buffer <- points_fora %>%
-  st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
-  st_transform(31984) %>%
-  st_buffer(1000) %>%
-  st_transform(4326)
-
-network_filtrada <- network %>% 
-  st_join(points_buffer, left = FALSE)
-
-# viz
-mapview(points_fora %>% st_as_sf(coords = c("X", "Y"), crs = 4326), zcol = NULL) + mapview(network_filtrada)
-
-# checar atividades nesses pontos
-atividades <- read_rds("../data/hex_agregados/hex_agregado_bel_09.rds") %>%
-  filter(id_hex %in% points_fora$id_hex)
-
-# Diagnostico: o unico que ficou fora está localizado no mar, mas tem população
-  
-
-# aplicar funcao?
-source("R/fun/snap_point_to_road.R")
-
-teste <- lapply(points_fora$id_hex, 
-                snap_sf, 
-                points_to_correct = points_fora, streets_buffer = network_buffer)
-
-network_filtrada <- por_network %>% 
-  st_join(points_buffer, left = FALSE)
-
-# viz
-mapview(por_points_fora %>% to_spatial(c("X", "Y")), zcol = NULL) + mapview(network_filtrada)
 
 ```
-
-
 
 
 ```{r for_erro_novo}
