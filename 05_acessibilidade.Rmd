@@ -53,16 +53,39 @@ Com a quantidade de oportunidades (saúde, educação, empregos) e a matriz de t
 
 ```{r fun}
 
-# cidade <- "for"
-# res <- "09"
+cidade <- "for"
+res <- "09"
 
 # Juntar as ttmatrix -------------------------------------------------------------------------------
 
 juntar_ttmatrix <- function(cidade, res = "09") {
   
+  cidade_files <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+                      pattern = sprintf("^ttmatrix_%s_[[:lower:]]+_%s", cidade, res), 
+                      full.names = TRUE)
   
+  # Abrir arquivos e juntar
+  ttmatrix_allmodes <- map(cidade_files, 
+                           fread, select = c("city", "mode", "depart_time", "origin", "destination", "travel_time")) %>%
+    rbindlist()
+  
+  # salvar
+  path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_09.rds", cidade, cidade)
+  write_rds(ttmatrix_allmodes, path_out)
   
 }
+
+# Aplicar
+furrr::future_map(c("for", "bel", "rio", "sao", "cur", "por"), juntar_ttmatrix)
+
+
+
+
+#-#-#-#-#-#-#-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-#
+# FUNCAO PARA CALCULAR ACESSIBILIDADE --------------------------------------------------------------
+#-#-#-#-#-#-#-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-##-#-#-#-#-#
+
+cidade <- "for"
 
 calcular_acess <- function(cidade, res = "09") {
   
@@ -72,9 +95,7 @@ calcular_acess <- function(cidade, res = "09") {
     # Ativa by origen, modo, horario
     # Passiva by dest, modo, horario
 
-  cidade_files <- dir("../data/output_ttmatrix/", 
-                      pattern = sprintf("^ttmatrix_%s_[[:lower:]]+_%s", cidade, res), 
-                      full.names = TRUE)
+
   
   # city,mode,depart_time,origin,destination,distance,travel_time
   
@@ -92,10 +113,10 @@ calcular_acess <- function(cidade, res = "09") {
   #   
   # }
   
-  # Abrir arquivos e juntar
-  ttmatrix_allmodes <- map(cidade_files, 
-                           fread, select = c("city", "mode", "depart_time", "origin", "destination", "travel_time")) %>%
-    rbindlist()
+  # Abrir arquivos
+  path_in <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_09.rds", cidade, cidade)
+  ttmatrix_allmodes <- read_rds(path_in)
+
   
   # Se a origem e o destino forem o mesmo, adotar o tempo de viagem (para qualquer modo) como 350s
   ttmatrix_allmodes[, travel_time := ifelse(origin == destination, 
@@ -119,7 +140,7 @@ calcular_acess <- function(cidade, res = "09") {
                                        by = .(city, mode, par_id, pico)]
   
   # Pegar arquivo com os hexagonos com as atividades
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, res)
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", cidade)
   
   # abrir oportunidades com hexagonos
   hexagonos_sf <- read_rds(dir_hex) %>%
@@ -180,7 +201,7 @@ calcular_acess <- function(cidade, res = "09") {
   # - TMI = Acessibilidade de Tempo Mínimo à Oportunidade
   
   # 1 - All accessible activities from each ORIGIN across they day
-  access <- ttmatrix_variaveis[, 
+  access_ative <- ttmatrix_variaveis[, 
                                   .(CMA_ST_15 = sum( saude_total[which( tt_median <= 15)], na.rm=T)
                                    , CMA_ST_30 = sum( saude_total[which( tt_median <= 30)], na.rm=T)
                                    , CMA_ST_60 = sum( saude_total[which( tt_median <= 60)], na.rm=T)
@@ -215,8 +236,29 @@ calcular_acess <- function(cidade, res = "09") {
                                    , TMI_EI = min(tt_median[which(escolas_infantil >= 1)])
                                    , TMI_EF = min(tt_median[which(escolas_fundamental >= 1)])
                                    , TMI_EM = min(tt_median[which(escolas_medio >= 1)])
+                                   
   ),
   by=.(city, mode, origin, pico) ]
+  
+  
+  # Calculo da acessibilidade passiva
+  access_passive <- ttmatrix_variaveis[,
+                                       
+                                       .(CMP_PT_15 = sum(pop_total[which( tt_median <= 15)], na.rm=T)
+                                         , CMP_PT_30 = sum(pop_total[which( tt_median <= 30)], na.rm=T)
+                                         , CMP_PT_60 = sum(pop_total[which( tt_median <= 60)], na.rm=T)
+                                         , CMP_PT_90 = sum(pop_total[which( tt_median <= 90)], na.rm=T)
+                                         , CMP_PT_120 = sum(pop_total[which( tt_median <= 120)], na.rm=T)
+                                         
+                                       ),   
+                                       by =.(city, mode, destination, pico)]
+  
+  # Juntar os dois
+  access <- merge(access_ative, access_passive,
+                  all.x = TRUE,
+                  by.x = c("city", "mode", "origin", "pico"),
+                  by.y = c("city", "mode", "destination", "pico"))
+  
   
   # # Nao faz mais sentido o timetrhresold ser menor para walk e bike?
   # access_at <- ttmatrix_variaveis[mode %in% c("walk", "bike"), 
