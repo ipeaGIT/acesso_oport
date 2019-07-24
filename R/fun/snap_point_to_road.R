@@ -2,34 +2,34 @@
 
 snap_sf <- function(i, points_to_correct, streets_buffer){ 
   
-  # points_to_correct <- copy(points_got)
-  # street_points <- copy(street_points_got)
-  # streets_buffer <- streets_buffer_got
-  # cut_dist = 450 # meters
-  # i = 16
-  
+  # # points_to_correct <- copy(points_got)
+  # # street_points <- copy(street_points_got)
+  # # streets_buffer <- streets_buffer_got
+  # # cut_dist = 450 # meters
+  # # i = 16
+  # 
   # select a point
   temp_point <- subset(points_to_correct, id_hex == i)
-  
-  # subset street buffer around that point
+  # 
+  # # subset street buffer around that point
   temp_buffer <- subset(streets_buffer, id_hex == i)
-  
-  # make sure streets are walkable and driveable
-  table(temp_buffer$type)
-  table(temp_buffer$access)
-  table(temp_buffer$service)
-  table(temp_buffer$class)
-  
-  # pedestrian and bike restrictions
-  # http://docs.opentripplanner.org/en/latest/Troubleshooting-Routing/
-  
-  p_restrictions <- c("trunk","trunk_link","motorway","motorway_link","construction")
-  # car restrictions
-  c_restrictions <- c("cycleway","footway","sidewalk","platform", "rail", "tram")
-  
-  temp_buffer <- subset(temp_buffer, !(class %in% "railway"))           # remove railways
-  temp_buffer <- subset(temp_buffer, !(access %in% c("no"))) # "private" ??? # remove segments with restricted car access
-  temp_buffer <- subset(temp_buffer, !(type %in% c(p_restrictions, c_restrictions))) # remove car, bike and pedestrian restrictions
+  # 
+  # # make sure streets are walkable and driveable
+  # table(temp_buffer$type)
+  # table(temp_buffer$access)
+  # table(temp_buffer$service)
+  # table(temp_buffer$class)
+  # 
+  # # pedestrian and bike restrictions
+  # # http://docs.opentripplanner.org/en/latest/Troubleshooting-Routing/
+  # 
+  # p_restrictions <- c("trunk","trunk_link","motorway","motorway_link","construction")
+  # # car restrictions
+  # c_restrictions <- c("cycleway","footway","sidewalk","platform", "rail", "tram")
+  # 
+  # temp_buffer <- subset(temp_buffer, !(class %in% "railway"))           # remove railways
+  # temp_buffer <- subset(temp_buffer, !(access %in% c("no"))) # "private" ??? # remove segments with restricted car access
+  # temp_buffer <- subset(temp_buffer, !(type %in% c(p_restrictions, c_restrictions))) # remove car, bike and pedestrian restrictions
   
   
   # if there are no streets within the buffer, return original point
