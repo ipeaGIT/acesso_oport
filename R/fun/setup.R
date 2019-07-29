@@ -21,7 +21,7 @@ library(lubridate)
 library(mapview)
 library(RColorBrewer)
 library(furrr)
-# library(extrafont)
+library(extrafont)
 #extrafont::loadfonts(device="win")
 
 options(scipen=10000)
