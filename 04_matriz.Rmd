@@ -553,7 +553,7 @@ Para a resolução 9:
 dia <- selecionar_data_gtfs("rio")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("rio", data = dia, from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("rio", modo = "tp", data = dia, from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
 aplicar_otp("rio", data = dia)
@@ -592,10 +592,10 @@ dia <- selecionar_data_gtfs("cur")
 criar_script_python("cur", dia, "09")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("cur", data = dia, res = "09", from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("cur", modo = "tp", data = dia, from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("cur", data = dia, res = "09", all_modes = TRUE)
+aplicar_otp("cur", data = dia)
 
 # Elapsed time was 6260.23 seconds
 
@@ -635,10 +635,10 @@ dia <- selecionar_data_gtfs("por")
 # criar_script_python("por", dia, "09")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("por", data = dia, res = "09", from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("por", modo = "tp", data = dia, from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("por", data = dia, res = "09")
+aplicar_otp("por", data = dia)
 
 # Elapsed time was 3113.68 seconds
 
@@ -676,10 +676,10 @@ dia <- "2019-05-15"
 criar_script_python("sao", dia, "09")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("sao", data = dia, res = "09", from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("sao", modo = "tp", data = dia, res = "09", from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("sao", data = dia, res = "09", all_modes = TRUE)
+aplicar_otp("sao", data = dia)
 
 # Elapsed time was 3113.68 seconds
 
