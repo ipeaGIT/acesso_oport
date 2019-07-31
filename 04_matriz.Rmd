@@ -339,7 +339,7 @@ selecionar_data_gtfs <- function(cidade) {
 }
 
 # Funcao para criar o script em python
-source("R/4-criar_script_python.R")
+source("R/4-criar_script_python_parallel_multiple.R")
 
 ```
 
@@ -349,13 +349,53 @@ Por fim, é necessário criar o comando para aplicar o OTP com o script em pytho
 
 ```{r fun_aplicar_otp}
 
-aplicar_otp <- function(cidade, data, res = "08") {
+# cidade <- "for"
+
+aplicar_otp <- function(cidade, data) {
   
-  py_nome <- sprintf("otp_%s_%s_%s_paral_allmodes.py", cidade, data, res)
+  py_nome <- dir("../otp/py", pattern = sprintf("otp_%s", cidade))[1] 
   
   comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar py/%s", py_nome)
   
   shell(comando)
+  
+  
+
+  # colar os arquivos
+  
+  # pegar os arquivos
+  files <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+               pattern = "^ttmatrix_\\w{3}_pt",
+               full.names = TRUE)
+  
+  # extrair os horarios
+  horarios <- str_extract(files, "\\d{1,2}-\\d{1,2}") %>% unique()
+  
+  # funcao para abrir e juntar os arquivos de cada horario
+  
+  # horarios1 <- horarios[1]
+  
+  abrir_e_juntar <- function(horarios1) {
+    
+    files_ok <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+               pattern = sprintf("^ttmatrix_\\w{3}_pt_%s", horarios1),
+               full.names = TRUE)
+    
+    # abrir, juntar e salvar arquivos
+    path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s.csv", cidade, cidade, horarios1)
+    
+    furrr::future_map(files_ok, fread) %>%
+      rbindlist() %>%
+      fwrite(path_out)
+    
+    # remove files?
+    walk(files_ok, file.remove)
+  }
+  
+  # aplicar funcao
+  plan(multiprocess)
+  invisible(furrr::future_map(horarios, abrir_e_juntar))
+  
   
 }
 
@@ -431,10 +471,10 @@ Para a resolução 9:
 dia <- selecionar_data_gtfs("for")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("for", data = dia, res = "09", from = 7, until = 8, every = 15)
+criar_script_python_paral_modes("for", modo = "tp", data = dia, from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("for", data = dia, res = "09")
+aplicar_otp("for", data = dia)
 
 # Elapsed time was 4071.65 seconds
 
@@ -471,14 +511,11 @@ Para a resolução 9:
 # Selecionar o dia
 dia <- selecionar_data_gtfs("bel")
 
-# criar arquivo python
-criar_script_python("bel", dia, "09")
-
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("bel", data = dia, res = "09", from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("bel", modo = "tp", data = dia, from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("bel", data = dia, res = "09")
+aplicar_otp("bel", data = dia)
 
 # 
 
@@ -515,14 +552,11 @@ Para a resolução 9:
 # Selecionar o dia
 dia <- selecionar_data_gtfs("rio")
 
-# criar arquivo python
-criar_script_python("rio", dia, "09")
-
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("rio", data = dia, res = "09", from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("rio", data = dia, from = 7, until = 8, every = 30)
 
 # aplicar otp para todos os modos
-aplicar_otp("rio", data = dia, res = "09")
+aplicar_otp("rio", data = dia)
 
 # Elapsed time was 3113.68 seconds
 
@@ -657,11 +691,11 @@ A avaliação da qualidade dos resultados retornados pelo OTP consiste na checag
 
 ```{r avaliar_qualidade_otp, eval=TRUE}
 
-# cidade <- "for"
+cidade <- "bel"
 
 avaliar_qualidade_otp <- function(cidade) {
   
-  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_09_.*.csv$", cidade)
+  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_.*.csv$", cidade)
   # pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_09.csv$", cidade)
   pattern_cidade_walk <- sprintf("ttmatrix_%s_walk_09.csv$", cidade)
   
@@ -733,7 +767,7 @@ Função para fazer o snap dos pontos que não foram roteados para o segmento ma
 
 ```{r}
 
-cidade <- "for"
+cidade <- "bel"
 
 snap_points_to_roads <- function(cidade) {
   
@@ -788,7 +822,7 @@ snap_points_to_roads <- function(cidade) {
 ```
 
 
-Correção desses pontos para Fortaleza:
+Correção desses pontos:
 
 ```{r for_erro}
 
@@ -801,6 +835,15 @@ snap_points_to_roads("por") # ok
 
 
 ```
+
+Rodar OTP para os pontos corrigidos:
+
+```{r rodar_otp_corrigidos}
+
+
+
+```
+
 
 
 ```{r for_erro_novo}
