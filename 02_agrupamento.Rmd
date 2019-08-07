@@ -225,8 +225,10 @@ agrupar_variaveis <- function(munis) {
     # mutate(municipio = iconv(municipio, to="ASCII//TRANSLIT")) %>%
   
   # empregos
-  empregos <- read_rds("../data/rais/rais_2015.rds") # para 2015
-  # empregos <- read_rds("../data/rais/rais_2017_corrigido.rds") # para 2017
+  # empregos <- read_rds("../data/rais/rais_2015.rds") # para 2015
+  empregos <- read_rds("../data/rais/rais_2017_corrigido_escol.rds") # para 2017
+  # Transformar o id_estab para caracter pra evitar problemas
+  empregos[, id_estab := as.character(id_estab)]
   
   # Criar tabela de lookup
   cidades_lookup <- tibble(municipio = c("for", "rec", "bel", "rio", "por", "cur", "ter"),
@@ -264,11 +266,11 @@ agrupar_variaveis <- function(munis) {
     
     # Filtrar somente as atividades referentes a cada municipio
     # Para RAIS 2015
-    empregos_filtrado <- empregos[cod_mun %in% cod_mun_ok$cod_mun] %>% 
-      st_as_sf(coords = c("lon", "lat"), crs = 4326)
-    # para rais 2017
-    # empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok$cod_mun, 1, 6)] %>% 
+    # empregos_filtrado <- empregos[cod_mun %in% cod_mun_ok$cod_mun] %>% 
     #   st_as_sf(coords = c("lon", "lat"), crs = 4326)
+    # para rais 2017
+    empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok$cod_mun, 1, 6)] %>%
+      st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     escolas_filtrado <- setDT(escolas)[cod_mun %in% cod_mun_ok$cod_mun] %>% 
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
@@ -304,16 +306,22 @@ agrupar_variaveis <- function(munis) {
         summarise(pop_total = sum(pop_total, na.rm = TRUE), renda_total = sum(renda, na.rm = TRUE)) %>%
         ungroup() %>%
         # Agrupar empregos (agora somando a quantidade de vinculos!)
-        st_join(empregos_filtrado) %>%
+        st_join(empregos_filtrado %>% select(id_estab)) %>%
+        # Trazer a quantidade de vinculos 
+        left_join(empregos_filtrado %>% st_set_geometry(NULL) %>% select(id_estab, baixo, medio, alto)) %>%
+        mutate(alto = ifelse(is.na(alto), 0, alto),
+               medio = ifelse(is.na(medio), 0, medio),
+               baixo = ifelse(is.na(baixo), 0, baixo)) %>%
         group_by(id_hex, pop_total, renda_total) %>%
         # summarise(empregos_total = sum(qt_vinc_ativos2, na.rm = TRUE)) %>% # para rais 2017
-        summarise(empregos_total = sum(qt_vinc_ativos, na.rm = TRUE)) %>% # para rais 2015
+        summarise(empregos_baixa = sum(baixo, na.rm = TRUE),
+                  empregos_media = sum(medio, na.rm = TRUE),
+                  empregos_alta = sum(alto, na.rm = TRUE)) %>% # para rais 2015
         ungroup() %>%
-        mutate(empregos_total = ifelse(is.na(empregos_total), 0, empregos_total)) %>%
         # agrupar saude
         st_join(cnes) %>%
         mutate(indice = ifelse(is.na(co_cnes), 0, 1)) %>%
-        group_by(id_hex, pop_total, renda_total, empregos_total) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa) %>%
         summarise(saude_total = sum(indice)) %>%
         ungroup() %>%
         # agrupar educacao
@@ -322,7 +330,7 @@ agrupar_variaveis <- function(munis) {
         mutate(indice = ifelse(is.na(cod_escola), 0, 
                                ifelse(mat_n == 0, 0, 
                                       1))) %>%
-        group_by(id_hex, pop_total, renda_total, empregos_total, saude_total) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa, saude_total) %>%
         summarise(escolas_infantil = sum(indice)) %>%
         ungroup() %>%
         # agrupar educacao fundamental
@@ -330,7 +338,8 @@ agrupar_variaveis <- function(munis) {
         mutate(indice = ifelse(is.na(cod_escola), 0, 
                                ifelse(mat_n == 0, 0, 
                                       1))) %>%
-        group_by(id_hex, pop_total, renda_total, empregos_total, saude_total, escolas_infantil) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa, 
+                 saude_total, escolas_infantil) %>%
         summarise(escolas_fundamental = sum(indice)) %>%
         ungroup() %>%
         # agrupar educacao media
@@ -338,7 +347,8 @@ agrupar_variaveis <- function(munis) {
         mutate(indice = ifelse(is.na(cod_escola), 0, 
                                ifelse(mat_n == 0, 0, 
                                       1))) %>%
-        group_by(id_hex, pop_total, renda_total, empregos_total, saude_total, escolas_infantil, escolas_fundamental) %>%
+        group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa, 
+                 saude_total, escolas_infantil, escolas_fundamental) %>%
         summarise(escolas_medio = sum(indice)) %>%
         ungroup()
       

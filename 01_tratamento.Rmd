@@ -565,25 +565,65 @@ write_rds(rais_v1, "../data/rais/rais_2015.rds")
 
 ```
 
+Para RAIS 2017 dos individuos:
+
+```{r rais-2017-ind}
+
+# RAIS PESSOAS! -------------------------------------------------------------------------------
+
+# rais <- fread("\\storage6\\bases\\DADOS\\RESTRITO\\RAIS")
+
+rais <- fread("../data-raw/rais/brasil2017.csv"
+              ,select = c("id_estab", "grau_instr", "emp_31dez")
+              # ,nrows = 1000
+              )
+
+# Salvar
+write_rds(rais, "../data/rais/rais_2017_ind.rds")
+
+# Abrir
+rais <- read_rds("../data/rais/rais_2017_ind.rds")
+
+# selecionar so vinculos ativos
+rais <- rais[emp_31dez == 1]
+
+# fazer sumario
+rais_sum <- rais[, .N, by = grau_instr]
+
+# categorizar
+rais_cats <- rais[, instrucao := ifelse(grau_instr %in% c(1:6), "baixo",
+                                         ifelse(grau_instr %in% c(7, 8), "medio",
+                                                ifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))]
+
+rais_fim <- rais[, .(vinculos = .N), by = .(id_estab, instrucao)]
+
+rais_fim_wide <- spread(rais_fim, instrucao, vinculos, fill = 0)
+
+fwrite(rais_fim_wide, "../data/rais/rais_2017_vin_instrucao.csv")
+
+```
+
 Para a RAIS 2017, com correção dos outliers:
 
 ```{r rais_2017_outliers}
 
-# abrir rais georef
+# # abrir rais georef
 # rais_raw <- foreign::read.dta("../data-raw/rais/rais_2017_georef.dta")
-# rais1 <- setDT(rais)[precisiondepth != "1 Estrela", .(precisiondepth, 
+# rais1 <- setDT(rais_raw)[precisiondepth != "1 Estrela", .(id_estab,
 #                                                       clas_cnae10,
 #                                                       lon = longitude, lat = latitude, codemun, qt_vinc_ativos,
 #                                                       cidade = BA_Nome_do_municipio)]
 # write_rds(rais1, "../data-raw/rais/rais_2017_raw.rds")
 # fwrite(rais1, "../data-raw/rais/rais_2017_raw.csv")
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# LIMPEZA DOS DADOS DA RAIS 2017 -------------------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 # Abrir
 rais <- fread("../data-raw/rais/rais_2017_raw.csv")
 
-# LIMPEZA DOS DADOS DA RAIS 2017 -------------------------------------------------------------------
-
-# limpeza de estabelecimentos com total de empregos outliers _ do c??digo do Bruno
+# Limpeza de estabelecimentos com total de empregos outliers _ do codigo do Bruno ------------------
 
 # Extrair o cnae do setor
 rais <- setDT(rais)[, cnae.setor := substr(clas_cnae10, 1, 2)]
@@ -592,8 +632,8 @@ rais <- setDT(rais)[, cnae.setor := substr(clas_cnae10, 1, 2)]
 rais.problema <- setDT(rais)[cnae.setor %in% c("40","41","60","62","74","90")]
 
 # Extrair somente os que tem vinculos ativos
-hist(rais.problema$qt_vinc_ativos)
-summary(rais.problema$qt_vinc_ativos)
+# hist(rais.problema$qt_vinc_ativos)
+# summary(rais.problema$qt_vinc_ativos)
 rais.problema <- rais.problema[qt_vinc_ativos > 0]
 # dessas, umas 7 mil n??o tinham v??nculos ativos
 
@@ -648,30 +688,59 @@ rais$qt_vinc_ativos2<-ifelse(rais$cnae.setor=="75",0,rais$qt_vinc_ativos2)
 geral3<-geral2[,c(1,6)]
 
 #colocando esse valor de corte na base
-rais<-left_join(rais,geral3,by="cnae.setor")
+rais <- merge(rais, geral3, 
+              by="cnae.setor",
+              all.x = TRUE)
 
 #substituindo valores maiores que o corte pelo valor de corte
 rais$qt_vinc_ativos2<-ifelse(rais$cnae.setor %in% c("40","41","60","62","74","90") & rais$qt_vinc_ativos2>rais$corte,rais$corte,rais$qt_vinc_ativos2)
 
 # corrigir coordenadas
-setDT(rais)[, ':='(lon = str_replace(lon, ",", "."),
+rais[, ':='(lon = str_replace(lon, ",", "."),
                    lat = str_replace(lat, ",", "."))]
 
-setDT(rais)[, ':='(lon = as.numeric(lon),
+rais[, ':='(lon = as.numeric(lon),
                    lat = as.numeric(lat))]
 
 rais_fim <- rais[qt_vinc_ativos2 > 0]
 
 # Salvar
-fwrite(rais_fim, "../data/rais/rais_2017_corrigido.csv")
 write_rds(rais_fim, "../data/rais/rais_2017_corrigido.rds")
 
-# Teste
-# setDT(rais)[cnae.setor=="75"]
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Trazer a informacao da quantidade de vinculos por escolaridade
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+rais_corrig <- read_rds("../data/rais/rais_2017_corrigido.rds")
+rais_escol <- fread("../data/rais/rais_2017_vin_instrucao.csv")
+
+# Juntar as bases!
+rais_fim_escol <- merge(rais_corrig, rais_escol,
+                        all.x = TRUE,
+                        by = "id_estab")
+
+# Calcular a proporcao que cada um dos vinculos por escolaridade representa dos vinculos totais
+rais_fim_escol[,  ":="(prop_baixo = baixo/qt_vinc_ativos,
+                       prop_medio = medio/qt_vinc_ativos,
+                       prop_alto = alto/qt_vinc_ativos)]
+
+# Substituir a quantidade de vinculos baixo, medio e alto somente se o estabelecimento recebeu corte
+rais_fim_escol[, ":="(alto = ifelse(qt_vinc_ativos2 < qt_vinc_ativos, 
+                                    round(prop_alto * qt_vinc_ativos2, 0), alto),
+                      medio = ifelse(qt_vinc_ativos2 < qt_vinc_ativos,
+                                     round(prop_medio * qt_vinc_ativos2, 0), medio),
+                      baixo = ifelse(qt_vinc_ativos2 < qt_vinc_ativos, 
+                                     round(prop_baixo * qt_vinc_ativos2, 0), baixo))]
+
+# Selecionar colunas de interesse
+rais_fim_escol <- rais_fim_escol[, .(id_estab, codemun, baixo, medio, alto, lon, lat)]
+
+
+# Salvar
+write_rds(rais_fim_escol, "../data/rais/rais_2017_corrigido_escol.rds")
 
 
 ```
-
 
 
 
