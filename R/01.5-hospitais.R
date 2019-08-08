@@ -126,17 +126,32 @@
   head(cnes_geo)
   
   
+  
+  
+  
+
 ### 3. Save geocoded and clean CNES data  ----------------------------
 
+  ftp_cnes <- "http://i3geo.saude.gov.br/i3geo/ogc.php?service=WFS&version=1.0.0&request=GetFeature&typeName=cnes&outputFormat=CSV"
+  cnes2 <- fread(ftp_cnes)
+  head(cnes2)
   
+  ftp_cnesativo <- "http://i3geo.saude.gov.br/i3geo/ogc.php?service=WFS&version=1.0.0&request=GetFeature&typeName=cnes_ativo&outputFormat=CSV"
+  cnes_ativos <- fread(ftp_cnesativo)
+  head(cnes_ativos)
+  
+  download.file(ftp_cnesativo,destfile = 'tempf.csv', mode='wb') 
+  
+    
+      
 # merge cnes hierarchy data with geocoded data
   nrow(cnes_geo) > nrow(cnes_filtered)
+
+  head(cnes_filtered)
+  head(cnes_geo)
+  
   cnes_geo$code_cnes <- as.character(cnes_geo$code_cnes)
-  
   dt <- dplyr::left_join(cnes_filtered, cnes_geo, by=c('CNES'='code_cnes'))
-  
-  
-  
   
 # Save data of health facilities
   readr::write_rds(dt, "../data/hospitais/hospitais_geo_filtered", compress = "gz")
