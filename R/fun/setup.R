@@ -2,9 +2,10 @@
 Sys.setenv(TZ='UTC') 
 
 library(sp)
+library(sf)
+library(geobr)
 library(ggplot2)
 library(dplyr)
-library(sf)
 library(fasttime)
 # library(mapview)
 #library(ggmap) #função geocode() pra extrair as coordenadas dos endereços
