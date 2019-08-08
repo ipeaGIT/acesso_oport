@@ -22,6 +22,8 @@ library(mapview)
 library(RColorBrewer)
 library(furrr)
 library(extrafont)
+library(read.dbc)
+
 #extrafont::loadfonts(device="win")
 
 options(scipen=10000)
