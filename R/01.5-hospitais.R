@@ -2,16 +2,12 @@
 #' 
 ## ----hospitais-----------------------------------------------------------
 
-
-### Download geocoded CNES data
-
-cnes_geo <- geobr::read_health_facilities(code = "all")
-sf::st_crs(cnes_geo)
-head(cnes_geo)
+# load libraries
+  source("./R/fun/setup.R")
 
 
 
-### Download CNES data from datasus
+### 1. Download raw CNES data from datasus with hierachy information ----------------------------
 
 # Download documentation
   # ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Doc/IT_CNES_1706.pdf
@@ -61,13 +57,17 @@ head(cnes_geo)
                   "BA", "MG", "ES", "RJ", "SP",
                   "PR", "SC", "RS", "MS", "MT",
                   "GO", "DF")
-  all_states <- all_states[1:2]
-
 
 # download
   cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
   table(cnes$NIV_HIER)
   table(cnes$date)
+  
+# save raw data
+  readr::write_rds(cnes, path = "../data-raw/hospitais/bra_cnes.rds", compress = "gz")
+  
+  
+  
   
 
 # clean dataset
@@ -89,9 +89,7 @@ head(cnes_geo)
     # ATENDAMB CHAR (1) Indica a existência de INSTALAÇÃO FÍSICA de ATENDIMENTO AMBULATORIAL para este CNES, onde: 1-sim 0-não
     # abbrev_uf - abbreviation of state name
     # date - date of reference
-  summary(cnes$NIV_HIER)
-  table(cnes$NIV_HIER)
-  
+
 
 
 # Filter 1: healthcare facilities operating with the public health system
@@ -113,17 +111,35 @@ head(cnes_geo)
                                   ,ifelse(NIV_HIER =="07", "Medium + High"
                                   ,ifelse(NIV_HIER =="08", "High", NA))))))))]
 
-
-# convert health facilities Hierarchy into dummy variables
+  summary(cnes_filtered$NIV_HIER)
+  table(cnes_filtered$hierarq)
+  
+# convert hierarchy info into dummy variables
   cnes_filtered[ , health_low := ifelse( grepl("Low", hierarq), 1, 0) ]
   cnes_filtered[ , health_med := ifelse( grepl("Medium", hierarq), 1, 0) ]
   cnes_filtered[ , health_high := ifelse( grepl("High", hierarq), 1, 0) ]
   
 
+### 2. Download geocoded CNES data  ----------------------------
+  cnes_geo <- geobr::read_health_facilities(code = "all")
+  sf::st_crs(cnes_geo)
+  head(cnes_geo)
+  
+  
+### 3. Save geocoded and clean CNES data  ----------------------------
+
+  
+# merge cnes hierarchy data with geocoded data
+  nrow(cnes_geo) > nrow(cnes_filtered)
+  cnes_geo$code_cnes <- as.character(cnes_geo$code_cnes)
+  
+  dt <- dplyr::left_join(cnes_filtered, cnes_geo, by=c('CNES'='code_cnes'))
+  
+  
   
   
 # Save data of health facilities
-  readr::write_rds(hospitals_filtered, "./data/health_facilities_filtered.rds")
+  readr::write_rds(dt, "../data/hospitais/hospitais_geo_filtered", compress = "gz")
   
   
   
