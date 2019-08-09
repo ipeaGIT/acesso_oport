@@ -24,13 +24,13 @@
   hack_datasus <- function(UF, ANO, MES){
 
                             # URL to download from
-                            str_download <- paste0("ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/ST", UF, ano, mes,".dbc")
+                            str_download <- paste0("ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/ST", UF, ANO, MES,".dbc")
                             
                             # create temporary file
                             tempf <- paste0(tempdir(),"/",'cnes_20',ANO,MES,'_',UF,".dbc") 
                             
                             # download data to temporary file
-                            download.file(str_download,destfile = tempf, mode='wb') 
+                            download.file(str_download,destfile = tempf, mode='wb', quiet=TRUE) 
                             
                             # read data from temporary file
                             datasus<- read.dbc::read.dbc(tempf)
@@ -39,6 +39,9 @@
                             datasus$abbrev_uf <- UF
                             datasus$date <- paste0('20',ANO,MES)
                             return(datasus)
+
+                            # remove tempfiles
+                            unlink(paste0(normalizePath(tempdir()), "/", dir(tempdir())), recursive = TRUE)
                           }
 
   
@@ -46,10 +49,12 @@
 # complete hierarchy data
 #  ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/STRJ1506.dbc
   
-# set month and year to download
+# set year to download
   ano = '15'
-  mes= '05'
-  
+
+# meses
+  meses <- sprintf('%0.2d', 1:12)
+
 # list of states
   all_states <- c("RO", "AC", "AM", "RR", "PA",
                   "AP", "TO", "MA", "PI", "CE",
@@ -57,26 +62,86 @@
                   "BA", "MG", "ES", "RJ", "SP",
                   "PR", "SC", "RS", "MS", "MT",
                   "GO", "DF")
-
-# download
-  cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
+  all_states <- all_states[1:2]
+  
+  
+## Download one month
+#  cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
+  
+# Download all states all months
+  for (i in meses){
+    if( i =='01'){ cnes <- lapply(all_states, hack_datasus, ANO=ano, MES=i) %>% data.table::rbindlist() }
+    if( i !='01'){ temp <- lapply(all_states, hack_datasus, ANO=ano, MES=i) %>% data.table::rbindlist() 
+                   cnes <- rbind(cnes, temp) }
+  }
   table(cnes$NIV_HIER)
   table(cnes$date)
   
-# save raw data
-  readr::write_rds(cnes, path = "../data-raw/hospitais/bra_cnes.rds", compress = "gz")
-  
-  
-  
   
 
+# All unique CNES ids
+  all_cnes <- cnes[, .(CNES, NIV_HIER)] %>% unique()
+  summary(all_cnes$NIV_HIER)
+
+# Drop facilities with missing hierarchy info
+  all_cnes <- na.omit(all_cnes)
+
+  
+a <- cnes[ date== unique(cnes$date)[1], .(CNES, NIV_HIER) ][order(CNES)]
+b <- cnes[ date== unique(cnes$date)[2], .(CNES, NIV_HIER) ][order(CNES)]
+c <- cnes[ date== unique(cnes$date)[3], .(CNES, NIV_HIER) ][order(CNES)]
+d <- cnes[ date== unique(cnes$date)[4], .(CNES, NIV_HIER) ][order(CNES)]
+e <- cnes[ date== unique(cnes$date)[5], .(CNES, NIV_HIER) ][order(CNES)]
+f <- cnes[ date== unique(cnes$date)[6], .(CNES, NIV_HIER) ][order(CNES)]
+
+  identical(a$CNES,b$CNES)
+  identical(a$CNES,c$CNES)
+  
+x <- full_join(a, b)
+    
+
+# clean
+  rm(list=setdiff(ls(), "cnes"))
+  gc(reset = T)
+
+  
+for (i in 1:12){
+  temp <- cnes[ date== unique(cnes$date)[i], .(CNES, NIV_HIER)][order(CNES)]
+  assign(x=paste0('month',i), value=temp )
+  rm(temp)
+  }
+  
+
+
+dtpattern <- grep("month",names(.GlobalEnv),value=TRUE)
+dt_list <- do.call("list",mget(dtpattern))
+  
+  ls()
+  
+  
+x <- dt_list  %>% purrr::reduce(full_join), by = "CNES")
+x <- unique(x)
+x <- na.omit(x)
+x[CNES=='2000067']
+x[CNES=='2000059']
+
+  
+
+
+# save raw data
+readr::write_rds(cnes, path = "../data-raw/hospitais/bra_cnes.rds", compress = "gz")
+
+
+
+
+  
 # clean dataset
   
 # CNES to characther
   setDT(cnes)[, CNES := as.character(CNES) ] 
   
 # Keep only columns we will use
-  cnes_filtered <- cnes[, .(CNES, CODUFMUN, COD_CEP, PF_PJ, NIV_HIER, VINC_SUS, ATENDAMB, ATENDHOS, abbrev_uf) ]
+  cnes_filtered <- cnes[, .(CNES, CODUFMUN, COD_CEP, PF_PJ, NIV_HIER, VINC_SUS, ATENDAMB, ATENDHOS, abbrev_uf, date) ]
   
   # vars to keep
     # CNES CHAR (7) Número nacional do estabelecimento de saúde
