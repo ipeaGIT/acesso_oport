@@ -48,7 +48,9 @@ construir_graph("por")
 #' 
 ## ----feedvalidator-------------------------------------------------------
 
-source("R/feed_validator.R")
+source("R/fun/feed_validator.R")
+
+run_validator("gtfs_20190619")
 
 
 #' 

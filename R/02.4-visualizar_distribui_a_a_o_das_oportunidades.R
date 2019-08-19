@@ -1,6 +1,5 @@
 #' ## Visualizar distribuição das oportunidades
 #' 
-#' Para Teresina:
 #' 
 ## ----for-----------------------------------------------------------------
 

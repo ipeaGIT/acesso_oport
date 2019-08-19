@@ -1,6 +1,5 @@
 #' ## Criação de hexágonos
 #' 
-#' As cidade brasileiras analisadas serão dividadas em hexágonos. A função ``poligono_para_hexagono`` pega os municípios e cria hexágonos de acordo com a resolução preferida, que no caso foi uma resolução de 960 metros (comprimento da menor diagonal do hexágono).
 #' 
 ## ----hexagonos-----------------------------------------------------------
 
@@ -17,7 +16,7 @@ shape_to_hexagon <- function(municipio, uf_sigla) {
   res_todas <- c(7, 8, 9, 10)
   
   # Teste:
-  resolution <- 8
+  # resolution <- 8
   
   make_hex <- function(resolution, muninho) {
     

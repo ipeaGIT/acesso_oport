@@ -1,6 +1,5 @@
 #' ## Grade censo
 #' 
-#' As grades do censo são agregações espaciais estimadas de tamanho padrão que contém informações populacionais (população de homens e mulheres), e são divididas por ID, onde cada um desses pode encorporar vários municípios. O arquivo ``Tabela_UF_ID.csv`` contém uma tabela auxiliar que identifica os IDs contidos em cada estado. O tratamento desse arquivo corrige alguns erros e cria uma correspondência entre o nome e a sigla de cada UF, salvando o arquivo tratado em disco. 
 #' 
 ## ----grade_censo---------------------------------------------------------
 
@@ -45,12 +44,7 @@ write_csv(ids_corresp_v1, "../data-raw/lookup_grade_ufs.csv")
 
 
 #' 
-#' A função para extrair os municípios das grades do IBGE requer dois inputs: o ``municipio`` e a ``uf``:
 #' 
-#' - Com a ``uf`` é feita uma seleção dos IDs que estão presentes na uf desejada daquele município;
-#' - É aberto então o shape do ``municipio`` desejado;
-#' - O geoprocessamento extrai somente as grades que estão inseridas dentro dos limites do município;
-#' - O resultado é salvo em disco.
 #' 
 ## ----funcao_grade_p_municipio--------------------------------------------
 
@@ -125,7 +119,6 @@ grade_para_municipio <- function(muni, uf_input) {
 
 
 #' 
-#' A função é então aplicada para as cidades desejadas:
 #' 
 ## ----aplicar_grades------------------------------------------------------
 

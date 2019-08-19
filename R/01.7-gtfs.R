@@ -1,6 +1,5 @@
 #' ## GTFS
 #' 
-#' O GTFS do Rio de Janeiro apresenta algumas inconsistências no arquivo ``stop_times.txt``.
 #' 
 ## ----gtfs----------------------------------------------------------------
 

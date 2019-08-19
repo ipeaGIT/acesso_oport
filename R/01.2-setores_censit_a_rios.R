@@ -1,6 +1,5 @@
 #' ## Setores censitários
 #' 
-#' Primeiramente os shapes dos setores são dividos por UF e guardados em formato .rds:
 #' 
 ## ----setores_shapes------------------------------------------------------
 
@@ -44,7 +43,6 @@ walk(arquivos_shp, shp_to_rds)
 
 
 #' 
-#' Em seguida, os dados estatísticos dos setores do censo são tratados: é feita a retirada das variáveis relacionadas à renda e à quantidade de pessoas, depois é feito o cálculo da renda por pessoa. A tabela resultante é salva como``renda_por_setor.rds``, e tem as variáveis para todos os setores juntos.
 #' 
 ## ----setores_var---------------------------------------------------------
 
@@ -72,7 +70,6 @@ setores_total <- setores_renda %>%
 
 
 #' 
-#' É feita então a junção dos shapes com as estatísticas, resultando numa base dos setores censitários georreferenciada, dividida por uf, com informações de renda e habitantes. A paste final ``setores_agregados`` contém todos os setores (com as variaveis de população e renda) com um arquivo para cada uf de nome ``setores_agregados_UF.rds``.
 #' 
 ## ----setores_juncao------------------------------------------------------
 
@@ -156,12 +153,11 @@ walk2(setores_total_v1, setores_shapes, agregar_setores)
 
 
 #' 
-#' Há a necessidade de filtrar os setores agregados por uf nas cidades dos projetos:
 #' 
 ## ----setores_por_municipio-----------------------------------------------
 
 # # nome do municipio completo, minusculo, sem acentos
-# municipio_logname <- "fortaleza"
+# municipio_logname <- "brasilia"
 # uf <- "ce"
 
 setores_por_municipio <- function(municipio_logname, uf) {
@@ -208,6 +204,9 @@ ufs <- c("ce", "rj", "mg", "pi", "rs", "sp", "pr")
 
 walk2(municipio_logname, ufs, setores_por_municipio)
 
+# para brasilia
+source("R/fun/setup.R")
+setores_por_municipio("brasilia", "df")
 
 
 #' 

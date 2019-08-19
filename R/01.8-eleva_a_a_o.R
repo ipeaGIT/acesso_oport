@@ -1,10 +1,7 @@
 #' ## Elevação
 #' 
-#' Os dados brutos de elevação são retirados do [Earth Explorer](https://earthexplorer.usgs.gov/). Lá, é necessário especificar a região e data que se quer extrair os dados de elevação. Na aba de _Select Your Data Set(s)_, seleciona-se ``Digital Elevation`` -> ``SRTM``. SRTM (_Shuttle Radar Topography Mission_) é um esforço de pesquisa internacional que obtém dados de elevação numa precisão de 30 metros. Os dados de elevação do SRTM são divididos por quadrículo de 1 grau de latidude e 1 longitude, então é necessário cortar os municípios desejados dessa área.
 #' 
-#' A função ``crop_save_raster`` foi criada para tratar e salvar os dados de elevação, e requer dois argumentos: ``municipio``, que é a sigla (três primeiras letras) do município desejado, e ``bb``, que é o _bounding box_ do município (pares de coordenadas que delimitam a área do município). Esse argumento pode ser extraído do [Bounding Box Tool](https://boundingbox.klokantech.com/), onde na aba de busca é pesquisada e selecionada a cidade em questão. Por fim, na parte inferior esquerda, é selecionada a opção ``CSV RAW`` na aba _Copy & Paste_, e as coordenadas são inseridas na função como um vetor.
 #' 
-#' A função será aplicada para três cidades inicialmente: Fortaleza, Belo Horizonte e Rio de Janeiro.
 #' 
 ## ----elevacao------------------------------------------------------------
 

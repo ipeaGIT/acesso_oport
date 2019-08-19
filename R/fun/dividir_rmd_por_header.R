@@ -5,6 +5,9 @@
 input_file <- "04_matriz.Rmd"
 input_file <- "03_otp.Rmd"
 
+
+
+
 dividir_rmd_por_header <- function(input_file) {
   
   purled <- knitr::purl(input_file, documentation = 2)    # purl original file; save name to variable
@@ -31,3 +34,12 @@ dividir_rmd_por_header <- function(input_file) {
   unlink(purled)    # delete purled file of entire document
   
 }
+
+
+
+
+# list all rmd files in folder
+files_rdm <- list.files(pattern = "0*.Rmd")
+
+# apply function
+lapply(files_rdm, FUN=dividir_rmd_por_header)

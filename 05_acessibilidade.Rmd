@@ -700,7 +700,7 @@ fazer_mapa_acess_cidade(acess_rio, indicador = "CMA", modo = "transit", atividad
 
 Para o Curitiba:
 
-```{r acess acumulativa rio}
+```{r acess acumulativa cur}
 
 # Aplicar
 # calcular_acess("cur")

@@ -1,10 +1,9 @@
 #' ## Agrupamento da renda dos setores censitários para a grade do censo
 #' 
-#' A grade do censo, tratada na etapa anterior, apresenta somente informação de população (homens e mulheres) por cada uma das entidades. Há então a necessidade de incorporar a variável da renda daquela grade. Para isso, será utilizada a informação de renda de cada setor censitário.
 #' 
 ## ----renda_de_setor_para_grade-------------------------------------------
 
-# cidade <- "bel"
+# cidade <- "for"
 
 renda_de_setor_p_grade <- function(cidade) {
   
@@ -38,7 +37,7 @@ renda_de_setor_p_grade <- function(cidade) {
     mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
     # Calcular a proporcao de populacao de cada grade que esta dentro do setor
     group_by(id_setor) %>%
-    mutate(sum = sum(pop_prop_grade)) %>%
+    mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
     ungroup() %>%
     # Calcular a populacao proporcional de cada pedaco dentro do setor
     mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
@@ -50,7 +49,13 @@ renda_de_setor_p_grade <- function(cidade) {
     # Agrupar por grade e somar a renda
     group_by(id_grade, pop_total) %>%
     summarise(renda = sum(renda_pedaco, na.rm = TRUE)) %>%
-    mutate(renda_capta = renda/pop_total)
+    mutate(renda = as.numeric(renda)) %>%
+    ungroup()
+  
+  # # Juntar algumas grades que estao faltando
+  # um_fim_v2 <- ui_fim %>%
+  #   full_join(grade %>% select(id_grade, geometry),
+  #             by = "id_grade")
   
   path_out <- sprintf("../data/grade_municipio_com_renda/grade_renda_%s.rds", cidade)
   
