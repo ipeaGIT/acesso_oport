@@ -1,30 +1,29 @@
+Sys.setenv(TZ='UTC') # Fuso horario local
 
-Sys.setenv(TZ='UTC') 
+# carregar bibliotecas
 
-library(sp)
-library(sf)
-library(geobr)
-library(ggplot2)
-library(dplyr)
-library(fasttime)
-# library(mapview)
-#library(ggmap) #função geocode() pra extrair as coordenadas dos endereços
-library(sf) #pra importar os dados espaciais e tal
-library(data.table)
+library(ggplot2)      # visualizacao de dados
+library(sf)           # leitura e manipulacao de dados espaciais
+library(data.table)   # manipulacao de dados
+library(read.dbc)     # leitura de bases relacionais em Microsoft Access
+library(geobr)        # dados espaciais do brasil
+library(pbapply)      # progress bar
+library(readr)        # rapida leitura de dados 
+library(tidyr)        # manipulacao de dados
+library(stringr)      # operacoes em strings
+library(lubridate)    # dados em data/horario
+library(fasttime)     # rapido processamento deddados em data/horario
+library(mapview)      # visualizacao interativa dos dados
+library(RColorBrewer) # paleta de cores
+library(extrafont)    # fontes de texto
+library(bit.64)       # lidar com numeros ee 64bits
 library(knitr)
-library(readr)
-library(tidyr)
-# library(hrbrthemes)
-library(stringr)
-# library(leaflet.minicharts)
-library(purrr)
-library(lubridate)
-library(mapview)
-library(RColorBrewer)
 library(furrr)
-library(extrafont)
-library(read.dbc)
 
+library(purrr)
+
+# library(hrbrthemes)
+# library(leaflet.minicharts)
 #extrafont::loadfonts(device="win")
 
 options(scipen=10000)
@@ -38,8 +37,8 @@ options(scipen=10000)
 #library(tmap)
 
 # Use GForce Optimisations in data.table operations
-  # details > https://jangorecki.gitlab.io/data.cube/library/data.table/html/datatable-optimize.html
-  options(datatable.optimize=Inf)
+# details > https://jangorecki.gitlab.io/data.cube/library/data.table/html/datatable-optimize.html
+options(datatable.optimize=Inf)
 
 
 to_spatial <- function(df1, coordenada = c("lon", "lat")) {
