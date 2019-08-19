@@ -1,6 +1,6 @@
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ###### 0.1.1 Download de shape file de municipios e setores censitarios dos  municipios incluidos no projeto
+###### 0.1.1 Download de shape file de municipios e setores censitarios dos  municipios incluidos no projeto
   
   # carregar bibliotecas
   source('./R/fun/setup.R')
@@ -39,15 +39,15 @@ download_muni_setores <- function(i){
   
   
   # Download de arquivos
-  muni_sf <- read_municipality(code_muni=i, year=2010)
-  ct_sf <- read_census_tract(code_tract =i, year=2010)
+  muni_sf <- geobr::read_municipality(code_muni=i, year=2010)
+  ct_sf <- geobr::read_census_tract(code_tract =i, year=2010)
   
   
   # salvar municipios
-  write_rds(muni_sf, paste0("../data-raw/municipios/",sigla,"/municipio_", sigla,".rds"))
+  readr::write_rds(muni_sf, paste0("../data-raw/municipios/",sigla,"/municipio_", sigla,".rds"))
   
   # salvar setores censitarios
-  write_rds(ct_sf, paste0("../data-raw/setores_censitarios/", sigla,"/setores_", sigla,".rds"))
+  readr::write_rds(ct_sf, paste0("../data-raw/setores_censitarios/", sigla,"/setores_", sigla,".rds"))
 }
 
 
