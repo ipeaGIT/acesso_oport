@@ -471,7 +471,7 @@ Para a resolução 9:
 dia <- selecionar_data_gtfs("for")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("for", modo = "tp", data = dia, from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("for", modo = "tp", data = dia, from = 7, until = 9, every = 15)
 
 # aplicar otp para todos os modos
 aplicar_otp("for", data = dia)
@@ -512,7 +512,7 @@ Para a resolução 9:
 dia <- selecionar_data_gtfs("bel")
 
 # Criar arquivo em python em paralelo, entre 7 e 9 da manha, e para todos os modos
-criar_script_python_paral_modes("bel", modo = "tp", data = dia, from = 7, until = 8, every = 30)
+criar_script_python_paral_modes("bel", modo = "tp", data = dia, from = 7, until = 9, every = 15)
 
 # aplicar otp para todos os modos
 aplicar_otp("bel", data = dia)

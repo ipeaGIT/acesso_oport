@@ -704,6 +704,8 @@ rais[, ':='(lon = as.numeric(lon),
 
 rais_fim <- rais[qt_vinc_ativos2 > 0]
 
+rais_fim[, id_estab := as.character(id_estab)]
+
 # Salvar
 write_rds(rais_fim, "../data/rais/rais_2017_corrigido.rds")
 
