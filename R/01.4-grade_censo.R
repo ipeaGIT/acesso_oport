@@ -49,7 +49,7 @@ criar_grade_muni <- function(sigla){
 
 
 # Aplicar funcao
-purrr::walk(munis_df$abrev_muni, criar_grade_muni)
+#purrr::walk(munis_df$abrev_muni, criar_grade_muni)
 
 pblapply(X = munis_df$abrev_muni, FUN=criar_grade_muni)
 
