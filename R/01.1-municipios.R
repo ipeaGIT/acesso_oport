@@ -4,42 +4,54 @@
 #' 
 ## ----municipios----------------------------------------------------------
 
-# ajeitar os municipios
+# carregar bibliotecas
+source('./R/fun/setup.R')
 
 
-arquivos <- dir("../data-raw/municipios", full.names = T, pattern = "_municipios.zip", recursive = T)
+## lista de municipios no projeto
+list_muni_codes <- c( 2304400 # Fortaleza
+                    , 3550308 # Sao Paulo
+                    , 3304557 # Rio de Janeiro
+                    , 4106902 # Curitiba
+                    , 4314902 # Porto Alegre
+                    , 3106200 # Belo Horizonte
+                    , 2211001 # Teresina
+                    )
 
 
-out_dir <- paste0("../data-raw/municipios/", str_sub(arquivos, -17, -16))
+## lista de estados com municipios no projeto
+# list_estados <- c('CE', 'RJ', 'SP', 'PR', 'PI', 'MG', 'RS')
 
-walk2(arquivos, out_dir, ~unzip(zipfile = .x, exdir = .y))
 
-# # criar pastas
-# walk(str_sub(arquivos, -17, -16), ~dir.create(paste0("../data/municipios/", .)))
-
-# nome dos arquivos .shp para abrir
-arquivos_shp <- dir("../data-raw/municipios", full.names = T, pattern = "*.shp", recursive = T)
-
-# # arquivo com output
-# out_dir_data <- paste0("../data/municipios/", str_sub(arquivos, -17, -16))
-
-# funcao
-
-shp_to_rds <- function(shp) {
+# Funcao para download de shape file dos municipios e setores censitarios
+download_muni_setores <- function(i){
   
-  shp_files <- st_read(shp, crs = 4326, options = "ENCODING=WINDOWS-1252")
+  sigla <-  ifelse(i== 2304400, 'for',
+            ifelse(i== 3550308, 'sao',
+            ifelse(i== 3304557, 'rio',
+            ifelse(i== 4106902, 'cur',
+            ifelse(i== 4314902, 'por',
+            ifelse(i== 3106200, 'bel',
+            ifelse(i== 2211001, 'ter', NA)))))))
   
-  uf <- gsub(".+/(\\D{2})/.+", "\\1", shp)
   
-  out_dir <- paste0("../data/municipios/municipios_", uf, ".rds")
+  # criar pasta do municipios
+  dir.create( paste0("../data-raw/municipios/", sigla) )  
+  dir.create( paste0("../data-raw/setores_censitarios/", sigla) )  
   
-  write_rds(shp_files, out_dir)
+  
+  # Download de arquivos
+  muni_sf <- read_municipality(code_muni=i, year=2010)
+  ct_sf <- read_census_tract(code_tract =i, year=2010)
   
   
+  # salvar municipios
+  write_rds(muni_sf, paste0("../data-raw/municipios/",sigla,"/municipio_", sigla,".rds"))
+  
+  # salvar setores censitarios
+  write_rds(ct_sf, paste0("../data-raw/setores_censitarios/", sigla,"/setores_", sigla,".rds"))
 }
-
-
-walk(arquivos_shp, shp_to_rds)
-
-
-#' 
+  
+  
+# aplica funcao
+lapply(X=list_muni_codes, FUN=download_muni_setores)
