@@ -44,8 +44,7 @@ dividido em:
 Além dessa documentação, outros arquivos necessários para o andamento do
 projeto estão divididos nas pastas:
 
-  - `analysis`: análises feitas a partir dos dados;
-  - `presentations`: apresentações advindas do projeto;
+
   - `R`: funções úteis para o desenvolvimento do projeto;
   - `reports`: relatórios criados com RMarkdown.
 
