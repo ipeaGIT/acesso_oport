@@ -1,14 +1,12 @@
-#' ## Municípios
-#' 
-#' 
-#' 
-## ----municipios----------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### Download de shape file de municipios e setores censitarios dos  municipios incluidos no projeto
 
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
 
-## lista de municipios no projeto
+## 1. lista de municipios no projeto
 list_muni_codes <- c( 2304400 # Fortaleza
                     , 3550308 # Sao Paulo
                     , 3304557 # Rio de Janeiro
@@ -23,7 +21,7 @@ list_muni_codes <- c( 2304400 # Fortaleza
 # list_estados <- c('CE', 'RJ', 'SP', 'PR', 'PI', 'MG', 'RS')
 
 
-# Funcao para download de shape file dos municipios e setores censitarios
+# 2. Funcao para download de shape file dos municipios e setores censitarios
 download_muni_setores <- function(i){
   
   sigla <-  ifelse(i== 2304400, 'for',
@@ -53,5 +51,5 @@ download_muni_setores <- function(i){
 }
   
   
-# aplica funcao
+# 3. Aplica funcao
 lapply(X=list_muni_codes, FUN=download_muni_setores)
