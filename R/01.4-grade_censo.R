@@ -1,138 +1,56 @@
-#' ## Grade censo
-#' 
-#' 
-## ----grade_censo---------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.1.4 Extrai grade estatistica de cada municipio
 
-# TRATAMENTO DO ARQUIVO COM OS IDs
+# carregar bibliotecas
+source('./R/fun/setup.R')
 
-# criar encoding para abrir arquivo
-brazil <- locale("pt", encoding = "Windows-1252")
 
-# abrir tabela de ids
-ids_corresp <- read_delim("../data-raw/Tabela_UF_ID.csv", delim = ";", locale = brazil) %>%
-  arrange(Estados) %>%
-  mutate(Estados = ifelse(Estados == "Pernanbuco", "Pernambuco", Estados))
-
-lookup_ufs <- data.frame(stringsAsFactors=FALSE,
-                      Estados = c("Acre", "Alagoas", "Amazonas",
-                                          "Amapá", "Bahia", "Ceará",
-                                          "Distrito Federal", "Espírito Santo", "Goiás",
-                                          "Maranhão", "Minas Gerais",
-                                          "Mato Grosso do Sul", "Mato Grosso", "Pará",
-                                          "Paraíba", "Pernambuco", "Piauí", "Paraná",
-                                          "Rio de Janeiro", "Rio Grande do Norte",
-                                          "Rondônia", "Roraima",
-                                          "Rio Grande do Sul", "Santa Catarina", "Sergipe",
-                                          "São Paulo", "Tocantins"),
-                         uf = c("AC", "AL", "AM", "AP", "BA", "CE",
-                                          "DF", "ES", "GO", "MA", "MG", "MS",
-                                          "MT", "PA", "PB", "PE", "PI", "PR",
-                                          "RJ", "RN", "RO", "RR", "RS", "SC", "SE",
-                                          "SP", "TO")
-)
+# Criar pasta para salvar arquivos
+dir.create(paste0("../data/grade_municipio"))
 
 
 
-ids_corresp_v1 <- ids_corresp %>%
-  left_join(lookup_ufs) %>%
-  mutate(uf = tolower(uf),
-         Quadrante = tolower(Quadrante)) %>%
-  mutate(Quadrante = gsub("_", "", Quadrante))
-
-write_csv(ids_corresp_v1, "../data-raw/lookup_grade_ufs.csv")
-# write_rds(ids_corresp_v1, "../data-raw/lookup_grade_ufs.rds")
+# Cria data.frame com municipios do projeto
+munis_df <- data.frame( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200, 2211001),
+                        abrev_muni=c('for', 'sao', 'rio', 'cur', 'por', 'bel', 'ter'),
+                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte', 'Teresina'),
+                        abrev_state=c('CE', 'SP', 'RJ', 'PR', 'RS', 'MG', 'PI'))
 
 
-#' 
-#' 
-#' 
-## ----funcao_grade_p_municipio--------------------------------------------
 
-# muni <- "porto alegre"
-# uf_input <- "rs"
+### Funcao
 
+criar_grade_muni <- function(sigla){
+  
+  message(paste0('Rodando ', sigla))
+  
+  # codigo do estado do municipio
+  cod_estado <- subset(munis_df, abrev_muni==sigla)$abrev_state %>% as.character()
+  
+  # Leitura das grades estatisticas dos estados
+  grade <- read_statistical_grid(code_grid = cod_estado, year = 2010)
+  # Leitura do municipio
+  muni <- readr::read_rds( paste0("../data-raw/municipios/",sigla,"/municipio_", sigla,".rds") )
+  
+  # mesma projecao geografica
+  grade <- grade %>% st_transform(crs = 4326)
+  muni <- muni   %>%  st_transform(crs = 4326)
+  
+  # Intersecao
+  grade_muni <- st_join(grade, muni)
+  
+  # limpa memoria
+  rm(grade, muni)
+  gc(reset=T)
 
-grade_para_municipio <- function(muni, uf_input) {
-  
-  files <- read_csv("../data-raw/lookup_grade_ufs.csv") %>%
-    # Corrigir esse valor
-    mutate(Quadrante = ifelse(Quadrante == "id4", "id04", Quadrante)) %>%
-    filter(uf == uf_input) %>%
-    mutate(Quadrante = paste0("grade_", Quadrante)) %>%
-    .$Quadrante
-  
-  arquivos <- paste0("../data-raw/dadosrds/", files, ".rds")
-  
-  # abrir quadrantes da uf
-  
-  grades <- map_dfr(arquivos, read_rds) %>%
-    as_tibble() %>%
-    st_sf(crs = 4326)
-  
-  # extrair municipio -------------------------------------------------------
-  
-  municipio_ok <- toupper(muni)
-  
-  
-  # abrir arquivos ----------------------------------------------------------
-  
-  dir_muni <- paste0("../data/municipios/municipios_", uf_input, ".rds")
-  
-  grade_estado <- grades %>%
-    mutate(id_grade = 1:n()) %>%
-    dplyr::select(id_grade, MASC, FEM, POP, DOM_OCU)
-  
-  # grade_estado_centroids <- grade_estado %>%
-  #   st_centroid()
-  
-  cidade <- read_rds(dir_muni) %>%
-    filter(NM_MUNICIP == municipio_ok) %>%
-    dplyr::select(municipio = NM_MUNICIP)
-  
-  
-  # geoprocessamento --------------------------------------------------------
-  
-  vai <- st_join(grade_estado, cidade) %>%
-    filter(!is.na(municipio))
-  
-  
-  grade_municipio <- grade_estado %>%
-    dplyr::filter(id_grade %in% vai$id_grade) %>%
-    mutate(municipio = municipio_ok)
-  
-  
-  # salvar ------------------------------------------------------------------
-  
-  # tirar os espaços e colocar underscore
-  municipio_nome_salvar <- substring(municipio_ok, 1, 3)
-  
-  # # criar pasta para o municipio
-  # dir.create(paste0("data/grade_municipio/", municipio_nome_salvar))
-  
   # salvar no disco
-  write_rds(grade_municipio, 
-           paste0("../data/grade_municipio/grade_", tolower(municipio_nome_salvar), ".rds"))
-  
-  
-  
+  write_rds(grade_muni, paste0("../data/grade_municipio/grade_", tolower(sigla), ".rds"))
 }
 
 
-#' 
-#' 
-## ----aplicar_grades------------------------------------------------------
+# Aplicar funcao
+purrr::walk(munis_df$abrev_muni, criar_grade_muni)
 
-municipios <- c("fortaleza", "rio de janeiro", "belo horizonte", "recife", "porto alegre", "são paulo", "curitiba")
-ufs <- c("ce", "rj", "mg", "pe", "rs", "sp", "pr")
-
-grade_para_municipio("são paulo", "sp")
-grade_para_municipio("curitiba", "pr")
-grade_para_municipio("teresina", "pi")
-grade_para_municipio("porto alegre", "rs")
-
-walk2(municipios, ufs, grade_para_municipio)
+pblapply(X = munis_df$abrev_muni, FUN=criar_grade_muni)
 
 
-#' 
-#' 
-#' 
