@@ -32,7 +32,7 @@ crop_save_raster <- function(sigla_muni) {
     elev_img_bind <- raster::raster(files)
     
   } else {
-    elev_img <- map(files, raster)
+    elev_img <- purrr::map(files, raster)
     elev_img_bind <- do.call(raster::merge, elev_img)
     }
   
@@ -48,11 +48,11 @@ crop_save_raster <- function(sigla_muni) {
   crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
   
   # crop do municipio com raster de topografia
-  elev_img_fim <- crop(elev_img_bind, e)
+  elev_img_fim <- raster::crop(elev_img_bind, e)
   
   # salvar
   output <- sprintf("../data/topografia/topografia_%s.tif", sigla_muni)
-  writeRaster(elev_img_fim, output, format="GTiff", overwrite=TRUE)
+  raster::writeRaster(elev_img_fim, output, format="GTiff", overwrite=TRUE)
 }
 
 #### Aplicando funcao em paralelo para salvar grades de hexagonos ---------------------------------------------------------------
