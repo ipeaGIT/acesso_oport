@@ -1,10 +1,14 @@
-#' ## Hospitais
-#' 
-## ----hospitais-----------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.1.5 Download dos dados geolicalizados dos estabelecimentos de saude
+##info
+# fonte: Cadastro Nacionl dos Estabelecimentos de Saude (CNES) - DataSus
+  
+  
+# carregar bibliotecas
+source('./R/fun/setup.R')
 
 
 ### Download geocoded CNES data
-
 cnes_geo <- geobr::read_health_facilities(code = "all")
 sf::st_crs(cnes_geo)
 head(cnes_geo)
@@ -19,16 +23,21 @@ head(cnes_geo)
 # tabulacao
   # ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Auxiliar/TAB_CNES.zip
 
+# complete hierarchy data
+#  ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/STRJ1506.dbc
+
+
+
 
 
 ### Download cnes data with classification of hospitals hierarchy for all states
 
 # Function do download CNES data from data sus
   # adapted from https://gist.github.com/fernandobarbalho/0cf27d994e39700663551b2d14387b08
-  hack_datasus <- function(UF, ANO, MES){
+  download_cnes_datasus <- function(UF, ANO, MES){
 
                             # URL to download from
-                            str_download <- paste0("ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/ST", UF, ano, mes,".dbc")
+                            str_download <- paste0("ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/ST", UF, ANO, MES,".dbc")
                             
                             # create temporary file
                             tempf <- paste0(tempdir(),"/",'cnes_20',ANO,MES,'_',UF,".dbc") 
@@ -37,22 +46,16 @@ head(cnes_geo)
                             download.file(str_download,destfile = tempf, mode='wb') 
                             
                             # read data from temporary file
-                            datasus<- read.dbc::read.dbc(tempf)
+                            datasus <- read.dbc::read.dbc(tempf)
                             
                             # create State and date columns
                             datasus$abbrev_uf <- UF
                             datasus$date <- paste0('20',ANO,MES)
-                            return(datasus)
+                            
+                            # save data
+                            readr::write_rds(datasus, paste0('../data-raw/servicos_saude/','cnes_20',ANO,MES,'_',UF,".rds"))
                           }
 
-  
-  
-# complete hierarchy data
-#  ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/STRJ1506.dbc
-  
-# set month and year to download
-  ano = '15'
-  mes= '05'
   
 # list of states
   all_states <- c("RO", "AC", "AM", "RR", "PA",
@@ -61,13 +64,37 @@ head(cnes_geo)
                   "BA", "MG", "ES", "RJ", "SP",
                   "PR", "SC", "RS", "MS", "MT",
                   "GO", "DF")
-  all_states <- all_states[1:2]
 
 
-# download
-  cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
-  table(cnes$NIV_HIER)
-  table(cnes$date)
+# Preparar processamento em paralelo usando future.apply
+  future::plan(future::multiprocess)
+
+# Loop over months
+  meses <- c(paste0("0", 1:9), 10:12)
+
+# download cnes data
+  for (i in meses){
+    
+      # Definir ano para download
+      ano = '18'
+      message(paste0("Baixando dados do mes ",i,"\n"))
+  
+      # Aplica funcao para baixar arquivos dos estados em paralelo
+      future.apply::future_lapply(X =all_states, FUN=download_cnes_datasus, ANO=ano, MES=i)
+  }
+    
+#   
+# # download
+#   cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
+#   table(cnes$NIV_HIER)
+#   table(cnes$date)
+  
+  
+  
+  
+  
+  
+  
   
 
 # clean dataset
