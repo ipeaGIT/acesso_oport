@@ -19,11 +19,32 @@ renda_de_setor_p_grade <- function(sigla_muni) {
   setor <- readr::read_rds(path_setor)
   grade <- readr::read_rds(path_grade)
   
+  
+  # mesma projecao
+  setor <- sf::st_transform(setor, crs(grade))
+  
   # Criar id unico de cada grade e filtra colunas
-  grade <- grade %>%
-    mutate(area_grade = st_area(.)) %>%
-    mutate(id_grade = 1:n()) %>%
-    dplyr::select(id_grade, pop_total = POP, area_grade)
+  grade$id_grade <- 1:nrow(grade)
+  
+  # corrigir grades de borda
+    grade_corrigida <- grade %>%
+      mutate(area_antes = as.numeric(st_area(.))) %>%
+      st_intersection(setor %>% dplyr::select(code_tract)) %>%
+      group_by(id_grade) %>%
+      summarise(pop_total = first(POP),
+                area_antes = first(area_antes))
+                    
+
+# corrigir populacao das grades de borda que foram cortadas (porque parte da grade caia fora do municipio)
+  grade_corrigida <- grade_corrigida %>%    
+    mutate(area_depois = as.numeric(st_area(.))) %>%
+    mutate(prop = area_depois/area_antes) %>%
+    mutate(pop_total = prop * pop_total)
+  
+  # Criar id unico de cada grade e filtra colunas
+  grade_corrigida <- grade_corrigida %>%
+    rename(area_grade = area_depois) %>%
+    dplyr::select(id_grade, pop_total, area_grade)
   
   # Criar id unico de cada setor e filtra colunas
   setor <- setor %>%
@@ -44,16 +65,12 @@ renda_de_setor_p_grade <- function(sigla_muni) {
   # volta para sf
   setor <- st_sf(setor)
   
-  
-  # mesma projecao
-  setor <- sf::st_transform(setor, crs(grade))
-  
 
 
 # funcao de reaportion com duas variaveis de referencia (populacao e area)
 # Resultado (ui_fim) eh uma grade estatistica com informacao de renda inputada a partir do setor censitario
 ### aplicacao para renda --------------------------
-ui <- sf::st_intersection(grade, setor) %>%
+ui <- sf::st_intersection(grade_corrigida, setor) %>%
   # tip from https://rpubs.com/rural_gis/255550
   
   # Calcular a area de cada pedaco
@@ -84,6 +101,7 @@ ui <- sf::st_intersection(grade, setor) %>%
 
 # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
 ui_fim <- ui %>%
+  st_set_geometry(NULL) %>%
   group_by(id_grade, pop_total) %>%
   dplyr::summarise(renda = sum(renda_pedaco, na.rm = TRUE),
                    cor_branca = sum(branca_pedaco, na.rm = TRUE),
@@ -93,11 +111,14 @@ ui_fim <- ui %>%
   dplyr::mutate(renda = as.numeric(renda)) %>%
   ungroup()
 
+ui_fim_sf <- grade_corrigida %>%
+  dplyr::select(id_grade) %>%
+  left_join(ui_fim, by = "id_grade")
     
     
 # Salvar em disco
   path_out <- sprintf("../data/grade_municipio_com_renda_cor/grade_renda_cor_%s.rds", sigla_muni)
-  readr::write_rds(ui_fim, path_out)
+  readr::write_rds(ui_fim_sf, path_out)
   
 }
 
@@ -107,3 +128,15 @@ ui_fim <- ui %>%
 future::plan(future::multiprocess)
 future.apply::future_lapply(X =munis_df$abrev_muni, FUN=renda_de_setor_p_grade, future.packages=c('sf', 'dplyr'))
 
+
+a <- setDT(ui_fim_sf)[id_grade==2477]
+
+apply(a[, 5:8], 1, sum)
+sum(a$pop_total)
+
+a_sf <- st_sf(a)
+ui_fim_sf <- st_sf(ui_fim)
+
+mapview(a_sf) + setor
+
+mapview(setor) + subset(ui, id_grade==4)
