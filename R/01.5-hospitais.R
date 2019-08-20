@@ -15,7 +15,7 @@ head(cnes_geo)
 
 
 
-### Download CNES data from datasus
+### 1. Download CNES data from datasus ---------------------------------
 
 # Download documentation
   # ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Doc/IT_CNES_1706.pdf
@@ -83,6 +83,21 @@ head(cnes_geo)
       future.apply::future_lapply(X =all_states, FUN=download_cnes_datasus, ANO=ano, MES=i)
   }
     
+  
+  
+### 2. Leitura e limpeza dos dados ---------------------------------
+  
+  
+# Listar todos arquivos
+  rdsfiles <- list.files('../data-raw/servicos_saude/', pattern = ".rds", full.names = T)
+
+# leitura de todos arquivos
+  cnes <- pbapply::pblapply(X = rdsfiles, FUN=readr::read_rds)
+
+# Empilhar todos arquivos num unico data.table
+  cnes <- rbindlist(cnes)
+
+#
 #   
 # # download
 #   cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
