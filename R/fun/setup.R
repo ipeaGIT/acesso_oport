@@ -19,8 +19,10 @@ library(extrafont)    # fontes de texto
 library(bit.64)       # lidar com numeros ee 64bits
 library(knitr)
 library(furrr)
-
 library(purrr)
+library(future.apply) # Aplicar funcoes em paralelo
+
+
 
 # library(hrbrthemes)
 # library(leaflet.minicharts)
