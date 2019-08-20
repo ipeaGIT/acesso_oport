@@ -6,11 +6,6 @@
   source('./R/fun/setup.R')
 
 
-# Cria data.frame com municipios do projeto
-munis_df <- data.frame( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200, 2211001),
-                        abrev_muni=c('for', 'sao', 'rio', 'cur', 'por', 'bel', 'ter'),
-                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte', 'Teresina'))
-
 
 #### 1 Funcao para criar hexagonos
 

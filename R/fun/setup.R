@@ -16,13 +16,18 @@ library(fasttime)     # rapido processamento deddados em data/horario
 library(mapview)      # visualizacao interativa dos dados
 library(RColorBrewer) # paleta de cores
 library(extrafont)    # fontes de texto
-library(bit.64)       # lidar com numeros ee 64bits
+# library(bit.64)       # lidar com numeros ee 64bits
 library(knitr)
 library(furrr)
 library(purrr)
 library(future.apply) # Aplicar funcoes em paralelo
 library(h3jsr) # H3 grade hexagonal
 library(dplyr)
+
+# Cria data.frame com municipios do projeto
+munis_df <- data.frame( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200, 2211001),
+                        abrev_muni=c('for', 'sao', 'rio', 'cur', 'por', 'bel', 'ter'),
+                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte', 'Teresina'))
 
 
 
