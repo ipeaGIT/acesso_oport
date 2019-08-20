@@ -1,83 +1,81 @@
-#' ## Empregos
-#' 
-#' 
-#' 
-#' 
-## ----rais----------------------------------------------------------------
-
-# Abrir RAIS (formato stata)
-rais_raw <- foreign::read.dta("../data-raw/rais/estab_2015_vinc_coord.dta")
-# Transformar em data.table
-setDT(rais_raw)
-# Deletar as localizacoes com precisao de 1 estrela
-rais_v1 <- rais_raw[Precison_original != "1 Estrela"]
-# Ajeitar as coordenadas
-rais_v1 <- rais_v1[, ':='(lon = as.numeric(gsub(",", ".", longitude)), lat = as.numeric(gsub(",", ".", latitude)))]
-# Selecionar as colunas de interesse
-rais_v1 <- rais_v1[, .(id_estab, qt_vinc_ativos, cod_mun = ibge_cod7, lon, lat)]
-# Dropar coordenadas NA
-rais_v1 <- na.omit(rais_v1, cols = c("lon", "lat"))
-# # Transformar para sf
-# rais_v1 <- st_as_sf(rais_v1, coords = c("lon", "lat"), crs = 4326)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.1.6 Leitura e limpeza de dados da RAIS
+  
+  
+  
+  
+# carregar bibliotecas
+  source('./R/fun/setup.R')
 
 
-# Salvar
-write_rds(rais_v1, "../data/rais/rais_2015.rds")
+ 
+#####----rais-2017 pessoas-------------------------------------------------------
 
 
-#' 
-#' 
-## ----rais-2017-ind-------------------------------------------------------
-
-# RAIS PESSOAS! -------------------------------------------------------------------------------
-
-# rais <- fread("\\storage6\\bases\\DADOS\\RESTRITO\\RAIS")
-
-rais <- fread("../data-raw/rais/brasil2017.csv"
-              ,select = c("id_estab", "grau_instr", "emp_31dez")
-              # ,nrows = 1000
+# Leitura dos dados da RAIS pessoas com colunas que vamos usar
+rais <- data.table::fread("../data-raw/rais/brasil2017.csv",
+              select = c("id_estab", "grau_instr", "emp_31dez", 'clas_cnae10'), colClasses='character'
+               #,nrows = 1000
               )
 
-# Salvar
+# Salvar em formato rds para formato rapido
 write_rds(rais, "../data/rais/rais_2017_ind.rds")
 
-# Abrir
+
+# Abrir RAIS  em formato rapido rds
 rais <- read_rds("../data/rais/rais_2017_ind.rds")
+
 
 # selecionar so vinculos ativos
 rais <- rais[emp_31dez == 1]
 
-# fazer sumario
-rais_sum <- rais[, .N, by = grau_instr]
+      # 
+      # # Identifica quantidade de pessoas com cada grau de instrucao
+      # rais_sum <- rais[, .N, by = grau_instr]
 
-# categorizar
-rais_cats <- rais[, instrucao := ifelse(grau_instr %in% c(1:6), "baixo",
-                                         ifelse(grau_instr %in% c(7, 8), "medio",
-                                                ifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))]
 
-rais_fim <- rais[, .(vinculos = .N), by = .(id_estab, instrucao)]
 
-rais_fim_wide <- spread(rais_fim, instrucao, vinculos, fill = 0)
+# Categorizar trabalhadores por grau de instrucao
+rais_cats <- rais[, instrucao := ifelse(grau_instr %in% c(1:6), "baixo",                                    # menor do que ensino medio (inclui ensino medio incompleto)
+                                         ifelse(grau_instr %in% c(7, 8), "medio",                           # ensino medio
+                                                ifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))] # ensino superior
 
+
+# Calcula quantidade de vinculo por grau de instrucao em cada estabelecimento
+  rais_fim <- rais[, .(vinculos = .N), by = .(id_estab, instrucao)]
+
+  # soma quantidade total de empregados em cada empresa
+  rais_fim <- rais_fim[, total := sum(vinculos), by = id_estab] 
+  head(rais_fim)
+  
+# Reshape da base de formato long para wide
+rais_fim_wide <- tidyr::spread(rais_fim, instrucao, vinculos, fill = 0)
+
+
+# Salvar agregado do numero de trabalhadores por empresa
 fwrite(rais_fim_wide, "../data/rais/rais_2017_vin_instrucao.csv")
 
 
-#' 
-#' 
-## ----rais_2017_outliers--------------------------------------------------
+### Limpeza de outliers -----------------------------------------------------
 
-# # abrir rais georef
-# rais_raw <- foreign::read.dta("../data-raw/rais/rais_2017_georef.dta")
-# rais1 <- setDT(rais_raw)[precisiondepth != "1 Estrela", .(id_estab,
-#                                                       clas_cnae10,
-#                                                       lon = longitude, lat = latitude, codemun, qt_vinc_ativos,
-#                                                       cidade = BA_Nome_do_municipio)]
-# write_rds(rais1, "../data-raw/rais/rais_2017_raw.rds")
-# fwrite(rais1, "../data-raw/rais/rais_2017_raw.csv")
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# LIMPEZA DOS DADOS DA RAIS 2017 -------------------------------------------------------------------
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                      # # abrir rais georef
+                      # rais_raw <- foreign::read.dta("../data-raw/rais/rais_2017_georef.dta")
+                      # rais1 <- setDT(rais_raw)[precisiondepth != "1 Estrela", .(id_estab,
+                      #                                                       clas_cnae10,
+                      #                                                       lon = longitude, lat = latitude, codemun, qt_vinc_ativos,
+                      #                                                       cidade = BA_Nome_do_municipio)]
+                      # write_rds(rais1, "../data-raw/rais/rais_2017_raw.rds")
+                      # fwrite(rais1, "../data-raw/rais/rais_2017_raw.csv")
+                      
+                      # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                      # LIMPEZA DOS DADOS DA RAIS 2017 -------------------------------------------------------------------
+                      # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
 
 # Abrir
 rais <- fread("../data-raw/rais/rais_2017_raw.csv")
