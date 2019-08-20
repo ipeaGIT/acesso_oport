@@ -1,6 +1,13 @@
-#' ## Agrupamento da renda dos setores censitários para a grade do censo
-#' 
-#' 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.2.2 Agrega informacao de renda dos setores censitários para a grade do censo
+  
+  
+
+# carregar bibliotecas
+source('./R/fun/setup.R')
+
+
+
 ## ----renda_de_setor_para_grade-------------------------------------------
 
 # cidade <- "for"
