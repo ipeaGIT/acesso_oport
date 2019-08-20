@@ -24,6 +24,8 @@ library(future.apply) # Aplicar funcoes em paralelo
 
 
 
+
+
 # library(hrbrthemes)
 # library(leaflet.minicharts)
 #extrafont::loadfonts(device="win")

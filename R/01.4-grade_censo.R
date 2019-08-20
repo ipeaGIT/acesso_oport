@@ -38,6 +38,10 @@ criar_grade_muni <- function(sigla){
   
   # Intersecao
   grade_muni <- st_join(grade, muni)
+  # Tirar grades so do municipio
+  grade_muni <- setDT(grade_muni)[!is.na(code_muni)]
+  # Transformar para sf
+  grade_muni <- st_sf(grade_muni)
   
   # limpa memoria
   rm(grade, muni)
@@ -52,5 +56,4 @@ criar_grade_muni <- function(sigla){
 #purrr::walk(munis_df$abrev_muni, criar_grade_muni)
 
 pblapply(X = munis_df$abrev_muni, FUN=criar_grade_muni)
-
 
