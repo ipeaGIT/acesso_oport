@@ -81,42 +81,42 @@ ui <- sf::st_intersection(grade_corrigida, setor) %>%
   
   # Calcular a proporcao de cada grade que esta naquele pedacao
   dplyr::mutate(area_prop_grade =  area_pedaco/area_grade) %>%
-  
-  # Calcular a quantidade de populacao em cada pedaco (baseado na grade)
-  dplyr::mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
-  
-  # Calcular a proporcao de populacao de cada grade que esta dentro do setor
-  group_by(id_setor) %>%
-  dplyr::mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
-  ungroup() %>%
-  
-  # Calcular a populacao proporcional de cada pedaco dentro do setor
-  dplyr::mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
-  # Calcular a renda dentro de cada pedaco
-  dplyr::mutate(renda_pedaco = renda_total * pop_prop_grade_no_setor) %>%
-  dplyr::mutate(branca_pedaco = cor_b_prop * area_prop_grade * pop_total) %>%
-  dplyr::mutate(amarela_pedaco = cor_a_prop * area_prop_grade * pop_total) %>%
-  dplyr::mutate(indigena_pedaco = cor_i_prop * area_prop_grade * pop_total) %>%
-  dplyr::mutate(negra_pedaco = cor_n_prop * area_prop_grade * pop_total)
-
-# Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
-ui_fim <- ui %>%
-  st_set_geometry(NULL) %>%
-  group_by(id_grade, pop_total) %>%
-  dplyr::summarise(renda = sum(renda_pedaco, na.rm = TRUE),
-                   cor_branca = sum(branca_pedaco, na.rm = TRUE),
-                   cor_amarela = sum(amarela_pedaco, na.rm = TRUE),
-                   cor_indigena = sum(indigena_pedaco, na.rm = TRUE),
-                   cor_negra = sum(negra_pedaco, na.rm = TRUE)) %>%
-  dplyr::mutate(renda = as.numeric(renda)) %>%
-  ungroup()
-
-ui_fim_sf <- grade_corrigida %>%
-  dplyr::select(id_grade) %>%
-  left_join(ui_fim, by = "id_grade")
     
+    # Calcular a quantidade de populacao em cada pedaco (baseado na grade)
+    dplyr::mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
     
-# Salvar em disco
+    # Calcular a proporcao de populacao de cada grade que esta dentro do setor
+    group_by(id_setor) %>%
+    dplyr::mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
+    ungroup() %>%
+    
+    # Calcular a populacao proporcional de cada pedaco dentro do setor
+    dplyr::mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
+    # Calcular a renda dentro de cada pedaco
+    dplyr::mutate(renda_pedaco = renda_total * pop_prop_grade_no_setor) %>%
+    dplyr::mutate(branca_pedaco = cor_b_prop * area_prop_grade * pop_total) %>%
+    dplyr::mutate(amarela_pedaco = cor_a_prop * area_prop_grade * pop_total) %>%
+    dplyr::mutate(indigena_pedaco = cor_i_prop * area_prop_grade * pop_total) %>%
+    dplyr::mutate(negra_pedaco = cor_n_prop * area_prop_grade * pop_total)
+  
+  # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
+  ui_fim <- ui %>%
+    st_set_geometry(NULL) %>%
+    group_by(id_grade, pop_total) %>%
+    dplyr::summarise(renda = sum(renda_pedaco, na.rm = TRUE),
+                     cor_branca = sum(branca_pedaco, na.rm = TRUE),
+                     cor_amarela = sum(amarela_pedaco, na.rm = TRUE),
+                     cor_indigena = sum(indigena_pedaco, na.rm = TRUE),
+                     cor_negra = sum(negra_pedaco, na.rm = TRUE)) %>%
+    dplyr::mutate(renda = as.numeric(renda)) %>%
+    ungroup()
+  
+  ui_fim_sf <- grade_corrigida %>%
+    dplyr::select(id_grade) %>%
+    left_join(ui_fim, by = "id_grade")
+  
+  
+  # Salvar em disco
   path_out <- sprintf("../data/grade_municipio_com_renda_cor/grade_renda_cor_%s.rds", sigla_muni)
   readr::write_rds(ui_fim_sf, path_out)
   
@@ -129,14 +129,3 @@ future::plan(future::multiprocess)
 future.apply::future_lapply(X =munis_df$abrev_muni, FUN=renda_de_setor_p_grade, future.packages=c('sf', 'dplyr'))
 
 
-a <- setDT(ui_fim_sf)[id_grade==2477]
-
-apply(a[, 5:8], 1, sum)
-sum(a$pop_total)
-
-a_sf <- st_sf(a)
-ui_fim_sf <- st_sf(ui_fim)
-
-mapview(a_sf) + setor
-
-mapview(setor) + subset(ui, id_grade==4)
