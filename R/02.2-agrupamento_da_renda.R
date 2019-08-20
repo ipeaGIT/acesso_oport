@@ -8,80 +8,75 @@ source('./R/fun/setup.R')
 
 
 
-## ----renda_de_setor_para_grade-------------------------------------------
-
-# cidade <- "for"
-
-renda_de_setor_p_grade <- function(cidade) {
+## Funcao para inputar renda do setor censitario para grade estatistica  -------------------------------------------
+renda_de_setor_p_grade <- function(sigla_muni) {
   
-  path_setor <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", cidade)
-  path_grade <- sprintf("../data/grade_municipio/grade_%s.rds", cidade)
+  # endereco dos arquivos
+  path_setor <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", sigla_muni)
+  path_grade <- sprintf("../data/grade_municipio/grade_%s.rds", sigla_muni)
   
-  setor <- read_rds(path_setor)
-  grade <- read_rds(path_grade)
+  # leitura de shapes de setores censitarios e grade estatistica
+  setor <- readr::read_rds(path_setor)
+  grade <- readr::read_rds(path_grade)
   
-    # abrir setores
+  # Criar id unico de cada setor e filtra colunas
   setor <- setor %>%
     mutate(id_setor = 1:n()) %>%
     mutate(area_setor = st_area(.)) %>%
     dplyr::select(id_setor, renda_total, area_setor)
   
-  # abrir grade
+  # Criar id unico de cada grade e filtra colunas
   grade <- grade %>%
     mutate(area_grade = st_area(.)) %>%
     mutate(id_grade = 1:n()) %>%
     dplyr::select(id_grade, pop_total = POP, area_grade)
   
-  ui <- st_intersection(grade, setor) %>%
+  # mesma projecao
+  setor <- sf::st_transform(setor, crs(grade))
+  
+# funcao de reaportion com duas variaveis de referencia (populacao e area)
+# Resultado (ui_fim) eh uma grade estatistica com informacao de renda inputada a partir do setor censitario
+  ui <- sf::st_intersection(grade, setor) %>%
     # tip from https://rpubs.com/rural_gis/255550
+    
     # Calcular a area de cada pedaco
-    mutate(area_pedaco = st_area(.)) %>%
-    # Calcular a proporcao de cada setor que esta naquele pedaco (essa sera a area a ponderar pela renda)
-    mutate(area_prop_setor = area_pedaco/area_setor) %>%
+    dplyr::mutate(area_pedaco = st_area(.)) %>%
+   
+     # Calcular a proporcao de cada setor que esta naquele pedaco (essa sera a area a ponderar pela renda)
+    dplyr::mutate(area_prop_setor = area_pedaco/area_setor) %>%
+    
     # Calcular a proporcao de cada grade que esta naquele pedacao
-    mutate(area_prop_grade =  area_pedaco/area_grade) %>%
+    dplyr::mutate(area_prop_grade =  area_pedaco/area_grade) %>%
+    
     # Calcular a quantidade de populacao em cada pedaco (baseado na grade)
-    mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
-    # Calcular a proporcao de populacao de cada grade que esta dentro do setor
+    dplyr::mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
+   
+     # Calcular a proporcao de populacao de cada grade que esta dentro do setor
     group_by(id_setor) %>%
-    mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
+    dplyr::mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
     ungroup() %>%
+    
     # Calcular a populacao proporcional de cada pedaco dentro do setor
-    mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
+    dplyr::mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
     # Calcular a renda dentro de cada pedaco
-    mutate(renda_pedaco = renda_total* pop_prop_grade_no_setor)
+    dplyr::mutate(renda_pedaco = renda_total* pop_prop_grade_no_setor)
   
-  # Grand Finale
-  ui_fim <- ui %>%
-    # Agrupar por grade e somar a renda
-    group_by(id_grade, pop_total) %>%
-    summarise(renda = sum(renda_pedaco, na.rm = TRUE)) %>%
-    mutate(renda = as.numeric(renda)) %>%
-    ungroup()
+    # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
+    ui_fim <- ui %>%
+      group_by(id_grade, pop_total) %>%
+      dplyr::summarise(renda = sum(renda_pedaco, na.rm = TRUE)) %>%
+      dplyr::mutate(renda = as.numeric(renda)) %>%
+      ungroup()
   
-  # # Juntar algumas grades que estao faltando
-  # um_fim_v2 <- ui_fim %>%
-  #   full_join(grade %>% select(id_grade, geometry),
-  #             by = "id_grade")
-  
-  path_out <- sprintf("../data/grade_municipio_com_renda/grade_renda_%s.rds", cidade)
-  
-  # Salvar em disco
-  write_rds(ui_fim, path_out)
+# Salvar em disco
+  path_out <- sprintf("../data/grade_municipio_com_renda/grade_renda_%s.rds", sigla_muni)
+  readr::write_rds(ui_fim, path_out)
   
 }
 
-# Aplicar funcao
-renda_de_setor_p_grade("for")
-renda_de_setor_p_grade("bel")
-renda_de_setor_p_grade("rio")
-renda_de_setor_p_grade("por")
-renda_de_setor_p_grade("cur")
-renda_de_setor_p_grade("sao")
+#### Aplicando funcao em paralelo para salvar grades com info de renda ---------------------------------------------------------------
 
+# Parallel processing using future.apply
+future::plan(future::multiprocess)
+future.apply::future_lapply(X =munis_df$abrev_muni, FUN=renda_de_setor_p_grade, future.packages=c('sf', 'dplyr'))
 
-
-
-
-#' 
-#' 
