@@ -19,6 +19,7 @@ rais <- data.table::fread("../data-raw/rais/brasil2017.csv",
               )
 
 
+
 # Salvar em formato rds para formato rapido
 write_rds(rais, "../data/rais/rais_2017_ind.rds")
 
@@ -199,3 +200,15 @@ rais[is.na(lat), sum(total_corrigido)] / sum(rais$total_corrigido)
 
 # Salvar
 write_rds(rais, "../data/rais/rais_2017_corrigido.rds")
+
+
+# Salvar base somente com municipios do projeto
+
+# filtar
+rais2 <- rais[ codemun %in% substr(munis_df$code_muni, 1, 6)]
+
+# Salvar
+write_rds(rais2, "../data/rais/rais_2017_corrigido_cidades_selecionadas2019.rds")
+
+
+
