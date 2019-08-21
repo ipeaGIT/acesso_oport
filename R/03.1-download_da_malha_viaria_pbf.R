@@ -13,7 +13,7 @@
 #'  clique em ``Create Export`` e espere o arquivo estar disponível para download. Descompactar o arquivo na pasta do
 #'   município na paste ``../otp/graphs``.
 
-
+# site alternativo: https://extract.bbbike.org
  
 # # carregar bibliotecas
 # source('./R/fun/setup.R')
