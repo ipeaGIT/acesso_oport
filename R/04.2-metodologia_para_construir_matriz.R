@@ -20,9 +20,10 @@ gerar_pontos_OTP <- function(sigla_muni) {
   # Lista arquivos de hexagonos
   dir_muni <- paste0("../data/hex_agregados/hex_agregado_", sigla_muni, "_", res, ".rds")
   
-  # muni_res <- dir_muni[1]
-  
-  gerar_por_resolucao <- function(muni_res) {
+# funcao que aplica por resolucao  
+gerar_por_resolucao <- function(muni_res) {
+    # muni_res <- dir_muni[1]
+    
     
     # Endereco do hexagono
     dir_muni <- muni_res
@@ -35,14 +36,14 @@ gerar_pontos_OTP <- function(sigla_muni) {
           
    # adiciona totais
     # setDT(hex_muni)[, empregos_total := sum(empregos_alta, empregos_media, empregos_baixa), by=id_hex]
-    # setDT(hex_muni)[, escolas_total := sum(edu_infantil, edu_fundamental, edu_medio), by=id_hex]
+    # setDT(hex_muni)[, edu_total := sum(edu_infantil, edu_fundamental, edu_medio), by=id_hex]
       
       
     # criar pontos
     hex_muni <- readr::read_rds(dir_muni) %>%
       # Tirar hexagonos sem atividade
       filter(!(pop_total == 0 & renda_total == 0 & empregos_total == 0 & saude_total == 0 & 
-                 escolas_infantil == 0 & escolas_fundamental == 0 & escolas_medio == 0)) %>%
+                 escolas_total == 0)) %>%
       select(id_hex) %>%
       st_centroid() %>%
       sfc_as_cols(names = c("X","Y"))
