@@ -17,24 +17,32 @@
 # walkReluctance: A multiplier for how bad walking is, compared to being in transit for equal lengths of time. (df = 2)
 # transferPenalty: An additional penalty added to boardings after the first,  roughly equivalent to seconds
 
-# cidade <- "for"
-# data <- "2018-05-12"
+# sigla_muni <- "for"
 # from <- 7
 # until <- 8
 # every <- 15
 # time_threshold <- 7200
 # max_walk_distance = 800
 
-criar_script_python_paral_modes <- function(cidade, modo = "todos",
-                                            data, 
-                                            from, until, every,
+
+
+criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
+                                            from, 
+                                            until, every,
                                             time_threshold = 7200, max_walk_distance = 800
                                             ) {
   
   
-  ano <- substr(data, 1, 4)
-  mes <- substr(data, 6, 7)
-  dia <- substr(data, 9, 10)
+  # Selecionar a data
+    source('./R/fun/selecionar_data_gtfs.R')
+    data <- selecionar_data_gtfs(sigla_muni)
+    
+    ano <- substr(data, 1, 4)
+    mes <- substr(data, 6, 7)
+    dia <- substr(data, 9, 10)
+    
+    message(paste0("Trabalalhando na cidade ",sigla_muni,"\n"))
+    
   
 # COMEÇA AQUI O SCRIPT ----------------------------------------------------
 
@@ -67,7 +75,7 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   sprintf("year= %s", ano),
   sprintf("month = %s", mes),
   sprintf("day = %s", dia),
-  sprintf("city = '%s'", cidade), 
+  sprintf("city = '%s'", sigla_muni), 
   "",
   "#################################################################################################",
   "",
@@ -80,10 +88,10 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "# THREADED VERSION OF OTP SCRIPT",
   "",
   "# Instantiate an OtpsEntryPoint",
-  sprintf("otp = OtpsEntryPoint.fromArgs(['--graphs', 'graphs', '--router', '%s'])", cidade),
+  sprintf("otp = OtpsEntryPoint.fromArgs(['--graphs', 'graphs', '--router', '%s'])", sigla_muni),
   "",
   "# Get the default router",
-  sprintf("router = otp.getRouter('%s')", cidade),
+  sprintf("router = otp.getRouter('%s')", sigla_muni),
   "",
   "",
   "",
@@ -100,7 +108,7 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "",
   "gc.collect()",
   "",
-  sprintf("filename = 'points_corrigidos/points_corrigido_%s_09.csv'", cidade),
+  sprintf("filename = 'points_corrigidos/points_corrigido_%s_09.csv'", sigla_muni),
   "batch_size = 128",
   "files = []",
   "try:",
@@ -168,7 +176,7 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "          matrixCsv.addRow([city, 'transit', str(h) + \":\" + str(m) + \":00\", origin.getStringData('id_hex'), r.getIndividual().getStringData('id_hex'), r.getWalkDistance(), r.getTime(), r.getBoardings()])",
   "",
   "      # Save the result",
-  sprintf("      matrixCsv.save('../data/output_ttmatrix/%s/ttmatrix_%s_pt_'+ str(h)+\"-\"+str(m) + \"_\" + p.split('/')[1])", cidade, cidade),
+  sprintf("      matrixCsv.save('../data/output_ttmatrix/%s/ttmatrix_%s_pt_'+ str(h)+\"-\"+str(m) + \"_\" + p.split('/')[1])", sigla_muni, sigla_muni),
   "      gc.collect()",
   "",
   "",
@@ -231,8 +239,8 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "",
   "",
   "# Read Points of Destination - The file points.csv contains the columns GEOID, X and Y.",
-  sprintf("points = otp.loadCSVPopulation('points_corrigidos/points_corrigido_%s_09.csv', 'Y', 'X')", cidade),
-  sprintf("dests = otp.loadCSVPopulation('points_corrigidos/points_corrigido_%s_09.csv', 'Y', 'X')", cidade),
+  sprintf("points = otp.loadCSVPopulation('points_corrigidos/points_corrigido_%s_09.csv', 'Y', 'X')", sigla_muni),
+  sprintf("dests = otp.loadCSVPopulation('points_corrigidos/points_corrigido_%s_09.csv', 'Y', 'X')", sigla_muni),
   "",
   "",
   "",
@@ -272,7 +280,7 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "        matrixCsv.addRow([ city, 'walk', str(h) + \":\" + str(m) + \":00\", origin.getStringData('id_hex'), r.getIndividual().getStringData('id_hex'), r.getWalkDistance() , r.getTime()])",
   "",
   "    # Save the result",
-  sprintf("    matrixCsv.save('../data/output_ttmatrix/ttmatrix_%s_walk.csv')", cidade),
+  sprintf("    matrixCsv.save('../data/output_ttmatrix/%s/ttmatrix_%s_walk.csv')", sigla_muni, sigla_muni),
   "    gc.collect()",
   "",
   "",
@@ -316,7 +324,7 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "        matrixCsv.addRow([ city, 'bike', str(h) + \":\" + str(m) + \":00\", origin.getStringData('id_hex'), r.getIndividual().getStringData('id_hex'), r.getWalkDistance() , r.getTime()])",
   "",
   "    # Save the result",
-  sprintf("    matrixCsv.save('../data/output_ttmatrix/ttmatrix_%s_bike.csv')", cidade),
+  sprintf("    matrixCsv.save('../data/output_ttmatrix/%s/ttmatrix_%s_bike.csv')", sigla_muni, sigla_muni),
   "    gc.collect()",
   "",
   "",
@@ -328,7 +336,7 @@ criar_script_python_paral_modes <- function(cidade, modo = "todos",
   "print(\"Elapsed time was %g seconds\" % (time.time() - start_time))")
   
   # Start writing to an output file
-  output_file <- sprintf("../otp/py/otp_%s_%s-%s.py", cidade, ano, mes)
+  output_file <- sprintf("../otp/py/otp_%s_%s-%s_%s-%s.py", sigla_muni, ano, mes, from, until)
   
   sink(output_file)
 
