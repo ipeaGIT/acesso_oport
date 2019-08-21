@@ -42,7 +42,7 @@ gerar_tt_matrix <- function(sigla_muni) {
   
 }
 
-
+# start 17:49
 # Aplica funcao para todas as cidades
 lapply(X=munis_df$abrev_muni, gerar_tt_matrix)
 

@@ -74,10 +74,17 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=gerar_pontos_OTP)
 source("./R/fun/criar_script_python_parallel_multiple.R")
 
 # pico
-pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until = 7, every = 60)
+pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until = 8, every = 15)
 
 # fora pico, # apenas modo transporte publico
 pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 14, until = 16, every = 15, modo='tp') 
+
+# #TEST
+# # pico
+# pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until = 7, every = 30)
+# 
+# # fora pico, # apenas modo transporte publico
+# pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 14, until = 15, every = 30, modo='tp') 
 
 
 
