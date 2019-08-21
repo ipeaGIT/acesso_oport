@@ -1,31 +1,45 @@
-#' ## Metodologia para a construção da matriz
-#' 
-#' 
-#' ### Criar pontos de origem para todas as cidades
-#' 
-#' 
-## ----fun_criar_pontos_allres---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.4.1 Funcoes para preparar os inputs do OpenTripPlanner
 
-# cidade <- "for"
+  
+# carregar bibliotecas
+source('./R/fun/setup.R')
 
-points_allres <- function(cidade) {
+
+
+### 1. Funcao para gerar pontos de origem e destino
+
+# sigla_muni <- "for"
+
+gerar_pontos_OTP <- function(sigla_muni) {
   
-  dir <- dir("../data/hex_agregados/", pattern = cidade)
-  
+  # Lista resolucoes disponiveis
+  dir <- dir("../data/hex_agregados/", pattern = sigla_muni)
   res <- str_extract(dir, "\\d+")
   
-  dir_muni <- paste0("../data/hex_agregados/hex_agregado_", cidade, "_", res, ".rds")
+  # Lista arquivos de hexagonos
+  dir_muni <- paste0("../data/hex_agregados/hex_agregado_", sigla_muni, "_", res, ".rds")
   
-  # muni_res <- dir_muni[3]
+  # muni_res <- dir_muni[1]
   
-  seila <- function(muni_res) {
+  gerar_por_resolucao <- function(muni_res) {
     
+    # Endereco do hexagono
     dir_muni <- muni_res
     
+    # Resolucao utilizada
     res <- str_extract(dir_muni, "\\d+")
     
+    
+
+          
+   # adiciona totais
+    # setDT(hex_muni)[, empregos_total := sum(empregos_alta, empregos_media, empregos_baixa), by=id_hex]
+    # setDT(hex_muni)[, escolas_total := sum(edu_infantil, edu_fundamental, edu_medio), by=id_hex]
+      
+      
     # criar pontos
-    hex_muni <- readRDS(dir_muni) %>%
+    hex_muni <- readr::read_rds(dir_muni) %>%
       # Tirar hexagonos sem atividade
       filter(!(pop_total == 0 & renda_total == 0 & empregos_total == 0 & saude_total == 0 & 
                  escolas_infantil == 0 & escolas_fundamental == 0 & escolas_medio == 0)) %>%
@@ -36,7 +50,7 @@ points_allres <- function(cidade) {
     
     
     # salvar
-    dir_output <- sprintf("../otp/points/points_%s_%s.csv", cidade, res)
+    dir_output <- sprintf("../otp/points/points_%s_%s.csv", sigla_muni, res)
     
     write_csv(hex_muni, dir_output)
     
@@ -58,9 +72,9 @@ points_allres <- function(cidade) {
 
 # Funcao para selecionar a data do gtfs
 
-selecionar_data_gtfs <- function(cidade) {
+selecionar_data_gtfs <- function(sigla_muni) {
   
-  path_zip <- sprintf("../otp/graphs/%s", cidade)
+  path_zip <- sprintf("../otp/graphs/%s", sigla_muni)
   file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)[1]
   
   unzip(file_zip, files = "calendar.txt", exdir = "../data/temp")
@@ -96,11 +110,11 @@ source("R/4-criar_script_python_parallel_multiple.R")
 #' 
 ## ----fun_aplicar_otp-----------------------------------------------------
 
-# cidade <- "for"
+# sigla_muni <- "for"
 
-aplicar_otp <- function(cidade, data) {
+aplicar_otp <- function(sigla_muni, data) {
   
-  py_nome <- dir("../otp/py", pattern = sprintf("otp_%s", cidade))[1] 
+  py_nome <- dir("../otp/py", pattern = sprintf("otp_%s", sigla_muni))[1] 
   
   comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp.jar py/%s", py_nome)
   
@@ -111,7 +125,7 @@ aplicar_otp <- function(cidade, data) {
   # colar os arquivos
   
   # pegar os arquivos
-  files <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+  files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
                pattern = "^ttmatrix_\\w{3}_pt",
                full.names = TRUE)
   
@@ -124,12 +138,12 @@ aplicar_otp <- function(cidade, data) {
   
   abrir_e_juntar <- function(horarios1) {
     
-    files_ok <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+    files_ok <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
                pattern = sprintf("^ttmatrix_\\w{3}_pt_%s", horarios1),
                full.names = TRUE)
     
     # abrir, juntar e salvar arquivos
-    path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s.csv", cidade, cidade, horarios1)
+    path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s.csv", sigla_muni, sigla_muni, horarios1)
     
     furrr::future_map(files_ok, fread) %>%
       rbindlist() %>%

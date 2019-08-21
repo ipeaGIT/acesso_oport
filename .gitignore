@@ -178,3 +178,7 @@ lucene
 presentations
 .httr-oauth
 /r/README.Rmd
+/v8.6.0.1/EPSG.data
+/v8.6.0.1/EPSG.properties
+/v8.6.0.1/EPSG.script
+/v8.6.0.1/EPSG_creation_marker.txt
