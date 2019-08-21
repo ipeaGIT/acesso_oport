@@ -23,6 +23,10 @@ library(purrr)
 library(future.apply) # Aplicar funcoes em paralelo
 library(h3jsr) # H3 grade hexagonal
 library(dplyr)
+library(Hmisc) # calcular quantis ponderados
+library(osmdata) # Download de dados do OpenStreeteMaps (OSM)
+
+
 
 # Cria data.frame com municipios do projeto
 munis_df <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200, 2211001),
