@@ -1,5 +1,5 @@
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.4.2 Criar inputs do OpenTripPlanner
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.3.2 Criar inputs do OpenTripPlanner
 # 1. pontos de origem e destino
 # 2. Scripts em Python
   
@@ -76,8 +76,8 @@ source("./R/fun/criar_script_python_parallel_multiple.R")
 # pico
 pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until = 8, every = 15)
 
-# fora pico
-pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 14, until = 16, every = 15, modo='tp')
+# fora pico, # apenas modo transporte publico
+pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 14, until = 16, every = 15, modo='tp') 
 
 
 
