@@ -104,10 +104,10 @@ ui <- sf::st_intersection(grade_corrigida, setor) %>%
     st_set_geometry(NULL) %>%
     group_by(id_grade, pop_total) %>%
     dplyr::summarise(renda = sum(renda_pedaco, na.rm = TRUE),
-                     cor_branca = sum(branca_pedaco, na.rm = TRUE),
-                     cor_amarela = sum(amarela_pedaco, na.rm = TRUE),
-                     cor_indigena = sum(indigena_pedaco, na.rm = TRUE),
-                     cor_negra = sum(negra_pedaco, na.rm = TRUE)) %>%
+                     cor_branca = as.numeric(sum(branca_pedaco, na.rm = TRUE)),
+                     cor_amarela = as.numeric(sum(amarela_pedaco, na.rm = TRUE)),
+                     cor_indigena = as.numeric(sum(indigena_pedaco, na.rm = TRUE)),
+                     cor_negra = as.numeric(sum(negra_pedaco, na.rm = TRUE))) %>%
     dplyr::mutate(renda = as.numeric(renda)) %>%
     ungroup()
   

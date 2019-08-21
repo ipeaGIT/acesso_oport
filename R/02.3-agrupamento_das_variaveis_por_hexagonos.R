@@ -27,11 +27,7 @@ escolas <- fread("../data/censo_escolar/censo_escolar_2015.csv") %>%
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
-empregos <- readr::read_rds("../data/rais/rais_2017_corrigido.rds") # para 2017
-
-# Transformar o id_estab para string pra evitar problemas
-empregos[, id_estab := as.character(id_estab)]
-
+empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_cidades_selecionadas2019.rds") # para 2017
 
 
 # FUNCAO PARA REALIZAR EM CADA MUNICIPIO ----------------------------------
@@ -93,6 +89,27 @@ agrupar_variaveis <- function(sigla_muni) {
                                   renda_total = sum(renda, na.rm = TRUE)), by = id_hex ]
     
     
+    # Calcular quintil e decil de renda
+      # calcula renda per capta de cada hexagono
+      hex_pop[, renda_capta := renda_total / pop_total]
+      
+      # calcular quintis ponderados pela populacao
+      deciles  <- Hmisc::wtd.quantile(hex_pop$renda_capta, weights=hex_pop$pop_total, 
+                                        probs=c( seq(0 , 1 , 0.1) ), 
+                                        type=c('quantile','(i-1)/(n-1)','i/(n+1)','i/n'), 
+                                        normwt=FALSE, na.rm=T)
+      
+      quintiles  <- Hmisc::wtd.quantile(hex_pop$renda_capta, weights=hex_pop$pop_total, 
+                                      probs=c( seq(0 , 1 , 0.2) ), 
+                                      type=c('quantile','(i-1)/(n-1)','i/(n+1)','i/n'), 
+                                      normwt=FALSE, na.rm=T)
+    
+    # classificar cada hexagono em cada quintil de renda
+      hex_pop[, quintil := 1+ findInterval(renda_capta , quintiles[ -length(quintiles) ] ) ]
+      hex_pop[, decil := 1+ findInterval(renda_capta , deciles[ -length(deciles) ] ) ]
+      
+      
+      
 # Agrupar empregos
     # join espacial 
     hex_rais <- hex_muni %>% st_join(empregos_filtrado)
@@ -144,6 +161,10 @@ hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
 hex_muni_fim[is.na(hex_muni_fim)] <- 0
 
 
+
+
+
+
   # Salva grade de hexagonos com todas informacoes de uso do soloe
     dir_output <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", sigla_muni, muni_res)
     readr::write_rds(hex_muni_fim, dir_output)
@@ -158,42 +179,5 @@ hex_muni_fim[is.na(hex_muni_fim)] <- 0
 
 # Parallel processing using future.apply
 future::plan(future::multiprocess)
-future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table'))
-
-
-map(sigla_muni, por_municipio)
-
-
-
-
-
-
-# Aplicar funcao
-agrupar_variaveis("for")
-agrupar_variaveis("bel")
-agrupar_variaveis("rio")
-agrupar_variaveis("por")
-agrupar_variaveis("cur")
-agrupar_variaveis("sao")
-
-# ou
-plan(multiprocess)
-furrr::future_map(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis)
-
-# # Calculate the number of cores
-# no_cores <- 6
-# 
-# #  Initiate cluster
-# library(parallel)
-# cl <- parallel::makeCluster(no_cores)
-# 
-# clusterEvalQ(cl, {library(data.table); library(sf); library(dplyr)})
-# clusterExport(cl=cl, c('points_got', 'streets_buffer_got', 'snap_sf'), envir=environment())
-# 
-# invisible(parallel::parLapply(cl = cl, c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis))
-
-
-invisible(parallel::mclapply(c("for", "bel", "rio", "por", "cur", "sao"), agrupar_variaveis, mc.cores = 6))
-
-
-#' 
+#options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
+future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table', 'Hmisc'))
