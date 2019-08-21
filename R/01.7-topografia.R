@@ -2,7 +2,7 @@
 ###### 0.1.7 Leitura e filtro de elevacao/topografia
   
 ## info:
-#' Os dados brutos de elevação são retirados do [Earth Explorer](https://earthexplorer.usgs.gov/). 
+#' Os dados brutos de elevação são retirados manualmente do [Earth Explorer](https://earthexplorer.usgs.gov/). 
 #' Lá, é necessário especificar a região e data que se quer extrair os dados de elevação. Na 
 #' aba de _Select Your Data Set(s)_, seleciona-se ``Digital Elevation`` -> ``SRTM``. SRTM (_Shuttle Radar 
 #' Topography Mission_) é um esforço de pesquisa internacional que obtém dados de elevação numa precisão de 
