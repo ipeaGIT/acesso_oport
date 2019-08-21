@@ -117,9 +117,11 @@ agrupar_variaveis <- function(sigla_muni) {
     # Summarize
     hex_rais <- setDT(hex_rais)[, .(empregos_baixa = sum(baixo, na.rm = TRUE),
                                     empregos_media = sum(medio, na.rm = TRUE),
-                                    empregos_alta = sum(alto, na.rm = TRUE)), by = id_hex ]
+                                    empregos_alta = sum(alto, na.rm = TRUE),
+                                    empregos_total = sum(alto, medio, baixo, na.rm = TRUE)), by = id_hex ]
     
   
+    # setDT(hex_muni)[, empregos_total := sum(empregos_alta, empregos_media, empregos_baixa), by=id_hex]
     
     
   # agrupar saude
@@ -138,18 +140,19 @@ agrupar_variaveis <- function(sigla_muni) {
       # join espacial 
         hex_escolas <- hex_muni %>% st_join(escolas_filtrado) %>% setDT()
       
-      # Dummy para nivel de educacao
+      # Dummy para nivel de educacao em cada hexagono
         hex_escolas[, edu_infantil := ifelse( mat_infantil > 0, 1, 0) ]
         hex_escolas[, edu_fundamental := ifelse( mat_fundamental > 0, 1, 0) ]      
         hex_escolas[, edu_medio := ifelse( mat_medio > 0, 1, 0) ]      
-      
+        hex_escolas[, edu_total := ifelse( is.na(cod_escola), 0, 1) ]      
+        
       # Summarize
-        hex_escolas <- hex_escolas[, .(edu_infantil = sum(edu_infantil),
+        hex_escolas <- hex_escolas[, .(edu_total = sum(edu_total),
+                                      edu_infantil = sum(edu_infantil),
                                        edu_fundamental=sum(edu_fundamental),
                                        edu_medio=sum(edu_medio)), by = id_hex ]
         
       
-
 
 # Junta todos os dados agrupados por hexagonos
 hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
