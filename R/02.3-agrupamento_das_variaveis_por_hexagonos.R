@@ -10,7 +10,7 @@ source('./R/fun/setup.R')
 # ABRIR ARQUIVOS COM AS OPORTUNIDADES -------------------------------------
 
 # Saude --------------------------------------
-cnes <- fread("../data-raw/hospitais/cnesnone_2018.csv") %>%
+cnes <- readr::read_rds("../data-raw/hospitais/cnes_geocoded.rds") %>%
   st_as_sf(coords = c("long", "lat"), crs = 4326)
 
 
@@ -20,9 +20,9 @@ escolas <- fread("../data/censo_escolar/censo_escolar_2015.csv") %>%
   # Deletar escolas q nao foram localizadas
   dplyr::filter(!is.na(lat)) %>%
   # Selecionar variaveis
-  dplyr::dplyr::select(cod_escola, uf, municipio, cod_mun = CO_MUNICIPIO, rede, mat_infantil, mat_fundamental, mat_medio, lon, lat) %>%
-  # Transformar para formato longo
-  tidyr::gather(tipo, mat_n, mat_infantil:mat_medio)
+  dplyr::select(cod_escola, uf, municipio, cod_mun = CO_MUNICIPIO, rede, mat_infantil, mat_fundamental, mat_medio, lon, lat) #%>%
+  # # Transformar para formato longo
+  # tidyr::gather(tipo, mat_n, mat_infantil:mat_medio)
 
 
 # Empregos ----------------------------------------------------------
@@ -48,7 +48,7 @@ agrupar_variaveis <- function(sigla_muni) {
   
   # Gerar centroide da grade grade de cada municipio
   centroide_pop <- readr::read_rds(grade_file) %>%
-    dplyr::dplyr::select(id_grade, pop_total, renda,  cor_branca, cor_amarela, cor_indigena, cor_negra) %>%
+    dplyr::select(id_grade, pop_total, renda,  cor_branca, cor_amarela, cor_indigena, cor_negra) %>%
     st_centroid()
   
   # Qual o codigo do municipio em questao?
@@ -64,7 +64,7 @@ agrupar_variaveis <- function(sigla_muni) {
     st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
   # saude
-  cnes_filtrado <- setDT(cnes)[co_ibge == substr(cod_mun_ok, 1, 6)] %>% st_sf()
+  cnes_filtrado <- setDT(cnes)[code_muni == substr(cod_mun_ok, 1, 6)] %>% st_sf()
   
   
   
@@ -81,96 +81,91 @@ agrupar_variaveis <- function(sigla_muni) {
     
     
 # Agrupar populacao, cor e renda
-    hex_muni_parcial <- hex_muni %>% st_join(centroide_pop) %>%
-      group_by(id_hex) %>%
-      summarise(cor_branca = sum(round(cor_branca,0), na.rm = TRUE),
-                cor_amarela = sum(round(cor_amarela,0), na.rm = TRUE),
-                cor_indigena = sum(round(cor_indigena,0), na.rm = TRUE),
-                cor_negra = sum(round(cor_negra,0), na.rm = TRUE),
-                pop_total = sum(round(pop_total,0), na.rm = TRUE),
-                renda_total = sum(renda, na.rm = TRUE)) %>%
-      ungroup()
+    # join espacial 
+    hex_pop <- hex_muni %>% st_join(centroide_pop)
+    
+    # Summarize
+    hex_pop <- setDT(hex_pop)[, .(cor_branca = sum(round(cor_branca,0), na.rm = TRUE),
+                                  cor_amarela = sum(round(cor_amarela,0), na.rm = TRUE),
+                                  cor_indigena = sum(round(cor_indigena,0), na.rm = TRUE),
+                                  cor_negra = sum(round(cor_negra,0), na.rm = TRUE),
+                                  pop_total = sum(round(pop_total,0), na.rm = TRUE),
+                                  renda_total = sum(renda, na.rm = TRUE)), by = id_hex ]
     
     
-# Agrupar empregos (agora somando a quantidade de vinculos!)
-    groupcols <- names(hex_muni_parcial)[1:ncol(hex_muni_parcial)-1]
-    # apagar groupcols <- paste(groupcols, collapse=", ")   %>% noquote()
+# Agrupar empregos
+    # join espacial 
+    hex_rais <- hex_muni %>% st_join(empregos_filtrado)
+    
+    # Summarize
+    hex_rais <- setDT(hex_rais)[, .(empregos_baixa = sum(baixo, na.rm = TRUE),
+                                    empregos_media = sum(medio, na.rm = TRUE),
+                                    empregos_alta = sum(alto, na.rm = TRUE)), by = id_hex ]
+    
+  
     
     
-    hex_muni_parcial <- hex_muni_parcial %>% st_join(empregos_filtrado) %>%
-      # Trazer a quantidade de vinculos 
-      group_by(groupcols) %>%
-      # summarise(empregos_total = sum(qt_vinc_ativos2, na.rm = TRUE)) %>% # para rais 2017
-      summarise(empregos_baixa = sum(baixo, na.rm = TRUE),
-                empregos_media = sum(medio, na.rm = TRUE),
-                empregos_alta = sum(alto, na.rm = TRUE)) %>% # para rais 2015
-      ungroup() %>%
-66666666666666666666666666666666666666666666666666666666666666666666666666      
+  # agrupar saude
+    # join espacial 
+      cnes_filtrado <- sf::st_transform(cnes_filtrado, sf::st_crs(hex_muni)) # mesma projecao geografica
+      hex_saude <- hex_muni %>% st_join(cnes_filtrado)
       
-     a <-  setDT(hex_muni_parcial)[, .(empregos_baixa = sum(baixo, na.rm = TRUE),
-                                       empregos_media = sum(medio, na.rm = TRUE),
-                                       empregos_alta = sum(alto, na.rm = TRUE),
-                                       geometry = st_union(geometry)
-                                       ), by = groupcols ]
-      a <- st_sf(a)
+      # Summarize
+      setDT(hex_saude)[, indice := ifelse(is.na(code_cnes), 0, 1) ]
+      hex_saude <- setDT(hex_saude)[, .(saude_total = sum(indice)), by = id_hex ]
       
-      # agrupar saude
-      st_join(cnes) %>%
-      mutate(indice = ifelse(is.na(co_cnes), 0, 1)) %>%
-      group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa) %>%
-      summarise(saude_total = sum(indice)) %>%
-      ungroup() %>%
+
+              
+        
+    # agrupar educacao
+      # join espacial 
+        hex_escolas <- hex_muni %>% st_join(escolas_filtrado) %>% setDT()
       
-      # agrupar educacao
-      # agrupar educacao infantil
-      st_join(escolas_filtrado %>% filter(tipo == "mat_infantil")) %>%
-      mutate(indice = ifelse(is.na(cod_escola), 0, 
-                             ifelse(mat_n == 0, 0, 
-                                    1))) %>%
-      group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa, saude_total) %>%
-      summarise(escolas_infantil = sum(indice)) %>%
-      ungroup() %>%
+      # Dummy para nivel de educacao
+        hex_escolas[, edu_infantil := ifelse( mat_infantil > 0, 1, 0) ]
+        hex_escolas[, edu_fundamental := ifelse( mat_fundamental > 0, 1, 0) ]      
+        hex_escolas[, edu_medio := ifelse( mat_medio > 0, 1, 0) ]      
       
-      # agrupar educacao fundamental
-      st_join(escolas_filtrado %>% filter(tipo == "mat_fundamental")) %>%
-      mutate(indice = ifelse(is.na(cod_escola), 0, 
-                             ifelse(mat_n == 0, 0, 
-                                    1))) %>%
-      group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa, 
-               saude_total, escolas_infantil) %>%
-      summarise(escolas_fundamental = sum(indice)) %>%
-      ungroup() %>%
+      # Summarize
+        hex_escolas <- hex_escolas[, .(edu_infantil = sum(edu_infantil),
+                                       edu_fundamental=sum(edu_fundamental),
+                                       edu_medio=sum(edu_medio)), by = id_hex ]
+        
       
-      # agrupar educacao media
-      st_join(escolas_filtrado %>% filter(tipo == "mat_medio")) %>%
-      mutate(indice = ifelse(is.na(cod_escola), 0, 
-                             ifelse(mat_n == 0, 0, 
-                                    1))) %>%
-      group_by(id_hex, pop_total, renda_total, empregos_alta, empregos_media, empregos_baixa, 
-               saude_total, escolas_infantil, escolas_fundamental) %>%
-      summarise(escolas_medio = sum(indice)) %>%
-      ungroup()
-    
-    
-    dir_output <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", munis, res)
-    
-    write_rds(hex_muni_fim, dir_output)
-    
+
+
+# Junta todos os dados agrupados por hexagonos
+hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
+  left_join(hex_rais) %>%
+  left_join(hex_saude) %>%
+  left_join(hex_escolas)
+
+# substitui NAs por zeros
+hex_muni_fim[is.na(hex_muni_fim)] <- 0
+
+
+  # Salva grade de hexagonos com todas informacoes de uso do soloe
+    dir_output <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", sigla_muni, muni_res)
+    readr::write_rds(hex_muni_fim, dir_output)
   }
   
-  # aplicar para cada resolucao
-  
-  walk(dir_muni[1:3], por_resolucao)
-  
+  # Aplicar funcao para cada resolucao
+  walk(res, por_resolucao)
 }
 
-# aplicar para cada municipio
+
+# Aplica funcao para cada municipio
+
+# Parallel processing using future.apply
+future::plan(future::multiprocess)
+future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table'))
+
 
 map(sigla_muni, por_municipio)
 
 
 
-}
+
 
 
 # Aplicar funcao
