@@ -8,27 +8,20 @@
 source('./R/fun/setup.R')
 
 
-### Download geocoded CNES data
+### 1. Download geocoded CNES data
 cnes_geo <- geobr::read_health_facilities(code = "all")
 sf::st_crs(cnes_geo)
 head(cnes_geo)
 
+# salva em data-raw
+readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
 
 
-### 1. Download CNES data from datasus ---------------------------------
+### 1. CNES data from datasus ---------------------------------
 
-# Download documentation
-  # ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Doc/IT_CNES_1706.pdf
-
-# tabulacao
-  # ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Auxiliar/TAB_CNES.zip
-
-# complete hierarchy data
-#  ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/STRJ1506.dbc
-
-
-
-
+#  documentation > ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Doc/IT_CNES_1706.pdf
+# tabulacao > ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Auxiliar/TAB_CNES.zip
+# complete hierarchy data > ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/STRJ1506.dbc
 
 ### Download cnes data with classification of hospitals hierarchy for all states
 
@@ -53,7 +46,7 @@ head(cnes_geo)
                             datasus$date <- paste0('20',ANO,MES)
                             
                             # save data
-                            readr::write_rds(datasus, paste0('../data-raw/servicos_saude/','cnes_20',ANO,MES,'_',UF,".rds"))
+                            readr::write_rds(datasus, paste0('../data-raw/hospitais/','cnes_20',ANO,MES,'_',UF,".rds"))
                           }
 
   
