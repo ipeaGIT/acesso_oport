@@ -1,29 +1,43 @@
-#' ## Avaliar qualidade dos resultados
-#' 
-#' 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###### 0.3.4 Avaliar qualidade da matriz de tempo de viagem
+
+# carregar bibliotecas
+source('./R/fun/setup.R')
+
+
+
 ## ----avaliar_qualidade_otp, eval=TRUE------------------------------------
 
-cidade <- "bel"
+# Funcao que identifica quais pontos nao foram roteados em cada modo de transportes 
+avaliar_qualidade_otp <- function(sigla_muni, ano) {
+  # sigla_muni <- "for"; ano <- 2019
 
-avaliar_qualidade_otp <- function(cidade) {
-  
-  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_.*.csv$", cidade)
-  # pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_09.csv$", cidade)
-  pattern_cidade_walk <- sprintf("ttmatrix_%s_walk_09.csv$", cidade)
-  
-  files_cidade_pt <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+ # listar e ler arquivos de Transporte Publico e Walking
+ 
+   # padrao de nome dos arquivos
+    pattern_pt <- sprintf("ttmatrix_%s_%s_pt*.rds", ano, sigla_muni)
+    pattern_walk <- sprintf("ttmatrix_%s_%s_walk", ano, sigla_muni)
+    pattern_bike <- sprintf("ttmatrix_%s_%s_bike", ano, sigla_muni)
+    
+  # listar arquivos
+  files_pt <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
                          full.names = TRUE, 
-                         pattern = pattern_cidade_pt)[1]
+                         pattern = pattern_pt)
   
-  files_cidade_walk <- dir(sprintf("../data/output_ttmatrix/%s", cidade), 
+  files_walk <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
                            full.names = TRUE, 
-                           pattern = pattern_cidade_walk)
+                           pattern = pattern_walk)
   
-  otp_matrix_pt <- map_dfr(files_cidade_pt, fread)
-  otp_matrix_walk <- map_dfr(files_cidade_walk, fread)
+  files_bike <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
+                               full.names = TRUE, 
+                               pattern = pattern_bike)
+  
+  
+  otp_matrix_pt <- map_dfr(files_sigla_muni_pt, fread)
+  otp_matrix_walk <- map_dfr(files_sigla_muni_walk, fread)
     
   # abrir os pontos
-  points_file <- sprintf("../otp/points/points_%s_09.csv", cidade)
+  points_file <- sprintf("../otp/points/points_%s_09.csv", sigla_muni)
   points <- fread(points_file)
   
   # checar os pontos na matrix
@@ -42,12 +56,12 @@ avaliar_qualidade_otp <- function(cidade) {
   pontos_fora_pt <- intersect(origem_fora_pt, destino_fora_pt)
   pontos_fora_walk <- intersect(origem_fora_walk, destino_fora_walk)
   
-  fim <- cbind(cidade = cidade, 
+  fim <- cbind(sigla_muni = sigla_muni, 
                id_hex = c(pontos_fora_pt, pontos_fora_walk), 
                modo = rep(c("pt", "walk"), times = c(length(pontos_fora_pt), length(pontos_fora_walk)))) %>%
     as.data.frame() %>%  
     left_join(points, by = "id_hex") %>%
-    group_by(cidade, modo) %>%
+    group_by(sigla_muni, modo) %>%
     mutate(n = n()) %>%
     mutate(Percentual = n/nrow(points)) %>%
     mutate(Percentual = scales::percent(Percentual)) %>%
@@ -68,7 +82,7 @@ avaliar_qualidade_otp <- function(cidade) {
 
 # # para porto alegre
 # qualidade_otp %>%
-#   dplyr::filter(cidade == "por") %>%
+#   dplyr::filter(sigla_muni == "por") %>%
 #   st_as_sf(coords = c("X", "Y"), crs = 4326) %>%
 #   mapview() +
 #   read_rds("../data/hex_municipio/hex_por_08.rds") %>% mapview()
@@ -78,11 +92,11 @@ avaliar_qualidade_otp <- function(cidade) {
 #' 
 ## ------------------------------------------------------------------------
 
-cidade <- "bel"
+sigla_muni <- "bel"
 
-snap_points_to_roads <- function(cidade) {
+snap_points_to_roads <- function(sigla_muni) {
   
-  path_network_in <- sprintf("../otp/graphs/%s", cidade)
+  path_network_in <- sprintf("../otp/graphs/%s", sigla_muni)
   
   # abrir street network
   path_network <- dir(path_network_in, full.names = TRUE, pattern = "*.pbf$")
@@ -92,12 +106,12 @@ snap_points_to_roads <- function(cidade) {
     filter(highway %nin% c("trunk","trunk_link","motorway","motorway_link","construction"))
   
   # extrair pontos que nao foram roteados pelo otp
-  points_fora <- avaliar_qualidade_otp(cidade) %>%
+  points_fora <- avaliar_qualidade_otp(sigla_muni) %>%
     distinct(id_hex, X, Y) %>%
     to_spatial(c("X", "Y"))
   
   # pegar hexagonos
-  path_hex_in <- sprintf("../data/hex_municipio/hex_%s_09.rds", cidade)
+  path_hex_in <- sprintf("../data/hex_municipio/hex_%s_09.rds", sigla_muni)
   hex <- read_rds(path_hex_in) %>%
     # filtrar somente hexagonos problematicos
     filter(id_hex %in% points_fora$id_hex)
@@ -116,13 +130,13 @@ snap_points_to_roads <- function(cidade) {
     sfc_as_cols(names = c("X", "Y"))
   
   # Juntar com os pontos totais
-  path_points_in <- sprintf("../otp/points/points_%s_09.csv", cidade)
+  path_points_in <- sprintf("../otp/points/points_%s_09.csv", sigla_muni)
   points_new <- fread(path_points_in) %>%
     filter(id_hex %nin% points_snap$id_hex) %>%
     rbind(points_snap)
   
   # salvar corrigido
-  path_out <- sprintf("../otp/points_corrigidos/points_corrigido_%s_09.csv", cidade)
+  path_out <- sprintf("../otp/points_corrigidos/points_corrigido_%s_09.csv", sigla_muni)
   fwrite(points_new, path_out)
   
   
@@ -159,17 +173,17 @@ snap_points_to_roads("por") # ok
 
 # Funcao para abrir resultado da matrix
 
-cidade <- "for"
+sigla_muni <- "for"
 
-abrir_resultado_matrix <- function(cidade) {
+abrir_resultado_matrix <- function(sigla_muni) {
   
-  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_09_.*.csv$", cidade)
-  # pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_09.csv$", cidade)
-  pattern_cidade_walk <- sprintf("ttmatrix_%s_walk_09.csv$", cidade)
+  pattern_sigla_muni_pt <- sprintf("ttmatrix_%s_pt_09_.*.csv$", sigla_muni)
+  # pattern_sigla_muni_ative <- sprintf("ttmatrix_%s_(walk|bike)_09.csv$", sigla_muni)
+  pattern_sigla_muni_walk <- sprintf("ttmatrix_%s_walk_09.csv$", sigla_muni)
   
-  files_cidade_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_pt)[1]
+  files_sigla_muni_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_sigla_muni_pt)[1]
   
-  fim <- fread(files_cidade_pt)
+  fim <- fread(files_sigla_muni_pt)
 }
 
 ttmatrix_for <- abrir_resultado_matrix("for")
@@ -187,7 +201,7 @@ hex_problematicos_sf <- ttmatrix_for %>%
 hex_problematicos_sf <- unique(hex_problematicos_sf, by = "origin")
 
 # abrir os pontos
-points_file <- sprintf("../otp/points/points_%s_09.csv", cidade)
+points_file <- sprintf("../otp/points/points_%s_09.csv", sigla_muni)
 points <- fread(points_file)
 
 hex_problematicos_sf <- merge(hex_problematicos_sf, setDT(points),
@@ -233,9 +247,9 @@ mapview(por_points_fora %>% to_spatial(c("X", "Y")), zcol = NULL) + mapview(netw
 ## ----tabela_qualidade_otp, eval = TRUE-----------------------------------
 
 qualidade_otp %>%
-  mutate(Cidade = c("Fortaleza", "Belo Horizonte", "Curitiba", "Porto Alegre")) %>%
+  mutate(sigla_muni = c("Fortaleza", "Belo Horizonte", "Curitiba", "Porto Alegre")) %>%
   # mutate(Percentual = color_bar("red")(Percentual)) %>%
-  select(Cidade, n, Percentual) %>%
+  select(sigla_muni, n, Percentual) %>%
   kable() %>%
   # column_spec(3, width = "3cm") %>%
   kable_styling(bootstrap_options = "striped", full_width = F)
@@ -246,20 +260,20 @@ qualidade_otp %>%
 #' 
 ## ----avaliar_qualidade_acessibilidade, eval = TRUE-----------------------
 
-# cidade <- "bel"
+# sigla_muni <- "bel"
 
-avaliar_qualidade_acess <- function(cidade) {
+avaliar_qualidade_acess <- function(sigla_muni) {
   
-  pattern_cidade_pt <- sprintf("ttmatrix_%s_pt_08_.*.csv$", cidade)
-  pattern_cidade_ative <- sprintf("ttmatrix_%s_(walk|bike)_08.csv$", cidade)
+  pattern_sigla_muni_pt <- sprintf("ttmatrix_%s_pt_08_.*.csv$", sigla_muni)
+  pattern_sigla_muni_ative <- sprintf("ttmatrix_%s_(walk|bike)_08.csv$", sigla_muni)
   
-  files_cidade_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_pt)
-  files_cidade_ative <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_cidade_ative)
+  files_sigla_muni_pt <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_sigla_muni_pt)
+  files_sigla_muni_ative <- dir("../data/output_ttmatrix", full.names = TRUE, pattern = pattern_sigla_muni_ative)
   
-  otp_matrix_pt <- map_dfr(files_cidade_pt, fread)
+  otp_matrix_pt <- map_dfr(files_sigla_muni_pt, fread)
   
   # abrir oportunidades com hexagonos
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", cidade, "08")
+  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", sigla_muni, "08")
   hexagonos_for_sf <- read_rds(dir_hex) %>%
     select(id_hex) %>%
     ungroup()
