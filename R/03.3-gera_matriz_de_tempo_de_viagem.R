@@ -63,12 +63,11 @@ juntar_output_OTP <- function(sigla_muni, ano){
 # status message
   message("Working on city ", sigla_muni, "\n")
   
-### Public Transport
+### Public Transport  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # pegar os arquivos
     files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni),
                 pattern = "^ttmatrix_\\w{3}_pt",
                 full.names = TRUE)
-    files <- files[c(1:2, 22, 24,45)]
 
      # abrir, juntar e salvar arquivos
      path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.rds", sigla_muni, ano, sigla_muni,'pt')
@@ -80,7 +79,7 @@ juntar_output_OTP <- function(sigla_muni, ano){
          readr::write_rds(path_out)
 
 
-### Walking and Cycling
+### Walking and Cycling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  # pegar os arquivos
  files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
               pattern = "^ttmatrix_\\w{3}_walk|^ttmatrix_\\w{3}_bike",
@@ -91,7 +90,7 @@ juntar_output_OTP <- function(sigla_muni, ano){
  
  # ler, empilhar e salvar arquivos
  # furrr::future_map(files, data.table::fread, nThread=getDTthreads()) %>%
- lapply(files, data.table::fread, nThread=getDTthreads(), nrows=300) %>%
+ lapply(files, data.table::fread, nThread=getDTthreads()) %>%
    rbindlist() %>%
    readr::write_rds(path_out) 
  
