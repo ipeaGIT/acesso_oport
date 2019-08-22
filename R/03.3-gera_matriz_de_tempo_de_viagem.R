@@ -1,7 +1,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.3.3 Calcula matriz de tempo de viagem
 
-  
+
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
@@ -22,7 +22,7 @@ source('./R/fun/setup.R')
 
 
 
-#### 1. Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem
+#### 1. Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem -----------------------
 
 gerar_tt_matrix <- function(sigla_muni) {
   
@@ -46,46 +46,61 @@ gerar_tt_matrix <- function(sigla_muni) {
 # Aplica funcao para todas as cidades
 lapply(X=munis_df$abrev_muni, gerar_tt_matrix)
 
-#' 
-#'   
-#'   
-#'   # colar os arquivos
-#'   
-#'   # pegar os arquivos
-#'   files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
-#'                pattern = "^ttmatrix_\\w{3}_pt",
-#'                full.names = TRUE)
-#'   
-#'   # extrair os horarios
-#'   horarios <- str_extract(files, "\\d{1,2}-\\d{1,2}") %>% unique()
-#'   
-#'   # funcao para abrir e juntar os arquivos de cada horario
-#'   
-#'   # horarios1 <- horarios[1]
-#'   
-#'   abrir_e_juntar <- function(horarios1) {
-#'     
-#'     files_ok <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
-#'                     pattern = sprintf("^ttmatrix_\\w{3}_pt_%s", horarios1),
-#'                     full.names = TRUE)
-#'     
-#'     # abrir, juntar e salvar arquivos
-#'     path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s.csv", sigla_muni, sigla_muni, horarios1)
-#'     
-#'     furrr::future_map(files_ok, fread) %>%
-#'       rbindlist() %>%
-#'       fwrite(path_out)
-#'     
-#'     # remove files?
-#'     walk(files_ok, file.remove)
-#'   }
-#'   
-#'   # aplicar funcao
-#'   plan(multiprocess)
-#'   invisible(furrr::future_map(horarios, abrir_e_juntar))
-#'   
-#'   
-#' }
-#' 
-#' 
-#' #' 
+
+
+
+
+
+#### 2. Agrega matriz do OTP num arquivo por cidade -----------------------
+
+ 
+# funcao para juntar arquivos por sigla_muni
+
+juntar_output_OTP <- function(sigla_muni, ano){
+  
+# sigla_muni <- 'for'
+
+# status message
+  message("Working on city ", sigla_muni, "\n")
+  
+### Public Transport
+    # pegar os arquivos
+    files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni),
+                pattern = "^ttmatrix_\\w{3}_pt",
+                full.names = TRUE)
+    files <- files[c(1:2, 22, 24,45)]
+
+     # abrir, juntar e salvar arquivos
+     path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.rds", sigla_muni, ano, sigla_muni,'pt')
+
+    # ler, empilhar e salvar arquivos
+     # furrr::future_map(files, data.table::fread, nThread=getDTthreads()) %>%
+       lapply(files, data.table::fread, nThread=getDTthreads()) %>%
+         rbindlist() %>%
+         readr::write_rds(path_out)
+
+
+### Walking and Cycling
+ # pegar os arquivos
+ files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
+              pattern = "^ttmatrix_\\w{3}_walk|^ttmatrix_\\w{3}_bike",
+              full.names = TRUE)
+ 
+ # abrir, juntar e salvar arquivos
+ path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.rds", sigla_muni, ano, sigla_muni,'ativo')
+ 
+ # ler, empilhar e salvar arquivos
+ # furrr::future_map(files, data.table::fread, nThread=getDTthreads()) %>%
+ lapply(files, data.table::fread, nThread=getDTthreads(), nrows=300) %>%
+   rbindlist() %>%
+   readr::write_rds(path_out) 
+ 
+#  # remove files?
+#  walk(files, file.remove)
+}
+
+# Aplicar funcao
+pbapply::pblapply(X=c('for', 'sao'), FUN=juntar_output_OTP, ano=2019)
+
+      # plan(multiprocess)
+      # invisible(furrr::future_map(horarios, abrir_e_juntar))
