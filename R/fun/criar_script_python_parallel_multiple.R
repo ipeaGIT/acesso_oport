@@ -38,10 +38,10 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
     data <- selecionar_data_gtfs(sigla_muni)
     
     ano <- substr(data, 1, 4)
-    mes <- substr(data, 6, 7)
-    dia <- substr(data, 9, 10)
+    mes <- substr(data, 6, 7)  %>% as.integer()
+    dia <- substr(data, 9, 10) %>% as.integer()
     
-    message(paste0("Trabalalhando na cidade ",sigla_muni,"\n"))
+    message(paste0("Trabalhando na cidade ",sigla_muni,"\n"))
     
   
 # COMEÇA AQUI O SCRIPT ----------------------------------------------------
@@ -160,11 +160,11 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "",
   "      # Create a CSV output",
   "      matrixCsv = otp.createCSVOutput()",
-  "      matrixCsv.setHeader(['city', 'year', 'depart_time', 'origin', 'destination', 'walk_distance', 'travel_time', 'boardings'])",
+  "      matrixCsv.setHeader(['city', 'mode', 'depart_time', 'origin', 'destination', 'walk_distance', 'travel_time', 'boardings'])",
   "",
   "      # Start Loop",
   "      for origin in points:",
-  "        print(\"Processing origin: \", str(h) + \"-\" + str(m), \" \", origin.getStringData('id_hex'), 'on ', threading.current_thread())",
+  sprintf("        print(\"Processing origin: %s \", str(h) + \"-\" + str(m), \" \", origin.getStringData('id_hex'), 'on ', threading.current_thread())", sigla_muni),
   "        req.setOrigin(origin)",
   "        spt = router.plan(req)",
   "        if spt is None:",
@@ -257,7 +257,7 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "    # Create a default request for a given time",
   "    req = otp.createRequest()",
   "    req.setDateTime(year, month, day, h, m, 00)",
-  "    req.setMaxTimeSec(time_threshold)", 
+  "    req.setMaxTimeSec(3600)", 
   "    req.setModes('WALK')",
   "",
   "",
@@ -301,7 +301,7 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "    # Create a default request for a given time",
   "    req = otp.createRequest()",
   "    req.setDateTime(year, month, day, h, m, 00)",
-  "    req.setMaxTimeSec(time_threshold)", 
+  "    req.setMaxTimeSec(5400)", 
   "    req.setModes('BICYCLE')",
   "",
   "",
