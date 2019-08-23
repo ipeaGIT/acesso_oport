@@ -29,15 +29,12 @@ calcular_acess <- function(sigla_muni, ano) {
   ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=readr::read_rds, future.packages=c('readr')) %>% data.table::rbindlist(fill = T)
   # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
   
-  # TESTE correcao do mode
-  # ttmatrix_allmodes[,  mode := ifelse(mode=='NA', 'transit',mode)]
-  # ttmatrix_allmodes[,  mode := ifelse(is.na(mode), 'transit',mode)]
-  # table(ttmatrix_allmodes$mode)
-  
-  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem (para qualquer modo) como 350s
-    # 350s equivale ao tempo necessario para cruzar um hexagono a pe (1 metro/sec = 3.6 km/h)
-    ttmatrix_allmodes[, travel_time := ifelse(origin == destination, 350, travel_time)]
-  
+  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como 350s (para qualquer modo)
+    # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
+    # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
+    ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
+    ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
+    
    # convert depart_time para formato itime
     ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
       
@@ -95,11 +92,19 @@ calcular_acess <- function(sigla_muni, ano) {
     # high income people = jobs with high and med education
     # low income people = jobs with low and med education
     ttmatrix[, empregos_match_decil := ifelse(decile>5, sum(empregos_media, empregos_alta),  sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
-    ttmatrix[, empregos_match_quintil := ifelse(decile>5, sum(empregos_media, empregos_alta),  sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
+    ttmatrix[, empregos_match_quintil := ifelse(quintil>3, sum(empregos_media, empregos_alta),  sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
     66666666666666666666666666666666666666666
     
     CORRIGIR DECIL E QUINTIL
 
+    # calcular totais para cidades
+    popt <- sum(hexagonos_sf$pop_total)
+    popt <- sum(hexagonos_sf$pop_total)
+    
+    
+    
+    
+    
   # Dicionario de variaveis:
   # - CMA = Acessibilidade Cumulativa Ativa
   # - CMP = Acessibilidade Cumulativa Passiva
