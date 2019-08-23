@@ -17,6 +17,10 @@ calcular_acess <- function(sigla_muni, ano) {
   
   # sigla_muni <- "for"; ano=2019
   
+  # status message
+  message('Woking on city ', sigla_muni, '\n')
+  
+  
   # Listar arquivos de matriz em formato .rds
   tt_files <- dir(path= sprintf("../data/output_ttmatrix/%s/", sigla_muni), pattern = '.rds', full.names = T)
   

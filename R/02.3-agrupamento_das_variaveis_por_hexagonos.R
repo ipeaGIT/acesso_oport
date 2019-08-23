@@ -36,6 +36,9 @@ empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_cidades_selecionad
 # Funcao para agregar dados de uso do solo na grade de hexagonos
 agrupar_variaveis <- function(sigla_muni) {
   
+  # status message
+  message('Woking on city ', sigla_muni, '\n')
+  
   # resolucoes disponiveis
   res <- str_extract(dir("../data/hex_municipio/", pattern = sigla_muni), "\\d+")
   
@@ -87,7 +90,6 @@ agrupar_variaveis <- function(sigla_muni) {
                                   cor_negra = sum(round(cor_negra,0), na.rm = TRUE),
                                   pop_total = sum(round(pop_total,0), na.rm = TRUE),
                                   renda_total = sum(renda, na.rm = TRUE)), by = id_hex ]
-    
     
     # Calcular quintil e decil de renda
       # calcula renda per capta de cada hexagono
@@ -166,9 +168,6 @@ hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
 
 # substitui NAs por zeros
 hex_muni_fim[is.na(hex_muni_fim)] <- 0
-
-
-
 
 
 

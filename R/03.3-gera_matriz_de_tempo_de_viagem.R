@@ -28,6 +28,9 @@ gerar_tt_matrix <- function(sigla_muni) {
   
   # sigla_muni <- "for"
 
+  # status message
+  message('Woking on city ', sigla_muni, '\n')
+  
   # lista scripts em python daquela cidade
   python_scripts <- dir("../otp/py", pattern = sprintf("otp_%s", sigla_muni))
   
@@ -48,8 +51,9 @@ lapply(X=munis_df$abrev_muni, gerar_tt_matrix)
 
 
 
-
-
+a <- munis_df$abrev_muni
+a <- a[-2]
+lapply(X=a, gerar_tt_matrix)
 
 #### 2. Agrega matriz do OTP num arquivo por cidade -----------------------
 
@@ -63,11 +67,12 @@ juntar_output_OTP <- function(sigla_muni, ano){
 # status message
   message("Working on city ", sigla_muni, "\n")
   
-### Public Transport  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Public Transport
     # pegar os arquivos
     files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni),
                 pattern = "^ttmatrix_\\w{3}_pt",
                 full.names = TRUE)
+#    files <- files[c(1:2, 22, 24,45)]
 
      # abrir, juntar e salvar arquivos
      path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.rds", sigla_muni, ano, sigla_muni,'pt')
@@ -79,7 +84,7 @@ juntar_output_OTP <- function(sigla_muni, ano){
          readr::write_rds(path_out)
 
 
-### Walking and Cycling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Walking and Cycling
  # pegar os arquivos
  files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
               pattern = "^ttmatrix_\\w{3}_walk|^ttmatrix_\\w{3}_bike",

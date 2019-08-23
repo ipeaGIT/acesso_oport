@@ -11,6 +11,11 @@ source('./R/fun/setup.R')
 ## Funcao para inputar renda do setor censitario para grade estatistica  -------------------------------------------
 renda_de_setor_p_grade <- function(sigla_muni) {
   
+  # sigla_muni <- 'for'
+
+  # status message
+  message('Woking on city ', sigla_muni, '\n')
+  
   # endereco dos arquivos
   path_setor <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", sigla_muni)
   path_grade <- sprintf("../data/grade_municipio/grade_%s.rds", sigla_muni)
@@ -21,7 +26,7 @@ renda_de_setor_p_grade <- function(sigla_muni) {
   
   
   # mesma projecao
-  setor <- sf::st_transform(setor, crs(grade))
+  setor <- sf::st_transform(setor, sf::st_crs(grade))
   
   # Criar id unico de cada grade e filtra colunas
   grade$id_grade <- 1:nrow(grade)

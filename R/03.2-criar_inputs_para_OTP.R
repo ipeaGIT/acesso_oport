@@ -14,6 +14,10 @@ gerar_pontos_OTP <- function(sigla_muni) {
 
   # sigla_muni <- "for"
   
+  # status message
+  message('Woking on city ', sigla_muni, '\n')
+  
+  
   # Lista resolucoes disponiveis
   dir <- dir("../data/hex_agregados/", pattern = sigla_muni)
   res <- str_extract(dir, "\\d+")

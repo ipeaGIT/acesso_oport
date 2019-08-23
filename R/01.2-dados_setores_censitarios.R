@@ -52,6 +52,9 @@ merge_renda_setores <- function(sigla){
   
 #  sigla <- "for"
   
+  # status message
+  message('Woking on city ', sigla_muni, '\n')
+  
   # codigo do municipios
   code_muni <- subset(munis_df, abrev_muni==sigla )$code_muni
   

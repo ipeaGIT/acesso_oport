@@ -22,7 +22,7 @@ munis_df <- data.frame( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902
 
 criar_grade_muni <- function(sigla){
   
-  message(paste0('Rodando ', sigla,"\n"))
+  message(paste0('Rodando cidade ', sigla,"\n"))
   
   # codigo do estado do municipio
   cod_estado <- subset(munis_df, abrev_muni==sigla)$abrev_state %>% as.character()
