@@ -105,8 +105,12 @@ agrupar_variaveis <- function(sigla_muni) {
                                       normwt=FALSE, na.rm=T)
     
     # classificar cada hexagono em cada quintil de renda
-      hex_pop[, quintil := 1+ findInterval(renda_capta , quintiles[ -length(quintiles) ] ) ]
-      hex_pop[, decil := 1+ findInterval(renda_capta , deciles[ -length(deciles) ] ) ]
+      hex_pop[, quintil := findInterval(renda_capta , quintiles[ -length(quintiles) ] ) ]
+      hex_pop[, decil := findInterval(renda_capta , deciles[ -length(deciles) ] ) ]
+      
+      # check if pop size in each decile are roughly equal
+      hex_pop[, .(po_in_decile = sum(pop_total, na.rm=T)), by = decil]
+      hex_pop[, .(po_in_quintil = sum(pop_total, na.rm=T)), by = quintil]
       
       
       
