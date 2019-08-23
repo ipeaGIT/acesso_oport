@@ -29,9 +29,10 @@ calcular_acess <- function(sigla_muni, ano) {
   ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=readr::read_rds, future.packages=c('readr')) %>% data.table::rbindlist(fill = T)
   # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
   
-  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como 350s (para qualquer modo)
+  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
     # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
     # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
+    ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
     ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
     ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
     
@@ -39,14 +40,12 @@ calcular_acess <- function(sigla_muni, ano) {
     ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
       
     # Classificar informacao de horario de partida como pico ou fora pico
-      ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
-                              ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("18:00:00")),1,0))]
+    ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
+                            ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
   
-  
-  
+      
   
 # Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
-  
 
   # Calcular a mediana agrupando por sigla_muni, modo, origin, destination, pico
   ttmatrix_median <- ttmatrix_allmodes[, .(tt_median = median(travel_time, na.rm = TRUE)), 
@@ -73,38 +72,53 @@ calcular_acess <- function(sigla_muni, ano) {
   
   
   # Merge de dados de origem na matrix de tempo de viagem
-
     ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
                                 c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capta','quintil','decil') :=
                                 list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, i.renda_total, i.renda_capta, i.quintil, i.decil)]
                                 
-    # Merge de dados de destino na matrix de tempo de viagem
+  # Merge de dados de destino na matrix de tempo de viagem
     ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
                          c("empregos_baixa","empregos_media","empregos_alta","empregos_total","saude_total","edu_total","edu_infantil","edu_fundamental","edu_medio") :=
                          list(i.empregos_baixa,i.empregos_media,i.empregos_alta,i.empregos_total,i.saude_total,i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio)]    
     
     
-    
   # Transformar o traveltime para minutos
     ttmatrix[, tt_median := tt_median/60]
   
+    
   # Calcular emprego com match qualitativo de renda e nivel de escolaridade do emprego 
     # high income people = jobs with high and med education
     # low income people = jobs with low and med education
-    ttmatrix[, empregos_match_decil := ifelse(decile>5, sum(empregos_media, empregos_alta),  sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
-    ttmatrix[, empregos_match_quintil := ifelse(quintil>3, sum(empregos_media, empregos_alta),  sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
-    66666666666666666666666666666666666666666
+    ttmatrix[, empregos_match_decil := ifelse(decil>5, sum(empregos_media, empregos_alta), sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
     
-    CORRIGIR DECIL E QUINTIL
+    ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, sum(empregos_media, empregos_alta), 
+                                         ifelse(quintil<=3,sum(empregos_media, empregos_baixa), NA)), by=.(origin, destination)]
+    
+
 
     # calcular totais para cidades
-    popt <- sum(hexagonos_sf$pop_total)
-    popt <- sum(hexagonos_sf$pop_total)
+      # pop
+      total_pop <- sum(hexagonos_sf$pop_total, na.rm=T)
+      total_branca <- sum(hexagonos_sf$cor_branca, na.rm=T)
+      total_amarela <- sum(hexagonos_sf$cor_amarela, na.rm=T)
+      total_indigena <- sum(hexagonos_sf$cor_indigena, na.rm=T)
+      total_negra  <- sum(hexagonos_sf$cor_negra, na.rm=T)
     
-    
-    
-    
-    
+      # saude
+      total_saude  <- sum(hexagonos_sf$saude_total, na.rm=T)
+      
+      # empregos
+      total_empregos <- sum(hexagonos_sf$empregos_total, na.rm=T)
+      total_empregos_decil <- sum(hexagonos_sf$empregos_match_decil, na.rm=T)
+      total_empregos_quintil <- sum(hexagonos_sf$empregos_match_quintil, na.rm=T)
+      
+      # educacao
+      total_edu  <- sum(hexagonos_sf$edu_total, na.rm=T)
+      total_edu_infantil  <- sum(hexagonos_sf$edu_infantil, na.rm=T)
+      edu_fundamental  <- sum(hexagonos_sf$edu_fundamental, na.rm=T)
+      edu_medio  <- sum(hexagonos_sf$edu_medio, na.rm=T)
+
+
   # Dicionario de variaveis:
   # - CMA = Acessibilidade Cumulativa Ativa
   # - CMP = Acessibilidade Cumulativa Passiva
