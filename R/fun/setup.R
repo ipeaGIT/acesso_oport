@@ -5,7 +5,7 @@ Sys.setenv(TZ='UTC') # Fuso horario local
 library(ggplot2)      # visualizacao de dados
 library(sf)           # leitura e manipulacao de dados espaciais
 library(data.table)   # manipulacao de dados
-library(read.dbc)     # leitura de bases relacionais em Microsoft Access
+# library(read.dbc)     # leitura de bases relacionais em Microsoft Access
 library(geobr)        # dados espaciais do brasil
 library(pbapply)      # progress bar
 library(readr)        # rapida leitura de dados 
@@ -31,14 +31,24 @@ library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/
 
 # Cria data.frame com municipios do projeto
 
-######################66666666666666666666666666666666666
-#> inluir todas capitais
-#> incluir coluna com modo de transporte
 # mudanças na geração do script em python
 
-munis_df <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200),
-                        abrev_muni=c('for', 'sao', 'rio', 'cur', 'por', 'bel'),
-                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte'))
+munis_df <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
+                                     5300108, 2927408, 1302603, 2611606, 5208707, 1501402,
+                                     3518800, 3509502, 2111300, 3304904, 2704302, 3301702,
+                                     5002704, 2408102),
+                        abrev_muni=c('for', 'spo', 'rio', 'cur', 'poa', 'bho', 
+                                     'bsb', 'sal', 'man', 'rec', 'goi', 'bel',
+                                     'gua', 'cam', 'slz', 'sgo', 'mac', 'duq',
+                                     'cgr', 'nat'),
+                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte',
+                                    'Brasilia', 'Salvador', 'Manaus', 'Recife', 'Goiania', 'Belem',
+                                    'Guarulhos', 'Campinas', 'Sao Luis', 'Sao Goncalo', 'Maceio', 'Duque de Caxias',
+                                    'Campo Grande', 'Natal'),
+                        modo = c('todos', 'todos', 'todos', 'todos', 'todos', 'todos',
+                                 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
+                                 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
+                                 'ativo', 'ativo'))
 
 
 # library(hrbrthemes)
