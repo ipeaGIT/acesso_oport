@@ -3,7 +3,7 @@
 
   
 # carregar bibliotecas
-  source('./R/fun/setup.R')
+source('./R/fun/setup.R')
 
 
 

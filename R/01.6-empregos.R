@@ -181,7 +181,10 @@ rais[, c('corte', 'prop_baixo', 'prop_medio',  'prop_alto') := NULL]
 
 
 # leitura da RAIS geocodificada
-rais_geo <- fread("../data-raw/rais/rais_2017_raw.csv", colClasses='character', select = c("id_estab", 'codemun', "lat", "lon"))
+rais_geo <- fread("../data-raw/rais/rais_2017_raw.csv", 
+                  colClasses='character', 
+                  select = c("id_estab", 'codemun', "lat", "lon"))
+
 rais_geo[, id_estab := as.numeric(id_estab)]
 head(rais_geo)
 
@@ -202,7 +205,11 @@ rais[is.na(lat), sum(total_corrigido)] / sum(rais$total_corrigido)
 write_rds(rais, "../data/rais/rais_2017_corrigido.rds")
 
 
-# Salvar base somente com municipios do projeto
+# Salvar base somente com municipios do projeto ----------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# abri rais corrigida
+rais <- read_rds("../data/rais/rais_2017_corrigido.rds")
 
 # filtar
 rais2 <- rais[ codemun %in% substr(munis_df$code_muni, 1, 6)]
