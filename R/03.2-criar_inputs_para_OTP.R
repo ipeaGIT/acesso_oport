@@ -83,6 +83,12 @@ pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until =
 # fora pico, # apenas modo transporte publico
 pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 14, until = 16, every = 15, modo='tp') 
 
+# para as cidades sem gtfs, sera somente transporte ativo
+# cidades: bsb, sal, man, rec, goi, bel, gua, cam, slz, sgo, mac, duq, cgr, nat
+pblapply(munis_df[modo == "ativo"]$abrev_muni, criar_script_python_paral_modes, 
+         modo='ativo') 
+
+
 # #TEST
 # # pico
 # pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until = 7, every = 30)

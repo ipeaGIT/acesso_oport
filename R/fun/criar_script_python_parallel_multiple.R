@@ -27,12 +27,15 @@
 
 
 criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
-                                            from, 
-                                            until, every,
+                                            from = 7, 
+                                            until = 8, 
+                                            every = 15,
                                             time_threshold = 7200, max_walk_distance = 800
                                             ) {
   
   
+  # so buscar a data no gtfs se for fazer o roteamento por transporte publico!
+  if (modo %in% c("todos", "tp")) {
   # Selecionar a data
     source('./R/fun/selecionar_data_gtfs.R')
     data <- selecionar_data_gtfs(sigla_muni)
@@ -40,6 +43,17 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
     ano <- substr(data, 1, 4)
     mes <- substr(data, 6, 7)  %>% as.integer()
     dia <- substr(data, 9, 10) %>% as.integer()
+    
+  }
+    
+    else {
+      
+      ano <- 2019
+      mes <- 10
+      dia <- 10
+      
+      
+    }
     
     message(paste0("Trabalhando na cidade ",sigla_muni,"\n"))
     
@@ -49,7 +63,7 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   
   
   
-  transit <- c(
+  comum <- c(
   "from __future__ import print_function",
   "import os",
   "from org.opentripplanner.scripting.api import OtpsEntryPoint",
@@ -95,7 +109,10 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "",
   "",
   "",
-  "",
+  "")
+    
+    
+  transit <- c(
   "",
   "",
   "",
@@ -212,10 +229,10 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "    print(\"Elapsed time was %g seconds\" % (time.time() - start_time))",
   "",
   "",
-  "shutil.rmtree('temp_data')")
-  
-  
-  active <- c(
+  "shutil.rmtree('temp_data')",
+  "",
+  "",
+  "",
   "#################################################################################################",
   "#################################################################################################",
   "#################################################################################################",
@@ -223,10 +240,10 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "print('ALL JOBS COMPLETED!')",
   "",
   "print(\"Elapsed time was %g seconds\" %
-        (time.time() - start_time), \"using %g threads\" % (max_threads))",
-  "",
-  "",
-  "",
+        (time.time() - start_time), \"using %g threads\" % (max_threads))")
+  
+  
+  active <- c(
   "",
   "",
   "",
@@ -342,21 +359,31 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   "print(\"Elapsed time was %g seconds\" % (time.time() - start_time))")
   
   # Start writing to an output file
+  # So salva a hora de partida se tiver o modo de transporte publico
+  if (modo %in% c("todos", "tp")) {
+    
   output_file <- sprintf("../otp/py/otp_%s_%s-%s_%s-%s.py", sigla_muni, ano, mes, from, until)
+  
+  } else {
+    
+  output_file <- sprintf("../otp/py/otp_%s_%s.py", sigla_muni, ano)
+    
+    
+  }
   
   sink(output_file)
 
   if (modo == "tp") {
 
-    cat(transit, sep = "\n")
+    cat(comum, transit, sep = "\n")
 
   } else if (modo == "ativo") {
 
-    cat(active, sep = "\n")
+    cat(comum, active, sep = "\n")
 
   } else if (modo == "todos") {
 
-    cat(transit, active, sep = "\n")
+    cat(comum, transit, active, sep = "\n")
 
   }
   
