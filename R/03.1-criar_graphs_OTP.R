@@ -20,7 +20,7 @@ construir_graph <- function(sigla_muni) {
   message(paste0("Criando Graph da cidade ",sigla_muni,"\n"))
   
   # Os arquivos de gtfs e .obj devem estar na pasta de cada cidade
-  opentripplanner::otp_build_graph(otp = "../otp/programs/otp-1.4.0-shaded.jar", dir = "../otp", router = sigla_muni, memory = 6000) 
+  opentripplanner::otp_build_graph(otp = "../otp/programs/otp-1.4.0-shaded.jar", dir = "../otp", router = sigla_muni) 
   
 }
 
@@ -32,7 +32,7 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=construir_graph)
 
 # Rodar somente para as cidades de transporte ativo
 munis_df_ativo <- subset(munis_df, modo == "ativo")$abrev_muni
-future.apply::future_lapply(X= munis_df_ativo, FUN=construir_graph)
+lapply(X= munis_df_ativo, FUN=construir_graph)
 
 
 
