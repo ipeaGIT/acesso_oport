@@ -8,7 +8,7 @@
   
   
 # carregar bibliotecas
-  source('./R/fun/setup.R')
+source('./R/fun/setup.R')
 
 
 
@@ -29,6 +29,11 @@ construir_graph <- function(sigla_muni) {
 options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
 future::plan(future::multiprocess)
 future.apply::future_lapply(X= munis_df$abrev_muni, FUN=construir_graph)
+
+# Rodar somente para as cidades de transporte ativo
+munis_df_ativo <- subset(munis_df, modo == "ativo")$abrev_muni
+future.apply::future_lapply(X= munis_df_ativo, FUN=construir_graph)
+
 
 
 # # FUNCAO PARA LIGAR SERVIDOR DO OTP DA CIDADE -----------------------------
