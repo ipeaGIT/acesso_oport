@@ -18,7 +18,7 @@ renda_de_setor_p_grade <- function(sigla_muni) {
   
   # endereco dos arquivos
   path_setor <- sprintf("../data/setores_agregados/setores_agregados_%s.rds", sigla_muni)
-  path_grade <- sprintf("../data/grade_municipio/grade_%s.rds", sigla_muni)
+  path_grade <- sprintf("../data-raw/grade_municipio/grade_%s.rds", sigla_muni)
   
   # leitura de shapes de setores censitarios e grade estatistica
   setor <- readr::read_rds(path_setor)
