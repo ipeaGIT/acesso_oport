@@ -49,6 +49,10 @@ gerar_tt_matrix <- function(sigla_muni) {
 # Aplica funcao para todas as cidades
 lapply(X=munis_df$abrev_muni, gerar_tt_matrix)
 
+# Aplicar funcao para somente as cidades de modo ativo
+munis_ativo <- subset(munis_df, modo == "ativo")$abrev_muni
+lapply(X=munis_ativo, gerar_tt_matrix)
+
 
 
 a <- munis_df$abrev_muni
