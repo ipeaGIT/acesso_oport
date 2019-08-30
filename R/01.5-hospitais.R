@@ -1,5 +1,5 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.1.5 Download dos dados geolicalizados dos estabelecimentos de saude
+###### 0.1.5 Download dos dados geolocalizados dos estabelecimentos de saude
 ##info
 # fonte: Cadastro Nacionl dos Estabelecimentos de Saude (CNES) - DataSus
   
@@ -8,13 +8,28 @@
 source('./R/fun/setup.R')
 
 
-### 1. Download geocoded CNES data
+### 1. Download geocoded CNES data ------------------------------------
 cnes_geo <- geobr::read_health_facilities(code = "all")
 sf::st_crs(cnes_geo)
 head(cnes_geo)
 
 # salva em data-raw
 readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
+
+
+
+                  # CNES Ativos
+                  # 
+                  # url_cnes <- "http://i3geo.saude.gov.br/i3geo/ogc.php?service=WFS&version=1.0.0&request=GetFeature&typeName=cnes_ativo&outputFormat=CSV"
+                  # 
+                  # 
+                  # cnes <- data.table::fread(url_cnes)
+                  # cnes <- read.csv(url_cnes)
+                  # 
+                  # download.file(url=url_cnes, destfile = '../data-raw/hospitais/cnes_ativos_201806.csv', mode='w')
+                  # 
+                  # 
+
 
 
 ### 1. CNES data from datasus ---------------------------------
@@ -50,6 +65,7 @@ readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
                           }
 
   
+
 # list of states
   all_states <- c("RO", "AC", "AM", "RR", "PA",
                   "AP", "TO", "MA", "PI", "CE",
@@ -65,6 +81,11 @@ readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
 # Loop over months
   meses <- c(paste0("0", 1:9), 10:12)
 
+# all data
+  # ano = '15'
+  # mes= '05'
+  
+  
 # download cnes data
   for (i in meses){
     
@@ -82,37 +103,28 @@ readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
   
   
 # Listar todos arquivos
-  rdsfiles <- list.files('../data-raw/servicos_saude/', pattern = ".rds", full.names = T)
-
+  rdsfiles <- list.files('../data-raw/hospitais/', pattern = ".rds", full.names = T)
+  
+  rds_2015 <- rdsfiles[rdsfiles %like% 2015]
+  rds_2019 <- rdsfiles[rdsfiles %like% 2019]
+  
 # leitura de todos arquivos
-  cnes <- pbapply::pblapply(X = rdsfiles, FUN=readr::read_rds)
-
-# Empilhar todos arquivos num unico data.table
-  cnes <- rbindlist(cnes)
-
-#
-#   
-# # download
-#   cnes <- lapply(X=all_states, FUN =function(X){hack_datasus(UF=X, ANO=ano, MES=mes)} ) %>% data.table::rbindlist()
-#   table(cnes$NIV_HIER)
-#   table(cnes$date)
+  future::plan(future::multiprocess)
+  cnes15 <- future.apply::future_lapply(X =rds_2015, FUN=readr::read_rds) %>% rbindlist(fill=TRUE)
+  cnes19 <- future.apply::future_lapply(X =rds_2019, FUN=readr::read_rds) %>% rbindlist(fill=TRUE)
   
   
   
   
   
-  
-  
-  
-
-# clean dataset
+#### clean dataset
   
 # CNES to characther
-  setDT(cnes)[, CNES := as.character(CNES) ] 
+  setDT(cnes19)[, CNES := as.character(CNES) ] 
+  setDT(cnes15)[, CNES := as.character(CNES) ] 
   
 # Keep only columns we will use
-  cnes_filtered <- cnes[, .(CNES, CODUFMUN, COD_CEP, PF_PJ, NIV_HIER, VINC_SUS, ATENDAMB, ATENDHOS, abbrev_uf) ]
-  
+  cnes_filtered <- cnes19[, .(CNES, CODUFMUN, COD_CEP, PF_PJ, NIV_HIER, VINC_SUS, ATENDAMB, ATENDHOS, abbrev_uf, date) ]
   # vars to keep
     # CNES CHAR (7) Número nacional do estabelecimento de saúde
     # CODUFMUN CHAR (7) Código do município do estabelecimento: UF + MUNIC (sem dígito)
@@ -124,10 +136,9 @@ readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
     # ATENDAMB CHAR (1) Indica a existência de INSTALAÇÃO FÍSICA de ATENDIMENTO AMBULATORIAL para este CNES, onde: 1-sim 0-não
     # abbrev_uf - abbreviation of state name
     # date - date of reference
-  summary(cnes$NIV_HIER)
-  table(cnes$NIV_HIER)
+  summary(cnes_filtered$NIV_HIER)
+  table(cnes_filtered$NIV_HIER)
   
-
 
 # Filter 1: healthcare facilities operating with the public health system
   cnes_filtered <- cnes_filtered[ VINC_SUS==1, ]
@@ -135,6 +146,46 @@ readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
 # Filter 2: Pessoa juridica
   cnes_filtered <- cnes_filtered[ PF_PJ==3, ]
 
+# filter 3: Only municipalities in the project
+  cnes_filtered <- subset(cnes_filtered, CODUFMUN %in% substr(munis_df$code_muni, 1,6))
+  
+# filter 4: Only atendimento hospitalar ou ambulatorial
+  cnes_filtered <- cnes_filtered[ ATENDHOS==1 | ATENDAMB==1]
+  
+# filter 4: remove duplicates
+  cnes_filtered <- cnes_filtered[, .(CNES, COD_CEP, CODUFMUN)] %>% unique()
+  
+  cnes_filtered[, .(CNES)] %>% unique()
+  
+  0003840
+  
+  
+  cnes_filtered[ CNES =='0003840']  
+  
+  
+  
+# Lat Long info from geobr
+  
+  cnes_geo$code_cnes <- as.character(cnes_geo$code_cnes)
+  cnes_geo <- sfc_as_cols(cnes_geo)
+  
+  a <- left_join(cnes_filtered, cnes_geo, by=c('CNES'='code_cnes')) %>% setDT()
+  
+  a[is.na(lat)]
+jogar eles no galileo
+
+
+  to_spatial(a) %>% mapview()
+  
+  
+  
+  cnes19[COD_CEP=='69065001']
+  
+# Bring Hierarchy info from 2015 data
+  cnes_filtered[cnes15, on='CNES', NIV_HIER := i.NIV_HIER]
+  table(cnes_filtered$NIV_HIER)
+  summary(cnes_filtered$NIV_HIER)
+  
   
   
 # Recode health facilities Hierarchy -----
