@@ -50,7 +50,7 @@ criar_grade_muni <- function(sigla){
   gc(reset=T)
 
   # salvar no disco
-  write_rds(grade_muni, paste0("../data/grade_municipio/grade_", tolower(sigla), ".rds"))
+  write_rds(grade_muni, paste0("../data-raw/grade_municipio/grade_", tolower(sigla), ".rds"))
 }
 
 
