@@ -63,6 +63,8 @@ options(scipen=10000)
 
 `%nin%` = Negate(`%in%`)
 
+`%nlike%` = Negate(`%like%`)
+
 
 #library(htmltools)
 #library(htmlwidgets)
