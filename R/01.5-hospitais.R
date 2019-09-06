@@ -1,6 +1,7 @@
 ref https://github.com/rafapereirabr/thesis/blob/master/Rscripts/0%20Rio%20places_schools%20and%20hospitals.R
 
 
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.1.5 Download dos dados geolocalizados dos estabelecimentos de saude
 ##info
@@ -104,8 +105,25 @@ source('./R/fun/setup.R')
   
   
   
+### 1.4 Download geocoded PMAQ data ------------------------------------
+  # better geocoded info for basic services
+  # source: http://aps.saude.gov.br/ape/pmaq
+  # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
   
   
+  
+  
+  library(xlsx)
+  library(readxl)
+  
+  df <- readxl::read_excel(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+                           sheet = 'Módulo I')
+  
+  df2 <- read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+                   sheet = 'Módulo I', col_types = rep("text", 425))
+  head(df)
+  
+  df2 <- subset(df2, LATITUDE !="0" )
   
   
 ### 2. Leitura dos dados ---------------------------------
