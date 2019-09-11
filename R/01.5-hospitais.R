@@ -138,9 +138,35 @@ dt <- subset(dt, LATITUDE !="9997" )
 
 
 dt[ LATITUDE %like% "-709261"]
+unique(dt$LATITUDE) %>% nchar() %>% table
+
+#  funcao para corrigir coordenadas lat lon, porque dados originais estao em Excel.xls
+convert_coords <- function(coords) {
+  
+  x <- gsub("\\.", "", coords)
+  x <- stringr::str_sub(x, 1, -3)
+  x <- as.numeric(x)
+  x <- scales::comma(x)
+  
+  x <- gsub("\\,", "\\.", x)
+  x1 <- str_extract(x, "-?\\d+\\.")
+  x2 <- gsub("(-?\\d+\\.)(.*)", "\\2", x)
+  x3 <- gsub("\\.", "", x2)
+  xfim <- paste0(x1, x3)
+  xfim <- as.numeric(xfim)
+  
+}
 
 
-unique(dt$LATITUDE)
+stringi::stri_sub_replace("-709261", 3, 2) <- 'a'
+
+
+setDT(dt)[, LATITUDE := as.numeric(LATITUDE)][, LONGITUDE := as.numeric(LONGITUDE)]
+head(dt$LONGITUDE)
+head(dt$LATITUDE)
+
+setDT(dt)[, LATITUDE := convert_coords(LATITUDE)][, LONGITUDE := convert_coords(LONGITUDE)]
+
 
 ### 2. Leitura dos dados ---------------------------------
   
