@@ -105,27 +105,43 @@ source('./R/fun/setup.R')
   
   
   
-### 1.4 Download geocoded PMAQ data ------------------------------------
-  # better geocoded info for basic services
-  # source: http://aps.saude.gov.br/ape/pmaq
-  # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
-  
-  
-  
-  
+# ### 1.4 Download geocoded PMAQ data ------------------------------------
+#   # better geocoded info for basic services
+#   # source: http://aps.saude.gov.br/ape/pmaq
+#   # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
+#   
+#   
+#   
+#   
   library(xlsx)
   library(readxl)
-  
+
   df <- readxl::read_excel(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
                            sheet = 'Módulo I')
-  
+
   df2 <- read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
                    sheet = 'Módulo I', col_types = rep("text", 425))
+  
   head(df)
-  
+
   df2 <- subset(df2, LATITUDE !="0" )
+
   
+  fwrite(df, '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
+  dt <- fread('../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
   
+head(dt$LONGITUDE)
+
+dt <- subset(dt, LATITUDE !="0" )
+dt <- subset(dt, LATITUDE !="0.0" )
+dt <- subset(dt, LATITUDE !="9997" )
+
+
+dt[ LATITUDE %like% "-709261"]
+
+
+unique(dt$LATITUDE)
+
 ### 2. Leitura dos dados ---------------------------------
   
   
