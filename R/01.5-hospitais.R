@@ -140,6 +140,50 @@ dt <- subset(dt, LATITUDE !="9997" )
 dt[ LATITUDE %like% "-709261"]
 unique(dt$LATITUDE) %>% nchar() %>% table
 
+# identificar cidades com dois digitos de latitude ----------------------
+
+# abrir munis
+munis <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>%
+  as_tibble() %>%
+  st_sf() %>%
+  st_centroid() %>%
+  # transformar para lon-lat %>%
+  sfc_as_cols() %>%
+  # quantos digitos as latitudes tem antes da virgula?
+  mutate(lat_digits = sub("^-?(\\d+)[[:punct:]]{1}\\d+$", "\\1", lat)) %>%
+  mutate(lat_digits = nchar(lat_digits)) %>%
+  # municipio so tem 6 digitos
+  mutate(code_muni = substr(code_muni, 1,6)) %>%
+  # selecionar so as colunas necessarias
+  select(code_muni, lat_digits)
+  
+
+# trazer a quantidade de digitos para o dt
+dt_digitos <- dt %>%
+  rename(code_muni = IBGE) %>%
+  # selecionar so os municipios do projeto
+  filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
+  mutate(code_muni = as.character(code_muni)) %>%
+  left_join(munis, by = "code_muni")
+
+# criar dataframe com as coordenadas ajeitadas
+dt_coords_fixed <- dt_digitos %>%
+  # o ponto na longitude vai ser sempre depois do segundo numerico
+  mutate(lon = sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LONGITUDE)) %>%
+  # o ponto na latitude vai depender do nchar
+  mutate(lat = ifelse(lat_digits == 1, sub("(^?-\\d{1})(\\d+)", "\\1\\.\\2", LATITUDE),
+                          sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LATITUDE))) %>%
+  mutate(lon = as.numeric(lon),
+         lat = as.numeric(lat))
+
+
+# teste
+dt_coords_fixed %>%
+  to_spatial() %>%
+  mapview()
+
+
+
 #  funcao para corrigir coordenadas lat lon, porque dados originais estao em Excel.xls
 convert_coords <- function(coords) {
   
