@@ -26,36 +26,37 @@ calcular_acess <- function(sigla_muni, ano) {
   
   # Ler e empilhar ttmatrix
   future::plan(future::multiprocess)
-  ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=readr::read_rds, future.packages=c('readr')) %>% data.table::rbindlist(fill = T)
+  ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=readr::read_rds, future.packages=c('readr')) %>% 
+    data.table::rbindlist(fill = T)
   # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
   
   # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
-    # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
-    # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
-    ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
-    ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
-    ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
-    
-   # convert depart_time para formato itime
-    ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
-      
-    # Classificar informacao de horario de partida como pico ou fora pico
-    ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
-                            ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
+  # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
+  # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
+  ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
+  ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
+  ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
   
-      
+  # convert depart_time para formato itime
+  ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
   
-# Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
-
+  # Classificar informacao de horario de partida como pico ou fora pico
+  ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
+                                     ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
+  
+  
+  
+  # Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
+  
   # Calcular a mediana agrupando por sigla_muni, modo, origin, destination, pico
   ttmatrix_median <- ttmatrix_allmodes[, .(tt_median = median(travel_time, na.rm = TRUE)), 
                                        by = .(city, mode, origin, destination, pico)]
   
   # clean RAM memory
-      # rm(ttmatrix_allmodes); gc(reset = T)
-      
-### Agrega dados de uso do solo
-      
+  # rm(ttmatrix_allmodes); gc(reset = T)
+  
+  ### Agrega dados de uso do solo
+  
   # Pegar arquivo com os hexagonos com as atividades
   dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)
   
@@ -72,111 +73,308 @@ calcular_acess <- function(sigla_muni, ano) {
   
   
   # Merge de dados de origem na matrix de tempo de viagem
-    ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
-                                c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capta','quintil','decil') :=
+  ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
+                              c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capta','quintil','decil') :=
                                 list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, i.renda_total, i.renda_capta, i.quintil, i.decil)]
-                                
-  # Merge de dados de destino na matrix de tempo de viagem
-    ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
-                         c("empregos_baixa","empregos_media","empregos_alta","empregos_total","saude_total","edu_total","edu_infantil","edu_fundamental","edu_medio") :=
-                         list(i.empregos_baixa,i.empregos_media,i.empregos_alta,i.empregos_total,i.saude_total,i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio)]    
-    
-    
-  # Transformar o traveltime para minutos
-    ttmatrix[, tt_median := tt_median/60]
   
-    
+  # Merge de dados de destino na matrix de tempo de viagem
+  ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
+                       c("empregos_baixa","empregos_media","empregos_alta","empregos_total","saude_total","edu_total","edu_infantil","edu_fundamental","edu_medio") :=
+                         list(i.empregos_baixa,i.empregos_media,i.empregos_alta,i.empregos_total,i.saude_total,i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio)]    
+  
+  
+  # Transformar o traveltime para minutos
+  ttmatrix[, tt_median := tt_median/60]
+  
+  
   # Calcular emprego com match qualitativo de renda e nivel de escolaridade do emprego 
-    # high income people = jobs with high and med education
-    # low income people = jobs with low and med education
-    ttmatrix[, empregos_match_decil := ifelse(decil>5, sum(empregos_media, empregos_alta), sum(empregos_media, empregos_baixa)), by=.(origin, destination)]
+  # high income people = jobs with high and med education
+  # low income people = jobs with low and med education
+  ttmatrix[, empregos_match_decil := ifelse(decil>5, 
+                                            map2_dbl(empregos_alta, empregos_media, sum), 
+                                            map2_dbl(empregos_baixa, empregos_media, sum))]
+  
+  ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, 
+                                            map2_dbl(empregos_alta, empregos_media, sum), 
+                                            map2_dbl(empregos_baixa, empregos_media, sum))]
+  
+  
+  # ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, sum(empregos_media, empregos_alta), 
+  #                                             ifelse(quintil<=3,sum(empregos_media, empregos_baixa), NA)), by=.(origin, destination)]
+
+  
+  # Construir base dos dados de populacao, renda e uso do solo
+  vars_df <- hexagonos_sf %>%
+    select(id_hex, 
+           # Selecionar variaveis de populacao
+           P001 = pop_total, P002 = cor_branca, P003 = cor_negra, P004 = cor_indigena, P005 = cor_amarela,
+           # Selecionar variveis de renda
+           R001 = renda_capta, R002 = quintil, R003 = decil,
+           # Selecionar atividades de trabalho
+           T001 = empregos_total, T002 = empregos_baixa, T003 = empregos_media, T004 = empregos_baixa,
+           # Selecionar atividades de educacao
+           E001 = edu_total, E002 = edu_infantil, E003 = edu_fundamental, E004 = edu_medio,
+           # Selecionar atividades de saude (por enquanto so saude total)
+           S001 = saude_total)
     
-    ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, sum(empregos_media, empregos_alta), 
-                                         ifelse(quintil<=3,sum(empregos_media, empregos_baixa), NA)), by=.(origin, destination)]
-    
-
-
-    # calcular totais para cidades
-      # pop
-      total_pop <- sum(hexagonos_sf$pop_total, na.rm=T)
-      total_branca <- sum(hexagonos_sf$cor_branca, na.rm=T)
-      total_amarela <- sum(hexagonos_sf$cor_amarela, na.rm=T)
-      total_indigena <- sum(hexagonos_sf$cor_indigena, na.rm=T)
-      total_negra  <- sum(hexagonos_sf$cor_negra, na.rm=T)
-    
-      # saude
-      total_saude  <- sum(hexagonos_sf$saude_total, na.rm=T)
-      
-      # empregos
-      total_empregos <- sum(hexagonos_sf$empregos_total, na.rm=T)
-      total_empregos_decil <- sum(hexagonos_sf$empregos_match_decil, na.rm=T)
-      total_empregos_quintil <- sum(hexagonos_sf$empregos_match_quintil, na.rm=T)
-      
-      # educacao
-      total_edu  <- sum(hexagonos_sf$edu_total, na.rm=T)
-      total_edu_infantil  <- sum(hexagonos_sf$edu_infantil, na.rm=T)
-      edu_fundamental  <- sum(hexagonos_sf$edu_fundamental, na.rm=T)
-      edu_medio  <- sum(hexagonos_sf$edu_medio, na.rm=T)
-
-
+  
+  # calcular totais para cidades
+  # pop
+  ttmatrix[, total_pop := sum(hexagonos_sf$pop_total, na.rm=T)]
+  ttmatrix[, total_branca := sum(hexagonos_sf$cor_branca, na.rm=T)]
+  ttmatrix[, total_amarela := sum(hexagonos_sf$cor_amarela, na.rm=T)]
+  ttmatrix[, total_indigena := sum(hexagonos_sf$cor_indigena, na.rm=T)]
+  ttmatrix[, total_negra  := sum(hexagonos_sf$cor_negra, na.rm=T)]
+  
+  # saude
+  ttmatrix[, total_saude := sum(hexagonos_sf$saude_total, na.rm=T)]
+  
+  # educacao
+  ttmatrix[, total_edu  := sum(hexagonos_sf$edu_total, na.rm=T)]
+  ttmatrix[, total_edu_infantil  := sum(hexagonos_sf$edu_infantil, na.rm=T)]
+  ttmatrix[, total_edu_fundamental  := sum(hexagonos_sf$edu_fundamental, na.rm=T)]
+  ttmatrix[, total_edu_medio  := sum(hexagonos_sf$edu_medio, na.rm=T)]
+  
+  # empregos
+  # criar totais dos empregos
+  total_empregos_media_baixa <- sum(c(hexagonos_sf$empregos_media, hexagonos_sf$empregos_baixa), na.rm=T)
+  total_empregos_media_alta <- sum(c(hexagonos_sf$empregos_media, hexagonos_sf$empregos_alta), na.rm=T)
+  
+  # colcoar o total de empregos da cidade de cada classificacao
+  ttmatrix[, total_empregos := sum(hexagonos_sf$empregos_total, na.rm=T)]
+  ttmatrix[, total_empregos_match_decil := ifelse(decil>5, total_empregos_media_alta, 
+                                                  total_empregos_media_baixa)]
+  ttmatrix[, total_empregos_match_quintil := ifelse(quintil>=3, total_empregos_media_alta, 
+                                                    total_empregos_media_baixa)]
+  
   # Dicionario de variaveis:
+  # Acessibilidade:
   # - CMA = Acessibilidade Cumulativa Ativa
   # - CMP = Acessibilidade Cumulativa Passiva
   # - CPT = Acessibilidade considerando Competitividade ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!!!!
   # - TMI = Acessibilidade de Tempo Mínimo à Oportunidade
-  
-  # 1 - All accessible activities from each ORIGIN across they day
-  access_ative <- ttmatrix_variaveis[, 
-                                     .(CMA_ST_15 = sum( saude_total[which( tt_median <= 15)], na.rm=T)
-                                       , CMA_ST_30 = sum( saude_total[which( tt_median <= 30)], na.rm=T)
-                                       , CMA_ST_60 = sum( saude_total[which( tt_median <= 60)], na.rm=T)
-                                       , CMA_ST_90 = sum( saude_total[which( tt_median <= 90)], na.rm=T)
-                                       , CMA_ST_120 = sum(saude_total[which( tt_median <= 120)], na.rm=T)
-                                       
-                                       , CMA_EI_15 = sum( escolas_infantil[which( tt_median <= 15)], na.rm=T)
-                                       , CMA_EI_30 = sum( escolas_infantil[which( tt_median <= 30)], na.rm=T)
-                                       , CMA_EI_60 = sum( escolas_infantil[which( tt_median <= 60)], na.rm=T)
-                                       , CMA_EI_90 = sum( escolas_infantil[which( tt_median <= 90)], na.rm=T)
-                                       , CMA_EI_120 = sum(escolas_infantil[which( tt_median <= 120)], na.rm=T)
-                                       
-                                       , CMA_EF_15 = sum( escolas_fundamental[which( tt_median <= 15)], na.rm=T)
-                                       , CMA_EF_30 = sum( escolas_fundamental[which( tt_median <= 30)], na.rm=T)
-                                       , CMA_EF_60 = sum( escolas_fundamental[which( tt_median <= 60)], na.rm=T)
-                                       , CMA_EF_90 = sum( escolas_fundamental[which( tt_median <= 90)], na.rm=T)
-                                       , CMA_EF_120 = sum(escolas_fundamental[which( tt_median <= 120)], na.rm=T)
-                                       
-                                       , CMA_EM_15 = sum( escolas_medio[which( tt_median <= 15)], na.rm=T)
-                                       , CMA_EM_30 = sum( escolas_medio[which( tt_median <= 30)], na.rm=T)
-                                       , CMA_EM_60 = sum( escolas_medio[which( tt_median <= 60)], na.rm=T)
-                                       , CMA_EM_90 = sum( escolas_medio[which( tt_median <= 90)], na.rm=T)
-                                       , CMA_EM_120 = sum(escolas_medio[which( tt_median <= 120)], na.rm=T)
-                                       
-                                       , CMA_TT_15 = sum( empregos_total[which( tt_median <= 15)], na.rm=T)
-                                       , CMA_TT_30 = sum( empregos_total[which( tt_median <= 30)], na.rm=T)
-                                       , CMA_TT_60 = sum( empregos_total[which( tt_median <= 60)], na.rm=T)
-                                       , CMA_TT_90 = sum( empregos_total[which( tt_median <= 90)], na.rm=T)
-                                       , CMA_TT_120 = sum(empregos_total[which( tt_median <= 120)], na.rm=T)
-                                       
-                                       , TMI_ST = min(tt_median[which(saude_total >= 1)])
-                                       , TMI_EI = min(tt_median[which(escolas_infantil >= 1)])
-                                       , TMI_EF = min(tt_median[which(escolas_fundamental >= 1)])
-                                       , TMI_EM = min(tt_median[which(escolas_medio >= 1)])
-                                       
-                                     ),
-                                     by=.(city, mode, origin, decil, quintil, pico) ]
+  # Atividades:
+  # - PT ~ "pop_total"
+  # - PB ~ "cor_branca"
+  # - PA ~ "cor_amarela"
+  # - PI ~ "cor_indigena"
+  # - PN ~ "cor_negra"
+  # - TT ~ "empregos_total"
+  # - TQ ~ "empregos_match_quintil"
+  # - TD ~ "empregos_match_decil"
+  # - ST ~ "saude_total"
+  # - SB ~ "saude_baixa"
+  # - SM ~ "saude_media"
+  # - SA ~ "saude_alta"
+  # - ET ~ "edu_total"
+  # - EI ~ "edu_infantil"
+  # - EF ~ "edu_fundamental"
+  # - EM ~ "edu_medio"
+  # - EI ~ "edu_infantil"
   
   
-  # Calculo da acessibilidade passiva
-  access_passive <- ttmatrix_variaveis[,
-                                       
-                                       .(CMP_PT_15 = sum(pop_total[which( tt_median <= 15)], na.rm=T)
-                                         , CMP_PT_30 = sum(pop_total[which( tt_median <= 30)], na.rm=T)
-                                         , CMP_PT_60 = sum(pop_total[which( tt_median <= 60)], na.rm=T)
-                                         , CMP_PT_90 = sum(pop_total[which( tt_median <= 90)], na.rm=T)
-                                         , CMP_PT_120 = sum(pop_total[which( tt_median <= 120)], na.rm=T)
-                                         
-                                       ),   
-                                       by =.(city, mode, destination, pico)]
+  # calcular acessibilidade cumulativa ativa -------------------------------------------------------------
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+  
+  acess_cma <- "CMA"
+  atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
+  # so com saude total
+  atividade_cma <- c("TT", "TQ", "TD", "ST", "ET", "EI", "EF", "EM")
+  # criar dummy para tt
+  tt <- c(1, 2, 3, 4)
+  
+  grid_cma <- expand.grid(acess_cma, atividade_cma, tt, stringsAsFactors = FALSE) %>%
+    rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
+    # adicionar colunas de time threshold  para cada um dos modos
+    mutate(tt_tp = case_when(
+      tt_sigla == 1 ~ 30,
+      tt_sigla == 2 ~ 60,
+      tt_sigla == 3 ~ 90,
+      tt_sigla == 4 ~ 120
+    )) %>%
+    mutate(tt_ativo = case_when(
+      tt_sigla == 1 ~ 15,
+      tt_sigla == 2 ~ 30,
+      tt_sigla == 3 ~ 45,
+      tt_sigla == 4 ~ 60
+    )) %>%
+    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
+    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+    mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
+                                      atividade_sigla == "TQ" ~ "empregos_match_quintil",
+                                      atividade_sigla == "TD" ~ "empregos_match_decil",
+                                      atividade_sigla == "ST" ~ "saude_total",
+                                      atividade_sigla == "SB" ~ "saude_baixa",
+                                      atividade_sigla == "SM" ~ "saude_media",
+                                      atividade_sigla == "SA" ~ "saude_alta",
+                                      atividade_sigla == "ET" ~ "edu_total",
+                                      atividade_sigla == "EF" ~ "edu_fundamental",
+                                      atividade_sigla == "EM" ~ "edu_medio",
+                                      atividade_sigla == "EI" ~ "edu_infantil")) %>%
+    # adicionar uma variavel com o total de oportunidades da atividade em questao
+    mutate(atividade_total = case_when(
+      atividade_sigla == "TT" ~ "total_empregos",
+      atividade_sigla == "TQ" ~ "total_empregos_match_quintil",
+      atividade_sigla == "TD" ~ "total_empregos_match_decil",
+      atividade_sigla == "ST" ~ "total_saude",
+      atividade_sigla == "SB" ~ "total_saude_basica",
+      atividade_sigla == "SM" ~ "total_saude_media",
+      atividade_sigla == "SA" ~ "total_saude_alta",
+      atividade_sigla == "ET" ~ "total_edu",
+      atividade_sigla == "EI" ~ "total_edu_infantil",
+      atividade_sigla == "EF" ~ "total_edu_fundamental",
+      atividade_sigla == "EM" ~ "total_edu_medio"
+      
+    ))
+  
+  
+  # gerar o codigo
+  codigo_cma_tp <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+                        grid_cma$junto_tp, 
+                        grid_cma$atividade_nome, 
+                        grid_cma$tt_tp,
+                        grid_cma$atividade_total)
+  
+  codigo_cma_ativo <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+                        grid_cma$junto_ativo, 
+                        grid_cma$atividade_nome, 
+                        grid_cma$tt_ativo,
+                        grid_cma$atividade_total)
+  
+  # # codigo para calcular os percentuais das atividades
+  # codigo_cma_perc <- sprintf("%s := %s/%s",
+  #                               grid_cma$junto_tp,
+  #                               grid_cma$junto_tp,
+  #                               grid_cma$atividade_total)
+  
+  
+  # dar nomes às variaveis
+  to_make_cma_tp <- setNames(codigo_cma_tp, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
+  to_make_cma_ativo <- setNames(codigo_cma_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_ativo))
+  
+  # para transporte publico
+  acess_cma_tp <- ttmatrix[mode == "transit",
+                           lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
+                           , by=.(city, mode, origin, pico)]
+  
+  # para modos ativos
+  acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
+                              lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+                              , by=.(city, mode, origin, pico)]
+  
+  
+  
+  # calcular acessibilidade cumulativa passiva ---------------------------------------------------------
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  acess_cmp <- "CMP"
+  atividade_cmp <- c("PT", "PB", "PA", "PI", "PN")
+  # criar dummy para tt
+  tt <- c(1, 2, 3, 4)
+  
+  grid_cmp <- expand.grid(acess_cmp, atividade_cmp, tt, stringsAsFactors = FALSE) %>%
+    rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
+    # adicionar colunas de time threshold para cada um dos modos
+    mutate(tt_tp = case_when(
+      tt_sigla == 1 ~ 30,
+      tt_sigla == 2 ~ 60,
+      tt_sigla == 3 ~ 90,
+      tt_sigla == 4 ~ 120
+    )) %>%
+    mutate(tt_ativo = case_when(
+      tt_sigla == 1 ~ 15,
+      tt_sigla == 2 ~ 30,
+      tt_sigla == 3 ~ 45,
+      tt_sigla == 4 ~ 60
+    )) %>%
+    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
+    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+    mutate(atividade_nome = case_when(atividade_sigla == "PT" ~ "pop_total",
+                                      atividade_sigla == "PB" ~ "cor_branca",
+                                      atividade_sigla == "PA" ~ "cor_amarela",
+                                      atividade_sigla == "PI" ~ "cor_indigena",
+                                      atividade_sigla == "PN" ~ "cor_negra")) %>%
+  # adicionar uma variavel com o total de oportunidades da atividade em questao
+  mutate(atividade_total = case_when(
+    atividade_sigla == "PT" ~ "total_pop",
+    atividade_sigla == "PB" ~ "total_branca",
+    atividade_sigla == "PA" ~ "total_amarela",
+    atividade_sigla == "PI" ~ "total_indigena",
+    atividade_sigla == "PN" ~ "total_negra",
+    
+  ))
+  
+  
+  # gerar o codigo
+  codigo_cmp_tp <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+                        grid_cmp$junto_tp, 
+                        grid_cmp$atividade_nome, 
+                        grid_cmp$tt_tp,
+                        grid_cmp$atividade_total)
+  
+  codigo_cmp_ativo <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+                        grid_cmp$junto_ativo, 
+                        grid_cmp$atividade_nome, 
+                        grid_cmp$tt_ativo,
+                        grid_cmp$atividade_total)
+  
+  
+  # gerar os nomes das variaveis
+  to_make_cmp_tp <- setNames(codigo_cmp_tp, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_tp))
+  
+  to_make_cmp_ativo <- setNames(codigo_cmp_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_ativo))
+  
+  
+  # calcular acessibilidade
+  acess_cmp_tp <- ttmatrix[mode == "transit", lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
+                              , by=.(city, mode, destination, pico)]
+  
+  acess_cmp_ativo <- ttmatrix[mode %in% c("bike", "walk"), lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
+                              , by=.(city, mode, destination, pico)]
+  
+  
+  
+  
+  # calcular acessibilidade tempo minimo (aqui eh feito junto para os dois modos) ------------------
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+  
+  
+  acess_tmi <- "TMI"
+  atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
+  # so com saude total
+  atividade_tmi <- c("ST", "ET", "EI", "EF", "EM")
+  
+  grid_tmi <- expand.grid(acess_tmi, atividade_tmi, stringsAsFactors = FALSE) %>%
+    rename(acess_sigla = Var1, atividade_sigla = Var2) %>%
+    mutate(junto = paste0(acess_sigla, atividade_sigla)) %>%
+    mutate(atividade_nome = case_when(atividade_sigla == "ST" ~ "saude_total",
+                                      atividade_sigla == "SB" ~ "saude_baixa",
+                                      atividade_sigla == "SM" ~ "saude_media",
+                                      atividade_sigla == "SA" ~ "saude_alta",
+                                      atividade_sigla == "ET" ~ "edu_total",
+                                      atividade_sigla == "EI" ~ "edu_infantil",
+                                      atividade_sigla == "EF" ~ "edu_fundamental",
+                                      atividade_sigla == "EM" ~ "edu_medio",
+                                      atividade_sigla == "EI" ~ "edu_infantil"))
+  
+  
+  # gerar o codigo
+  codigo_tmi <- sprintf("%s = min(tt_median[which(%s >= 1)])", 
+                        grid_tmi$junto, 
+                        grid_tmi$atividade_nome)
+  
+  
+  # gerar os nomes das variaveis
+  to_make_tmi <- setNames(codigo_tmi, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi))
+  
+  
+  acess_tmi <- ttmatrix[, lapply(to_make_tmi, function(x) eval(parse(text = x)))
+                              , by=.(city, mode, origin, pico)]
+  
+  
+
+  # juntar os arquivos (ainda necessario metodo) ------------------------------------------------
+
   
   # Juntar os dois
   access <- merge(access_ative, access_passive,
@@ -185,44 +383,6 @@ calcular_acess <- function(sigla_muni, ano) {
                   by.y = c("city", "mode", "destination", "pico"))
   
   
-  # # Nao faz mais sentido o timetrhresold ser menor para walk e bike?
-  # access_at <- ttmatrix_variaveis[mode %in% c("walk", "bike"), 
-  #                                 .(CMA_ST_10 = sum( saude_total[which( tt_median <= 10)], na.rm=T)
-  #                                  , CMA_ST_20 = sum( saude_total[which( tt_median <= 20)], na.rm=T)
-  #                                  , CMA_ST_30 = sum( saude_total[which( tt_median <= 30)], na.rm=T)
-  #                                  , CMA_ST_40 = sum( saude_total[which( tt_median <= 40)], na.rm=T)
-  #                                  , CMA_ST_50 = sum( saude_total[which( tt_median <= 50)], na.rm=T)
-  #                                  
-  #                                  , CMA_EI_10 = sum( escolas_infantil[which( tt_median <= 10)], na.rm=T)
-  #                                  , CMA_EI_20 = sum( escolas_infantil[which( tt_median <= 20)], na.rm=T)
-  #                                  , CMA_EI_30 = sum( escolas_infantil[which( tt_median <= 30)], na.rm=T)
-  #                                  , CMA_EI_40 = sum( escolas_infantil[which( tt_median <= 40)], na.rm=T)
-  #                                  , CMA_EI_50 = sum( escolas_infantil[which( tt_median <= 50)], na.rm=T)
-  #                                  
-  #                                  , CMA_EF_10 = sum( escolas_fundamental[which( tt_median <= 10)], na.rm=T)
-  #                                  , CMA_EF_20 = sum( escolas_fundamental[which( tt_median <= 20)], na.rm=T)
-  #                                  , CMA_EF_30 = sum( escolas_fundamental[which( tt_median <= 30)], na.rm=T)
-  #                                  , CMA_EF_40 = sum( escolas_fundamental[which( tt_median <= 40)], na.rm=T)
-  #                                  , CMA_EF_50 = sum( escolas_fundamental[which( tt_median <= 50)], na.rm=T)
-  #                                  
-  #                                  , CMA_EM_10 = sum( escolas_medio[which( tt_median <= 10)], na.rm=T)
-  #                                  , CMA_EM_20 = sum( escolas_medio[which( tt_median <= 20)], na.rm=T)
-  #                                  , CMA_EM_30 = sum( escolas_medio[which( tt_median <= 30)], na.rm=T)
-  #                                  , CMA_EM_40 = sum( escolas_medio[which( tt_median <= 40)], na.rm=T)
-  #                                  , CMA_EM_50 = sum( escolas_medio[which( tt_median <= 50)], na.rm=T)
-  #                                  
-  #                                  , CMA_TT_10 = sum( empregos_total[which( tt_median <= 10)], na.rm=T)
-  #                                  , CMA_TT_20 = sum( empregos_total[which( tt_median <= 20)], na.rm=T)
-  #                                  , CMA_TT_30 = sum( empregos_total[which( tt_median <= 30)], na.rm=T)
-  #                                  , CMA_TT_40 = sum( empregos_total[which( tt_median <= 40)], na.rm=T)
-  #                                  , CMA_TT_50 = sum( empregos_total[which( tt_median <= 50)], na.rm=T)
-  #                                  
-  #                                  , TMI_ST = min(tt_median[which(saude_total >= 1)])
-  #                                  , TMI_EI = min(tt_median[which(escolas_infantil >= 1)])
-  #                                  , TMI_EF = min(tt_median[which(escolas_fundamental >= 1)])
-  #                                  , TMI_EM = min(tt_median[which(escolas_medio >= 1)])
-  # ),
-  # by=.(city, mode, origin, pico) ]
   
   # # Juntar as bases
   # access <- rbind(access_pt, access_at)
@@ -256,11 +416,11 @@ calcular_acess <- function(sigla_muni, ano) {
 }
 
 
-```
 
-Função para produzir mapas de acessibilidade:
-  
-  ```{r fun_criar_mapas}
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+# FUNCAO PARA CRIAR OS MAPAS DE ACESSIBILIDADE ------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
 
 
 # Abrir linhas de alta/media capasigla_muni
@@ -273,7 +433,7 @@ linhas_hm <- read_rds("../data/linhas_HMcapasigla_muni/linhas_HMcapasigla_muni.r
 # modo <- "walk"
 # atividade <- "ST"
 
-# Fazer mapas para cada uma das atividades, fazendo o facet_wrap pelo threshold --------------------
+# Fazer mapas para cada uma das atividades, fazendo o facet_wrap pelo threshold
 fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salvar = FALSE, 
                                         nrow = 1) {
   
@@ -450,20 +610,10 @@ theme_for_TMI <- function(base_size) {
     )
 }
 
-# # Fazer mapas para cada uma das atividades, fazendo comparacao entre sigla_munis -----------------------
-# 
-# fazer_mapa_acess_comparar <- function(variables) {
-#   
-# }
 
 
-```
-
-
-## Fortaleza
-
-```{r acess acumulativa for}
-
+# CALCULAR INDICADORES PARA FORTALEZA ---------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
 # calcular_acess("for")
@@ -536,13 +686,9 @@ fazer_mapa_acess_sigla_muni(acess_for, indicador = "CMA", modo = "bike", ativida
 
 
 
-```
 
-## Belo Horizonte
-
-Para Belo Horizonte:
-  
-  ```{r acess acumulativa bel}
+# CALCULAR INDICADORES PARA BELO HORIZONTE ---------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
 # calcular_acess("bel")
@@ -578,13 +724,9 @@ fazer_mapa_acess_sigla_muni(acess_bel, indicador = "CMA", modo = "transit", ativ
                             salvar = TRUE)
 
 
-```
 
-## Rio de Janeiro
-
-Para o Rio de Janeiro:
-  
-  ```{r acess acumulativa rio}
+# CALCULAR INDICADORES PARA RIO DE JANEIRO ---------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
 # calcular_acess("rio")
@@ -619,13 +761,11 @@ fazer_mapa_acess_sigla_muni(acess_rio, indicador = "CMA", modo = "transit", ativ
 fazer_mapa_acess_sigla_muni(acess_rio, indicador = "CMA", modo = "transit", atividade = "EM",
                             salvar = TRUE, nrow = 2)
 
-```
 
-## Curitiba
 
-Para o Curitiba:
-  
-  ```{r acess acumulativa cur}
+
+# CALCULAR INDICADORES PARA CURITIBA ---------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
 # calcular_acess("cur")
@@ -660,5 +800,4 @@ fazer_mapa_acess_sigla_muni(acess_cur, indicador = "CMA", modo = "transit", ativ
 fazer_mapa_acess_sigla_muni(acess_cur, indicador = "CMA", modo = "transit", atividade = "EM",
                             salvar = TRUE, nrow = 2)
 
-```
 
