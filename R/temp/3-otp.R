@@ -7,7 +7,7 @@ construir_graph <- function(cidade) {
   otp_build_graph(otp = "../otp/programs/otp.jar", dir = "../otp", router = cidade, memory = 6) 
   
 }
-
+ 
 
 
 

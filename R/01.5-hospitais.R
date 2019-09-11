@@ -1,6 +1,7 @@
 ref https://github.com/rafapereirabr/thesis/blob/master/Rscripts/0%20Rio%20places_schools%20and%20hospitals.R
 
 
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.1.5 Download dos dados geolocalizados dos estabelecimentos de saude
 ##info
@@ -104,10 +105,69 @@ source('./R/fun/setup.R')
   
   
   
+# ### 1.4 Download geocoded PMAQ data ------------------------------------
+#   # better geocoded info for basic services
+#   # source: http://aps.saude.gov.br/ape/pmaq
+#   # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
+#   
+#   
+#   
+#   
+  library(xlsx)
+  library(readxl)
+
+  df <- readxl::read_excel(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+                           sheet = 'Módulo I')
+
+  df2 <- read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+                   sheet = 'Módulo I', col_types = rep("text", 425))
   
+  head(df)
+
+  df2 <- subset(df2, LATITUDE !="0" )
+
   
+  fwrite(df, '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
+  dt <- fread('../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
   
+head(dt$LONGITUDE)
+
+dt <- subset(dt, LATITUDE !="0" )
+dt <- subset(dt, LATITUDE !="0.0" )
+dt <- subset(dt, LATITUDE !="9997" )
+
+
+dt[ LATITUDE %like% "-709261"]
+unique(dt$LATITUDE) %>% nchar() %>% table
+
+#  funcao para corrigir coordenadas lat lon, porque dados originais estao em Excel.xls
+convert_coords <- function(coords) {
   
+  x <- gsub("\\.", "", coords)
+  x <- stringr::str_sub(x, 1, -3)
+  x <- as.numeric(x)
+  x <- scales::comma(x)
+  
+  x <- gsub("\\,", "\\.", x)
+  x1 <- str_extract(x, "-?\\d+\\.")
+  x2 <- gsub("(-?\\d+\\.)(.*)", "\\2", x)
+  x3 <- gsub("\\.", "", x2)
+  xfim <- paste0(x1, x3)
+  xfim <- as.numeric(xfim)
+  
+}
+
+
+stringi::stri_sub_replace("-709261", 3, 2) <- 'a'
+
+
+setDT(dt)[, LATITUDE := as.numeric(LATITUDE)][, LONGITUDE := as.numeric(LONGITUDE)]
+head(dt$LONGITUDE)
+head(dt$LATITUDE)
+
+setDT(dt)[, LATITUDE := convert_coords(LATITUDE)][, LONGITUDE := convert_coords(LONGITUDE)]
+
+
 ### 2. Leitura dos dados ---------------------------------
   
   
