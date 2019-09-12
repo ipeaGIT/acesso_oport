@@ -394,7 +394,7 @@ cnes_geo_filter <- subset(cnes_geo, code_muni %in% substr(munis_df$code_muni, 1,
     
 
 # Save data of health facilities
-  readr::write_rds(new_cnes19, "./data/health_facilities2019_filtered.rds")
+  readr::write_rds(new_cnes19, "../data/hospitais/health_facilities2019_filtered.rds")
   
   
   
