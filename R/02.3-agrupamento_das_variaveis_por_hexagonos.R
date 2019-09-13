@@ -10,8 +10,14 @@ source('./R/fun/setup.R')
 # ABRIR ARQUIVOS COM AS OPORTUNIDADES -------------------------------------
 
 # Saude --------------------------------------
-cnes <- readr::read_rds("../data-raw/hospitais/cnes_geocoded.rds") %>%
-  st_as_sf(coords = c("long", "lat"), crs = 4326)
+cnes <- readr::read_rds("../data/hospitais/health_facilities2019_filtered.rds") 
+
+cnes <- cnes[!is.na(lat),] 
+cnes <- cnes[!is.na(NIV_HIER),] 
+
+cnes <- cnes %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+
 
 
 # Escolas  -------------------------------------
@@ -63,7 +69,7 @@ agrupar_variaveis <- function(sigla_muni) {
     st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
   # saude
-  cnes_filtrado <- setDT(cnes)[code_muni == substr(cod_mun_ok, 1, 6)] %>% st_sf()
+  cnes_filtrado <- setDT(cnes)[CODUFMUN == substr(cod_mun_ok, 1, 6)] %>% st_sf()
   
   
   
@@ -135,10 +141,15 @@ agrupar_variaveis <- function(sigla_muni) {
       cnes_filtrado <- sf::st_transform(cnes_filtrado, sf::st_crs(hex_muni)) # mesma projecao geografica
       hex_saude <- hex_muni %>% st_join(cnes_filtrado)
       
+
       # Summarize
-      setDT(hex_saude)[, indice := ifelse(is.na(code_cnes), 0, 1) ]
-      hex_saude <- setDT(hex_saude)[, .(saude_total = sum(indice)), by = id_hex ]
-      
+      hex_saude <- setDT(hex_saude)[, .(saude_total = sum(health_low, health_med, health_high, na.rm=T),
+                                 saude_baixa = sum(health_low, na.rm=T),
+                                 saude_media=sum(health_med, na.rm=T),
+                                 saude_alta=sum(health_high, na.rm=T)),
+                             by = id_hex ]
+
+            
 
               
         

@@ -113,36 +113,33 @@ source('./R/fun/setup.R')
 #   
 #   
 #   
-  library(xlsx)
   library(readxl)
 
-  df <- readxl::read_excel(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
-                           sheet = 'Módulo I')
-
-  df2 <- read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+  # read original Excel sheet
+  df <- readxl::read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
                    sheet = 'Módulo I', col_types = rep("text", 425))
   
-  head(df)
-
-  df2 <- subset(df2, LATITUDE !="0" )
-
-  
+# save as .csv
   fwrite(df, '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
+  rm(df)
+  gc(reset = T)
+  
+  
+# Read PMAQ data
   dt <- fread('../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
   
-head(dt$LONGITUDE)
+# clean PMAQ data
+  
+# remove invalid lat long info
+  head(dt$LONGITUDE)
+  dt <- subset(dt, LATITUDE !="0" )
+  dt <- subset(dt, LATITUDE !="0.0" )
+  dt <- subset(dt, LATITUDE !="9997" )
 
-dt <- subset(dt, LATITUDE !="0" )
-dt <- subset(dt, LATITUDE !="0.0" )
-dt <- subset(dt, LATITUDE !="9997" )
-
-
-dt[ LATITUDE %like% "-709261"]
-unique(dt$LATITUDE) %>% nchar() %>% table
-
-# identificar cidades com dois digitos de latitude ----------------------
-
-# abrir munis
+## Fix lat long info
+  
+  
+# identificar cidades do projeto com dois digitos de latitude
 munis <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>%
   as_tibble() %>%
   st_sf() %>%
@@ -182,34 +179,6 @@ dt_coords_fixed %>%
   to_spatial() %>%
   mapview()
 
-
-
-#  funcao para corrigir coordenadas lat lon, porque dados originais estao em Excel.xls
-convert_coords <- function(coords) {
-  
-  x <- gsub("\\.", "", coords)
-  x <- stringr::str_sub(x, 1, -3)
-  x <- as.numeric(x)
-  x <- scales::comma(x)
-  
-  x <- gsub("\\,", "\\.", x)
-  x1 <- str_extract(x, "-?\\d+\\.")
-  x2 <- gsub("(-?\\d+\\.)(.*)", "\\2", x)
-  x3 <- gsub("\\.", "", x2)
-  xfim <- paste0(x1, x3)
-  xfim <- as.numeric(xfim)
-  
-}
-
-
-stringi::stri_sub_replace("-709261", 3, 2) <- 'a'
-
-
-setDT(dt)[, LATITUDE := as.numeric(LATITUDE)][, LONGITUDE := as.numeric(LONGITUDE)]
-head(dt$LONGITUDE)
-head(dt$LATITUDE)
-
-setDT(dt)[, LATITUDE := convert_coords(LATITUDE)][, LONGITUDE := convert_coords(LONGITUDE)]
 
 
 ### 2. Leitura dos dados ---------------------------------
@@ -326,95 +295,106 @@ setDT(dt)[, LATITUDE := convert_coords(LATITUDE)][, LONGITUDE := convert_coords(
    
 ### 4. Recupera Nivel hierarquico  ---------------------------------
 
-   cnes_filter6, cnes15
    
    
    
-   
+# Bring Hierarchy info from 2015 data
+  cnes_filter6[cnes15, on='CNES', NIV_HIER := i.NIV_HIER]
+  new_cnes19 <- copy(cnes_filter6)
+  summary(new_cnes19$NIV_HIER) # 767 NAs
+  table(new_cnes19$NIV_HIER)
+
+
+  
+# Recode health facilities Hierarchy -----
+# based on PDF (Manual tecnico do cadastro nacional de estabelecimentos de saude - versao 2) p. 131
+  new_cnes19[ , hierarq := ifelse(NIV_HIER =="01", "Low"
+                                   ,ifelse(NIV_HIER =="02", "Medium"
+                                           ,ifelse(NIV_HIER =="03", "Medium"
+                                                   ,ifelse(NIV_HIER =="04", "High"
+                                                           ,ifelse(NIV_HIER =="05", "Low + Medium"
+                                                                   ,ifelse(NIV_HIER =="06", "Medium"
+                                                                           ,ifelse(NIV_HIER =="07", "Medium + High"
+                                                                                   ,ifelse(NIV_HIER =="08", "High", NA))))))))]
+
+
+# convert health facilities Hierarchy into dummy variables
+  new_cnes19[ , health_low := ifelse( grepl("Low", hierarq), 1, 0) ]
+  new_cnes19[ , health_med := ifelse( grepl("Medium", hierarq), 1, 0) ]
+  new_cnes19[ , health_high := ifelse( grepl("High", hierarq), 1, 0) ]
+
    
    
 ### 5. Recuperar Lat Long  ---------------------------------
 
+# subset keep Only municipalities in the project
+cnes_geo_filter <- subset(cnes_geo, code_muni %in% substr(munis_df$code_muni, 1,6))
+
+
 # reorganize cnes geo
-  cnes_geo$code_cnes <- as.character(cnes_geo$code_cnes)
-  cnes_geo <- sfc_as_cols(cnes_geo)
+  cnes_geo_filter$code_cnes <- as.character(cnes_geo_filter$code_cnes)
+  cnes_geo_filter_df <- sfc_as_cols(cnes_geo_filter)
+  plot( cnes_geo_filter['code_muni'] )
   
-  a <- left_join(cnes_filter6, cnes_geo, by=c('CNES'='code_cnes')) %>% setDT()
-  
-ceps_missing <-   a[is.na(lat)]
-ceps_missing <- ceps_missing[, .(CNES,  COD_CEP, CODUFMUN)]
-
-
-ceps_missing[, code_state := substr(CODUFMUN,1,2)]
-
-# add State abbreviation
-ceps_missing <- ceps_missing %>% mutate(abbrev_state =  ifelse(code_state== 11, "RO",
-                                                     ifelse(code_state== 12, "AC",
-                                                            ifelse(code_state== 13, "AM",
-                                                                   ifelse(code_state== 14, "RR",
-                                                                          ifelse(code_state== 15, "PA",
-                                                                                 ifelse(code_state== 16, "AP",
-                                                                                        ifelse(code_state== 17, "TO",
-                                                                                               ifelse(code_state== 21, "MA",
-                                                                                                      ifelse(code_state== 22, "PI",
-                                                                                                             ifelse(code_state== 23, "CE",
-                                                                                                                    ifelse(code_state== 24, "RN",
-                                                                                                                           ifelse(code_state== 25, "PB",
-                                                                                                                                  ifelse(code_state== 26, "PE",
-                                                                                                                                         ifelse(code_state== 27, "AL",
-                                                                                                                                                ifelse(code_state== 28, "SE",
-                                                                                                                                                       ifelse(code_state== 29, "BA",
-                                                                                                                                                              ifelse(code_state== 31, "MG",
-                                                                                                                                                                     ifelse(code_state== 32, "ES",
-                                                                                                                                                                            ifelse(code_state== 33, "RJ",
-                                                                                                                                                                                   ifelse(code_state== 35, "SP",
-                                                                                                                                                                                          ifelse(code_state== 41, "PR",
-                                                                                                                                                                                                 ifelse(code_state== 42, "SC",
-                                                                                                                                                                                                        ifelse(code_state== 43, "RS",
-                                                                                                                                                                                                               ifelse(code_state== 50, "MS",
-                                                                                                                                                                                                                      ifelse(code_state== 51, "MT",
-                                                                                                                                                                                                                             ifelse(code_state== 52, "GO",
-                                                                                                                                                                                                                                    ifelse(code_state== 53, "DF",NA))))))))))))))))))))))))))))
-
-ceps_missing <- select(ceps_missing, CNES, CEP=COD_CEP, Estado=abbrev_state)
-fwrite(ceps_missing, "../data/hospitais/to_galileo.csv", sep=';')
-
-
-  to_spatial(a) %>% mapview()
+# add lat long from the 2015 database
+  new_cnes19 <- left_join(new_cnes19, cnes_geo_filter_df[,.(code_cnes, lon, lat)], by=c('CNES'='code_cnes')) %>% setDT()
+  summary(new_cnes19$lat) # 925 NAs
   
   
-  
-  cnes19[COD_CEP=='69065001']
-  
-# Bring Hierarchy info from 2015 data
-  cnes_filtered[cnes15, on='CNES', NIV_HIER := i.NIV_HIER]
-  table(cnes_filtered$NIV_HIER)
-  summary(cnes_filtered$NIV_HIER)
-  
-  
-  
-# Recode health facilities Hierarchy -----
-# based on PDF (Manual tecnico do cadastro nacional de estabelecimentos de saude - versao 2) p. 131
-  cnes_filtered[ , hierarq := ifelse(NIV_HIER =="01", "Low"
-                                  ,ifelse(NIV_HIER =="02", "Medium"
-                                  ,ifelse(NIV_HIER =="03", "Medium"
-                                  ,ifelse(NIV_HIER =="04", "High"
-                                  ,ifelse(NIV_HIER =="05", "Low + Medium"
-                                  ,ifelse(NIV_HIER =="06", "Medium"
-                                  ,ifelse(NIV_HIER =="07", "Medium + High"
-                                  ,ifelse(NIV_HIER =="08", "High", NA))))))))]
-
-
-# convert health facilities Hierarchy into dummy variables
-  cnes_filtered[ , health_low := ifelse( grepl("Low", hierarq), 1, 0) ]
-  cnes_filtered[ , health_med := ifelse( grepl("Medium", hierarq), 1, 0) ]
-  cnes_filtered[ , health_high := ifelse( grepl("High", hierarq), 1, 0) ]
+# update lat lonf info from PMAQ
+  new_cnes19[dt_coords_fixed, on=c('CNES'='CNES_FINAL'), c('lat', 'lon') := list(i.lat, i.lon) ] 
+  summary(new_cnes19$lat) # 795 NAs
   
 
+### O que fazer com missing??? Rodar no Galileo?
+    #   
+    # ceps_missing <-   a[is.na(lat)]
+    # ceps_missing <- ceps_missing[, .(CNES,  COD_CEP, CODUFMUN)]
+    # 
+    # 
+    # ceps_missing[, code_state := substr(CODUFMUN,1,2)]
+    # 
+    # # add State abbreviation
+    # ceps_missing <- ceps_missing %>% mutate(abbrev_state =  ifelse(code_state== 11, "RO",
+    #                                                      ifelse(code_state== 12, "AC",
+    #                                                             ifelse(code_state== 13, "AM",
+    #                                                                    ifelse(code_state== 14, "RR",
+    #                                                                           ifelse(code_state== 15, "PA",
+    #                                                                                  ifelse(code_state== 16, "AP",
+    #                                                                                         ifelse(code_state== 17, "TO",
+    #                                                                                                ifelse(code_state== 21, "MA",
+    #                                                                                                       ifelse(code_state== 22, "PI",
+    #                                                                                                              ifelse(code_state== 23, "CE",
+    #                                                                                                                     ifelse(code_state== 24, "RN",
+    #                                                                                                                            ifelse(code_state== 25, "PB",
+    #                                                                                                                                   ifelse(code_state== 26, "PE",
+    #                                                                                                                                          ifelse(code_state== 27, "AL",
+    #                                                                                                                                                 ifelse(code_state== 28, "SE",
+    #                                                                                                                                                        ifelse(code_state== 29, "BA",
+    #                                                                                                                                                               ifelse(code_state== 31, "MG",
+    #                                                                                                                                                                      ifelse(code_state== 32, "ES",
+    #                                                                                                                                                                             ifelse(code_state== 33, "RJ",
+    #                                                                                                                                                                                    ifelse(code_state== 35, "SP",
+    #                                                                                                                                                                                           ifelse(code_state== 41, "PR",
+    #                                                                                                                                                                                                  ifelse(code_state== 42, "SC",
+    #                                                                                                                                                                                                         ifelse(code_state== 43, "RS",
+    #                                                                                                                                                                                                                ifelse(code_state== 50, "MS",
+    #                                                                                                                                                                                                                       ifelse(code_state== 51, "MT",
+    #                                                                                                                                                                                                                              ifelse(code_state== 52, "GO",
+    #                                                                                                                                                                                                                                     ifelse(code_state== 53, "DF",NA))))))))))))))))))))))))))))
+    # 
+    # ceps_missing <- select(ceps_missing, CNES, CEP=COD_CEP, Estado=abbrev_state)
+    # fwrite(ceps_missing, "../data/hospitais/to_galileo.csv", sep=';')
+    # 
+    # 
+    #   to_spatial(a) %>% mapview()
+    #   
   
-  
+
+    
+
 # Save data of health facilities
-  readr::write_rds(hospitals_filtered, "./data/health_facilities_filtered.rds")
+  readr::write_rds(new_cnes19, "../data/hospitais/health_facilities2019_filtered.rds")
   
   
   
