@@ -54,7 +54,7 @@ calcular_acess <- function(sigla_muni, ano) {
                                        by = .(city, mode, origin, destination, pico)]
   
   # clean RAM memory
-  # rm(ttmatrix_allmodes); gc(reset = T)
+  rm(ttmatrix_allmodes); gc(reset = T)
   
   ### Agrega dados de uso do solo
   
@@ -98,31 +98,28 @@ calcular_acess <- function(sigla_muni, ano) {
   # high income people = jobs with high and med education
   # low income people = jobs with low and med education
   ttmatrix[, empregos_match_decil := ifelse(decil>5, 
-                                            map2_dbl(empregos_alta, empregos_media, sum), 
-                                            map2_dbl(empregos_baixa, empregos_media, sum))]
+                                            purrr::map2_dbl(empregos_alta, empregos_media, sum), 
+                                            purrr::map2_dbl(empregos_baixa, empregos_media, sum))]
   
   ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, 
-                                            map2_dbl(empregos_alta, empregos_media, sum), 
-                                            map2_dbl(empregos_baixa, empregos_media, sum))]
+                                              purrr::map2_dbl(empregos_alta, empregos_media, sum), 
+                                              purrr::map2_dbl(empregos_baixa, empregos_media, sum))]
   
   
-  # ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, sum(empregos_media, empregos_alta), 
-  #                                             ifelse(quintil<=3,sum(empregos_media, empregos_baixa), NA)), by=.(origin, destination)]
-
-  
-  # Construir base dos dados de populacao, renda e uso do solo
-  vars_df <- hexagonos_sf %>%
-    select(id_hex, 
-           # Selecionar variaveis de populacao
-           P001 = pop_total, P002 = cor_branca, P003 = cor_negra, P004 = cor_indigena, P005 = cor_amarela,
-           # Selecionar variveis de renda
-           R001 = renda_capta, R002 = quintil, R003 = decil,
-           # Selecionar atividades de trabalho
-           T001 = empregos_total, T002 = empregos_baixa, T003 = empregos_media, T004 = empregos_baixa,
-           # Selecionar atividades de educacao
-           E001 = edu_total, E002 = edu_infantil, E003 = edu_fundamental, E004 = edu_medio,
-           # Selecionar atividades de saude (por enquanto so saude total)
-           S001 = saude_total)
+### formato final para disponibilizar dados publicamente
+  # # Construir base dos dados de populacao, renda e uso do solo
+  # vars_df <- hexagonos_sf %>%
+  #   select(id_hex, 
+  #          # Selecionar variaveis de populacao
+  #          P001 = pop_total, P002 = cor_branca, P003 = cor_negra, P004 = cor_indigena, P005 = cor_amarela,
+  #          # Selecionar variveis de renda
+  #          R001 = renda_capta, R002 = quintil, R003 = decil,
+  #          # Selecionar atividades de trabalho
+  #          T001 = empregos_total, T002 = empregos_baixa, T003 = empregos_media, T004 = empregos_baixa,
+  #          # Selecionar atividades de educacao
+  #          E001 = edu_total, E002 = edu_infantil, E003 = edu_fundamental, E004 = edu_medio,
+  #          # Selecionar atividades de saude (por enquanto so saude total)
+  #          S001 = saude_total)
     
   
   # calcular totais para cidades
@@ -275,7 +272,7 @@ calcular_acess <- function(sigla_muni, ano) {
   
   
   # juntar os cma
-  acess_cma <- rbind(acess_cma_tp, acess_cma_ativo, fill = TRUE)  
+ acess_cma <- rbind(acess_cma_tp, acess_cma_ativo, fill = TRUE)
   
   } else {
     
@@ -415,12 +412,20 @@ calcular_acess <- function(sigla_muni, ano) {
   acess_tmi <- ttmatrix[, lapply(to_make_tmi, function(x) eval(parse(text = x)))
                               , by=.(city, mode, origin, pico)]
   
+  # hexagonos_sf <- st_sf(hexagonos_sf)
+  # 
+  # ggplot() + geom_sf(data=hexagonos_sf ,fill='gray') +
+  #  geom_sf(data=subset(hexagonos_sf, saude_media>0) , aes(fill=saude_media))
+  # 
+  # ggplot() + geom_sf(data=hexagonos_sf ,fill='gray') +
+  #   geom_sf(data=subset(hexagonos_sf, saude_baixa>0) , aes(fill=saude_baixa))
+  # 
+  # 
   
+# juntar os arquivos de acess ------------------------------------------------
 
-  # juntar os arquivos de acess ------------------------------------------------
 
-
-  # Juntar os tres
+  # Juntar os tres (left_join)
   acess <- merge(acess_cma, acess_cmp,
                   all.x = TRUE,
                   by.x = c("city", "mode", "origin", "pico"),
