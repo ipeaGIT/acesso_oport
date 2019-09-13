@@ -26,7 +26,7 @@ source('./R/fun/setup.R')
 
 gerar_tt_matrix <- function(sigla_muni) {
   
-  # sigla_muni <- "for"
+  # sigla_muni <- "cur"
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
@@ -66,7 +66,7 @@ lapply(X=a, gerar_tt_matrix)
 
 juntar_output_OTP <- function(sigla_muni, ano){
   
-  # sigla_muni <- 'for'
+  # sigla_muni <- 'bel'; ano <- 2019
   
   # status message
   message("Working on city ", sigla_muni, "\n")
@@ -77,15 +77,17 @@ juntar_output_OTP <- function(sigla_muni, ano){
                pattern = "^ttmatrix_\\w{3}_pt",
                full.names = TRUE)
   #    files <- files[c(1:2, 22, 24,45)]
+  # files <- files[c(1:20)]
   
   # abrir, juntar e salvar arquivos
-  path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.rds", sigla_muni, ano, sigla_muni,'pt')
+  path_out <- sprintf("E:/data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.csv", sigla_muni, ano, sigla_muni,'pt')
   
   # ler, empilhar e salvar arquivos
-  # furrr::future_map(files, data.table::fread, nThread=getDTthreads()) %>%
-  lapply(files, data.table::fread, nThread=getDTthreads()) %>%
+  plan(multiprocess)
+  # furrr::future_map(files, data.table::fread) %>%
+  furrr::future_map(files, fread, .progress = TRUE) %>%
     rbindlist() %>%
-    readr::write_rds(path_out)
+    fwrite(path_out)
   
   
   ### Walking and Cycling
@@ -95,20 +97,22 @@ juntar_output_OTP <- function(sigla_muni, ano){
                full.names = TRUE)
   
   # abrir, juntar e salvar arquivos
-  path_out <- sprintf("../data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.rds", sigla_muni, ano, sigla_muni,'ativo')
+  path_out <- sprintf("E:/data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.csv", sigla_muni, ano, sigla_muni,'ativo')
   
   # ler, empilhar e salvar arquivos
   # furrr::future_map(files, data.table::fread, nThread=getDTthreads()) %>%
   lapply(files, data.table::fread, nThread=getDTthreads()) %>%
     rbindlist() %>%
-    readr::write_rds(path_out) 
+    fwrite(path_out) 
   
   #  # remove files?
   #  walk(files, file.remove)
 }
 
 # Aplicar funcao
-pbapply::pblapply(X=c('for', 'sao'), FUN=juntar_output_OTP, ano=2019)
+pbapply::pblapply(munis_df$abrev_muni, FUN=juntar_output_OTP, ano=2019)
+juntar_output_OTP("sao", 2019)
+juntar_output_OTP("por", 2019)
 
 # plan(multiprocess)
 # invisible(furrr::future_map(horarios, abrir_e_juntar))
