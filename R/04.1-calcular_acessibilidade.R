@@ -15,18 +15,19 @@ source('./R/fun/setup.R')
 
 calcular_acess <- function(sigla_muni, ano) {
   
+  # sigla_muni <- "bho"; ano=2019
   # sigla_muni <- "for"; ano=2019
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
   
   
-  # Listar arquivos de matriz em formato .rds
-  tt_files <- dir(path= sprintf("../data/output_ttmatrix/%s/", sigla_muni), pattern = '.rds', full.names = T)
+  # Listar arquivos de matriz em formato .csv
+  tt_files <- dir(path= sprintf("E:/data/output_ttmatrix/%s/", sigla_muni), pattern = '.csv', full.names = T)
   
   # Ler e empilhar ttmatrix
   future::plan(future::multiprocess)
-  ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=readr::read_rds, future.packages=c('readr')) %>% 
+  ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=fread, future.packages=c('data.table')) %>% 
     data.table::rbindlist(fill = T)
   # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
   
@@ -68,7 +69,9 @@ calcular_acess <- function(sigla_muni, ano) {
   hex_orig <- setDT(hexagonos_sf)[, .(id_hex, pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, renda_total, renda_capta, quintil, decil)]
   
   # filtra apenas colunas com info de uso do solo no destino
-  hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_baixa, empregos_media, empregos_alta, empregos_total, saude_total, edu_total, edu_infantil, edu_fundamental, edu_medio)]
+  hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_total, empregos_baixa, empregos_media, empregos_alta,  
+                                      saude_total, saude_baixa, saude_media, saude_alta,
+                                      edu_total, edu_infantil, edu_fundamental, edu_medio)]
   
   
   
@@ -79,8 +82,12 @@ calcular_acess <- function(sigla_muni, ano) {
   
   # Merge de dados de destino na matrix de tempo de viagem
   ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
-                       c("empregos_baixa","empregos_media","empregos_alta","empregos_total","saude_total","edu_total","edu_infantil","edu_fundamental","edu_medio") :=
-                         list(i.empregos_baixa,i.empregos_media,i.empregos_alta,i.empregos_total,i.saude_total,i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio)]    
+                       c("empregos_total", "empregos_baixa","empregos_media","empregos_alta",
+                         "saude_total", "saude_baixa", "saude_media", "saude_alta",
+                         "edu_total","edu_infantil","edu_fundamental","edu_medio") :=
+                         list(i.empregos_total, i.empregos_baixa,i.empregos_media,i.empregos_alta,
+                              i.saude_total, i.saude_baixa, i.saude_media, i.saude_alta,
+                              i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio)]    
   
   
   # Transformar o traveltime para minutos
@@ -128,6 +135,9 @@ calcular_acess <- function(sigla_muni, ano) {
   
   # saude
   ttmatrix[, total_saude := sum(hexagonos_sf$saude_total, na.rm=T)]
+  ttmatrix[, total_saude_baixa := sum(hexagonos_sf$saude_baixa, na.rm=T)]
+  ttmatrix[, total_saude_media := sum(hexagonos_sf$saude_media, na.rm=T)]
+  ttmatrix[, total_saude_alta := sum(hexagonos_sf$saude_alta, na.rm=T)]
   
   # educacao
   ttmatrix[, total_edu  := sum(hexagonos_sf$edu_total, na.rm=T)]
@@ -140,7 +150,7 @@ calcular_acess <- function(sigla_muni, ano) {
   total_empregos_media_baixa <- sum(c(hexagonos_sf$empregos_media, hexagonos_sf$empregos_baixa), na.rm=T)
   total_empregos_media_alta <- sum(c(hexagonos_sf$empregos_media, hexagonos_sf$empregos_alta), na.rm=T)
   
-  # colcoar o total de empregos da cidade de cada classificacao
+  # colocar o total de empregos da cidade de cada classificacao
   ttmatrix[, total_empregos := sum(hexagonos_sf$empregos_total, na.rm=T)]
   ttmatrix[, total_empregos_match_decil := ifelse(decil>5, total_empregos_media_alta, 
                                                   total_empregos_media_baixa)]
@@ -178,8 +188,6 @@ calcular_acess <- function(sigla_muni, ano) {
   
   acess_cma <- "CMA"
   atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
-  # so com saude total
-  atividade_cma <- c("TT", "TQ", "TD", "ST", "ET", "EI", "EF", "EM")
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
   
@@ -217,7 +225,7 @@ calcular_acess <- function(sigla_muni, ano) {
       atividade_sigla == "TQ" ~ "total_empregos_match_quintil",
       atividade_sigla == "TD" ~ "total_empregos_match_decil",
       atividade_sigla == "ST" ~ "total_saude",
-      atividade_sigla == "SB" ~ "total_saude_basica",
+      atividade_sigla == "SB" ~ "total_saude_baixa",
       atividade_sigla == "SM" ~ "total_saude_media",
       atividade_sigla == "SA" ~ "total_saude_alta",
       atividade_sigla == "ET" ~ "total_edu",
@@ -229,29 +237,32 @@ calcular_acess <- function(sigla_muni, ano) {
   
   
   # gerar o codigo
+  # para tp
   codigo_cma_tp <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
                         grid_cma$junto_tp, 
                         grid_cma$atividade_nome, 
                         grid_cma$tt_tp,
                         grid_cma$atividade_total)
   
+  # para ativo
   codigo_cma_ativo <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
                         grid_cma$junto_ativo, 
                         grid_cma$atividade_nome, 
                         grid_cma$tt_ativo,
                         grid_cma$atividade_total)
   
-  # # codigo para calcular os percentuais das atividades
-  # codigo_cma_perc <- sprintf("%s := %s/%s",
-  #                               grid_cma$junto_tp,
-  #                               grid_cma$junto_tp,
-  #                               grid_cma$atividade_total)
-  
   
   # dar nomes às variaveis
   to_make_cma_tp <- setNames(codigo_cma_tp, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
   to_make_cma_ativo <- setNames(codigo_cma_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_ativo))
   
+  
+  # so aplicar a acessibilidade para os modos da cidade
+  
+  modo <- munis_df[abrev_muni == sigla_muni]$modo
+  
+  if (modo == "todos") {
+    
   # para transporte publico
   acess_cma_tp <- ttmatrix[mode == "transit",
                            lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
@@ -261,6 +272,21 @@ calcular_acess <- function(sigla_muni, ano) {
   acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
                               lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
                               , by=.(city, mode, origin, pico)]
+  
+  
+  # juntar os cma
+  acess_cma <- rbind(acess_cma_tp, acess_cma_ativo, fill = TRUE)  
+  
+  } else {
+    
+    # so para modos ativos
+    acess_cma <- ttmatrix[, 
+                          lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+                          , by=.(city, mode, origin, pico)]
+    
+  }
+  
+  
   
   
   
@@ -325,14 +351,33 @@ calcular_acess <- function(sigla_muni, ano) {
   to_make_cmp_ativo <- setNames(codigo_cmp_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_ativo))
   
   
-  # calcular acessibilidade
-  acess_cmp_tp <- ttmatrix[mode == "transit", lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
-                              , by=.(city, mode, destination, pico)]
   
-  acess_cmp_ativo <- ttmatrix[mode %in% c("bike", "walk"), lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
-                              , by=.(city, mode, destination, pico)]
+  # so aplicar a acessibilidade para os modos da cidade
   
-  
+  if (modo == "todos") {
+    
+    # para transporte publico
+    acess_cmp_tp <- ttmatrix[mode == "transit",
+                             lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
+                             , by=.(city, mode, destination, pico)]
+    
+    # para modos ativos
+    acess_cmp_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
+                                lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
+                                , by=.(city, mode, destination, pico)]
+    
+    
+    # juntar os cma
+    acess_cmp <- rbind(acess_cmp_tp, acess_cmp_ativo, fill = TRUE)  
+    
+  } else {
+    
+    # so para modos ativos
+    acess_cmp <- ttmatrix[, 
+                          lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
+                          , by=.(city, mode, destination, pico)]
+    
+  }
   
   
   # calcular acessibilidade tempo minimo (aqui eh feito junto para os dois modos) ------------------
@@ -341,8 +386,6 @@ calcular_acess <- function(sigla_muni, ano) {
   
   acess_tmi <- "TMI"
   atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
-  # so com saude total
-  atividade_tmi <- c("ST", "ET", "EI", "EF", "EM")
   
   grid_tmi <- expand.grid(acess_tmi, atividade_tmi, stringsAsFactors = FALSE) %>%
     rename(acess_sigla = Var1, atividade_sigla = Var2) %>%
@@ -368,40 +411,29 @@ calcular_acess <- function(sigla_muni, ano) {
   to_make_tmi <- setNames(codigo_tmi, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi))
   
   
+  # calcular acessibilidade
   acess_tmi <- ttmatrix[, lapply(to_make_tmi, function(x) eval(parse(text = x)))
                               , by=.(city, mode, origin, pico)]
   
   
 
-  # juntar os arquivos (ainda necessario metodo) ------------------------------------------------
+  # juntar os arquivos de acess ------------------------------------------------
 
-  
-  # Juntar os dois
-  access <- merge(access_ative, access_passive,
+
+  # Juntar os tres
+  acess <- merge(acess_cma, acess_cmp,
                   all.x = TRUE,
                   by.x = c("city", "mode", "origin", "pico"),
                   by.y = c("city", "mode", "destination", "pico"))
   
+  acess <- merge(acess, acess_tmi,
+                  all.x = TRUE,
+                  by.x = c("city", "mode", "origin", "pico"),
+                  by.y = c("city", "mode", "origin", "pico"))
   
   
-  # # Juntar as bases
-  # access <- rbind(access_pt, access_at)
-  
-  # # Trazer de volta a geometria das origens
-  # 
-  # access_sf <- map(list(access_at, access_pt), merge, 
-  #                  setDT(hexagonos_sf)[, .(id_hex, geometry)],
-  #                  by.x = "origin", 
-  #                  by.y = "id_hex", 
-  #                  all.x = TRUE)
-  # 
-  # access_sf <- map(access_sf, st_sf)
-  # 
-  # names(access_sf) <- c("ativo", "transit")
-  # 
-  # return(access_sf)
-  
-  access_sf <- merge(access, setDT(hexagonos_sf)[, .(id_hex, geometry)],
+  # Transformar para sf
+  acess_sf <- merge(acess, setDT(hexagonos_sf)[, .(id_hex, geometry)],
                      by.x = "origin",
                      by.y = "id_hex",
                      all.x = TRUE) %>%
@@ -409,11 +441,24 @@ calcular_acess <- function(sigla_muni, ano) {
     st_sf()
   
   # Salvar
-  path_out <- sprintf("../data/output_access/acess_%s.rds", sigla_muni)
-  write_rds(access_sf, path_out)
+  path_out <- sprintf("../data/output_access/acess_%s_%s.rds", sigla_muni, ano)
+  write_rds(acess_sf, path_out)
+  
+  # gc colletc
+  gc(TRUE)
   
   
 }
+
+# Aplicar para todas as cidades --------------------------------------------------------------------
+future::plan(future::multiprocess)
+future.apply::future_lapply(X= munis_df$abrev_muni, FUN=calcular_acess, ano = 2019)
+
+
+
+
+
+
 
 
 
@@ -421,17 +466,22 @@ calcular_acess <- function(sigla_muni, ano) {
 # FUNCAO PARA CRIAR OS MAPAS DE ACESSIBILIDADE ------------------------------------------------
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
+sigla_muni <- "for"
 
+# Abrir teste
+acess_for <- read_rds("../data/output_access/acess_for_2019.rds")
 
 # Abrir linhas de alta/media capasigla_muni
-linhas_hm <- read_rds("../data/linhas_HMcapasigla_muni/linhas_HMcapasigla_muni.rds") %>%
+linhas_hm <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%
   mutate(city = substr(sigla_muni, 1, 3) %>% tolower())
 
 
 # acess <- acess_for
 # indicador <- "CMA"
-# modo <- "walk"
-# atividade <- "ST"
+# indicador <- "TMI"
+# modo <- "transit"
+# atividade <- "TQ"
+# nrow = 1
 
 # Fazer mapas para cada uma das atividades, fazendo o facet_wrap pelo threshold
 fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salvar = FALSE, 
@@ -462,27 +512,30 @@ fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salva
     fim <- acess_modo %>%
       # Filtrar indicador
       select(matches(indicador)) %>%
+      # Tirar os NA
+      na.omit() %>%
       gather(atividade, acess_abs, -geometry) %>%
       mutate(acess_discrete = ifelse(acess_abs >= 30, 30, acess_abs)) %>%
       mutate(atividade1 = case_when(
-        atividade == "TMI_EF" ~ "Educação Fundamental",
-        atividade == "TMI_EI" ~ "Educação Infantil",
-        atividade == "TMI_EM" ~ "Educação Média",
-        atividade == "TMI_ST" ~ "Saúde"
+        atividade == "TMIET" ~ "Educação Total",
+        atividade == "TMIEF" ~ "Educação Fundamental",
+        atividade == "TMIEI" ~ "Educação Infantil",
+        atividade == "TMIEM" ~ "Educação Média",
+        atividade == "TMIST" ~ "Saúde Total"
       )
       ) %>%
       mutate(atividade1 = factor(atividade1, 
-                                 levels = c("Saúde", "Educação Infantil", "Educação Fundamental", "Educação Média")))
+                                 levels = c("Saúde Total",  "Educação Total", "Educação Infantil", "Educação Fundamental", "Educação Média")))
     
     mapa <- 
       ggplot(data = fim)+
       # annotation_map_tile(zoomin = -1) +
       geom_sf(aes(fill = acess_discrete), color = NA)+
-      geom_sf(data = linhas_hm_sigla_muni, size=0.7, color="#2340e7")+
+      # geom_sf(data = linhas_hm_sigla_muni, size=0.7, color="#2340e7")+
       facet_wrap(~atividade1, nrow = nrow)+
       viridis::scale_fill_viridis(option = "B", 
                                   direction = -1, 
-                                  breaks = c(0, 10, 20, 30), labels = c("0", "10", "20", ">30")) +
+                                  breaks = c(0, 10, 20, 30), labels = c("0", "10", "20", "> 30 minutos")) +
       theme_for_TMI()+
       labs(fill = "Tempo até a oportunidade\n mais próxima",
            title = title)
@@ -495,11 +548,14 @@ fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salva
                          ifelse(modo == "bike", "bicicleta", 
                                 ifelse(modo == "transit", "transporte público")))
     
-    atividade_title <- ifelse(atividade == "ST", "saúde",
-                              ifelse(atividade == "TT", "trabalho",
-                                     ifelse(atividade == "EI", "educação infantil",
-                                            ifelse(atividade == "EM", "educação média",
-                                                   ifelse(atividade == "EF", "educação fundamental")))))
+    atividade_title <- ifelse(atividade == "ST", "saúde total",
+                              ifelse(atividade == "TT", "trabalho total",
+                                     ifelse(atividade == "TQ", "trabalho (quintil de renda)",
+                                            ifelse(atividade == "TD", "trabalho (decil de renda)",
+                                                   ifelse(atividade == "ET", "educação total",
+                                                          ifelse(atividade == "EI", "educação infantil",
+                                                                 ifelse(atividade == "EM", "educação média",
+                                                                        ifelse(atividade == "EF", "educação fundamental", atividade))))))))
     
     
     # title <- sprintf("Indicador cumulativo para oportunidades de %s\n %s", atividade_title, modo_title)
@@ -517,19 +573,22 @@ fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salva
         gather(threshold, acess_abs, -geometry) %>%
         mutate(threshold1 = as.integer(str_extract(threshold, "\\d+$"))) %>%
         # Pegar somente esses threshoold
-        filter(threshold1 %in% c(15, 30, 60)) %>%
+        filter(threshold1 %in% c(15, 30, 45)) %>%
         mutate(threshold_name = paste0(str_extract(threshold, "\\d+$"), " minutos")) %>%
         mutate(threshold_name = forcats::fct_reorder(factor(threshold_name), threshold1))
+      
+      max_acess <- max(fim$acess_abs)
       
       mapa <-
         ggplot(data = fim)+
         geom_sf(aes(fill = acess_abs), color = NA)+
-        geom_sf(data = linhas_hm_sigla_muni, size=0.7, color="#2340e7")+
+        # geom_sf(data = linhas_hm_sigla_muni, size=0.7, color="#2340e7")+
         facet_wrap(~threshold_name, nrow = nrow) +
-        viridis::scale_fill_viridis(option = "B") +
+        viridis::scale_fill_viridis(option = "B",
+                                    labels = scales::percent) +
         # ggthemes::theme_map() + 
         theme_for_CMA()+
-        labs(fill = "Quantidade de oportunidades\n acessíveis",
+        labs(fill = "Porcentagem de oportunidades\n acessíveis",
              title = title)
       # guides(fill = guide_legend(title.position = 'top'))
       
@@ -551,12 +610,13 @@ fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salva
       mapa <-
         ggplot(data = fim)+
         geom_sf(aes(fill = acess_abs), color = NA)+
-        geom_sf(data = linhas_hm_sigla_muni, size=0.7, color="#2340e7")+
+        # geom_sf(data = linhas_hm_sigla_muni, size=0.7, color="#2340e7")+
         facet_wrap(~threshold_name, nrow = nrow) +
-        viridis::scale_fill_viridis(option = "B") +
+        viridis::scale_fill_viridis(option = "B",
+                                    labels = scales::percent) +
         # ggthemes::theme_map() + 
         theme_for_CMA()+
-        labs(fill = "Quantidade de oportunidades\n acessíveis",
+        labs(fill = "Porcentagem de oportunidades\n acessíveis",
              title = title)
     }
     
