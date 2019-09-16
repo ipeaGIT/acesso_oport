@@ -70,7 +70,7 @@ source('./R/fun/setup.R')
   for (i in meses){
     
       # Definir ano para download
-      ano = '18'
+      ano = '15'
       message(paste0("Baixando dados do mes ",i,"\n"))
   
       # Aplica funcao para baixar arquivos dos estados em paralelo
@@ -112,7 +112,6 @@ source('./R/fun/setup.R')
 #   
 #   
 #   
-#   
   library(readxl)
 
   # read original Excel sheet
@@ -127,6 +126,7 @@ source('./R/fun/setup.R')
   
 # Read PMAQ data
   dt <- fread('../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
+
   
 # clean PMAQ data
   
