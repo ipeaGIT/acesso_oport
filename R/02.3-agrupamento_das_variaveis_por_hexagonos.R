@@ -45,9 +45,10 @@ empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_cidades_selecionad
 
 # FUNCAO PARA REALIZAR EM CADA MUNICIPIO ----------------------------------
 
-# sigla_muni <- "for"
 # Funcao para agregar dados de uso do solo na grade de hexagonos
-agrupar_variaveis <- function(sigla_muni) {
+agrupar_variaveis <- function(sigla_muni) { 
+  
+  # sigla_muni <- "for"
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
@@ -83,7 +84,7 @@ agrupar_variaveis <- function(sigla_muni) {
 # FUNCAO PARA REALIZAR PARA TODAS AS RESOLUCOES ------------------------------
   
   por_resolucao <- function(muni_res) {
-    # muni_res <- '08'
+    # muni_res <- '09'
     
     # endereco do hexagono na resolucao
     hexf <- paste0("../data/hex_municipio/hex_",sigla_muni,'_',muni_res, '.rds')
@@ -124,10 +125,12 @@ agrupar_variaveis <- function(sigla_muni) {
       hex_pop[, decil := findInterval(renda_capta , deciles[ -length(deciles) ] ) ]
       
       # check if pop size in each decile are roughly equal
-      hex_pop[, .(po_in_decile = sum(pop_total, na.rm=T)), by = decil]
       hex_pop[, .(po_in_quintil = sum(pop_total, na.rm=T)), by = quintil]
+      hex_pop[, .(po_in_decile = sum(pop_total, na.rm=T)), by = decil]
       
-      
+      # # remove NAs
+      # hex_pop <- hex_pop[ !is.na(decil)]
+      # hex_pop <- hex_pop[ !is.na(quintil)]
       
 # Agrupar empregos
     # join espacial 

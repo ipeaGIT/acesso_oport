@@ -4,14 +4,18 @@ source('./R/fun/setup.R')
 # FIGURAS A FAZER
 
 # 1) TMI saude de media e alta - PT  (uma cidade)- rio 
+ - so firula
+
 
 # 2) CMA empregos 60 min - PT (duas cidades) - BHe Fortaleza
+- so firula
 
 # 3) CMP - Gráfico de pontos do acesso a pé  educação infantil - população negra e branca (TODAS CIDADES)
 
 # 4) Um gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média
 
 # 5) Box plot por renda - acesso a emprego de PT - 60 min
+- firula
 
 
 # temas
@@ -63,10 +67,11 @@ acess_rio_pt_pico <- acess_rio %>%
 
 # fazer grafico
 acess_rio %>%
-  mutate(TMIEM = ifelse(TMIEM > 30, 30, TMIEM)) %>%
+  mutate(TMISM = ifelse(TMISM > 40, 40, TMISM)) %>%
   ggplot()+
-  geom_sf(aes(fill = TMIEM), color = NA) 
-
+  geom_sf(aes(fill = TMISM), color = NA, alpha=.7)  +
+  viridis::scale_fill_viridis( direction = -1) +
+  theme_for_TMI() 
 
 
 
@@ -85,7 +90,7 @@ library(patchwork)
 # fazer plots
 acess_for %>%
   ggplot()+
-  geom_sf(aes(fill = CMATT60), color = NA)+
+  geom_sf(aes(fill = CMATT60), color = NA, alpha=.9)+
   viridis::scale_fill_viridis(option = "B",
                               labels = scales::percent) +
   theme_for_CMA()+
@@ -93,7 +98,7 @@ acess_for %>%
        title = "") +
 acess_bho %>%
   ggplot()+
-  geom_sf(aes(fill = CMATT60), color = NA)+
+  geom_sf(aes(fill = CMATT60), color = NA, alpha=.9)+
   viridis::scale_fill_viridis(option = "B",
                               labels = scales::percent) +
   theme_for_CMA()+
@@ -111,15 +116,51 @@ acess_cmp_todas_walk <- lapply(dir("../data/output_access/", full.names = TRUE),
   # tirar so caminhada
   filter(mode == "walk")
 
+
+
+# funcao quebra galho
+ler_mais_muni <- function(diretorio){ #diretorio <- '../data/hex_agregados/hex_agregado_spo_09.rds'
+  message(diretorio)
+  tem_sf <-   readr::read_rds(diretorio)
+  sigla_muni <- stringi::stri_sub(diretorio, -10, -8)
+  tem_sf$muni <- sigla_muni
+  return(tem_sf)
+  }
+
+# dados hex agregados
+hex_agreg <- lapply(dir("../data/hex_agregados/", full.names = TRUE, pattern = "09"), ler_mais_muni) %>% rbindlist(fill = TRUE)
+head(hex_agreg)
+
+# cor
+pop_totais1 <- hex_agreg[, .(pop_negra_total = sum(cor_negra, na.rm=T),
+                            pop_branca_total = sum(cor_branca, na.rm=T),
+                             pop_total_total = sum(pop_total, na.rm=T)), by= muni]
+# renda
+pop_totais1 <- hex_agreg[, .(pop_quintil1 = ifelse(quintil==1, sum(pop_total, na.rm=T), NA),
+                             pop_quintil5 = ifelse(quintil==5, sum(pop_total, na.rm=T),NA)), by= muni ]
+
+
+temp1 <- hex_agreg[ quintil %in% c(1, 5)]
+temp2 <- temp1[ pop_total>0, .(pop_quintil =  sum(pop_total, na.rm=T)), by= .(muni, quintil) ]
+temp3 <- spread(temp2, quintil, pop_quintil)
+names(temp3) <- c('muni', 'quintil1', 'quintil5')
+
+# agrega totais de pop de cada muni
+pop_totais <- left_join(pop_totais1, temp3)
+
+
 # tem que filtrar zonas que tenha alguma escola de edu infantil!
-hex_todos <- lapply(dir("../data/hex_agregados/", full.names = TRUE, pattern = "09"), read_rds) %>%
-  rbindlist() %>%
-  filter(edu_infantil != 0)
+hex_escolas <- hex_agreg %>% filter(edu_infantil > 0)
   
-acess_cmp_todas_edu <- acess_cmp_todas %>%
-  filter(origin %in% hex_todos$id_hex) %>%
+acess_cmp_todas_edu <- acess_cmp_todas_walk %>%
+  filter(origin %in% hex_escolas$id_hex) %>%
   # selecionar so acess passiva negros e brancos 15 min
-  select(city, CMPPB15, CMPPN15)
+  select(city, CMPPB30, CMPPN30)
+
+
+
+
+
 
 # grafico!
 
@@ -140,11 +181,11 @@ acess_cmp_todas_edu %>%
 
   
   
-# 4) Um gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média ---
+# 4) Um gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média  --------------------------------
 
 # abrir o acess de todas as cidades e juntar
 
-acess_cma_todas_bike <- lapply(dir("../data/output_access/", full.names = TRUE), read_rds) %>%
+acess_cma_todas_bike <- lapply(dir("../data/output_access/", full.names = TRUE), ler_mais_muni) %>%
   rbindlist(fill = TRUE) %>%
   # tirar so bike
   filter(mode == "bike")
@@ -155,6 +196,11 @@ acess_cma_todas_bike <- lapply(dir("../data/output_access/", full.names = TRUE),
 # grafico!
 library(ggalt)
 library(hrbrthemes)
+
+# calcula summary
+acess_cma_todas_bike[]
+
+, by=city]
 
 acess_cma_todas_bike %>%
   select(city, CMAEM30) %>%
@@ -233,23 +279,27 @@ baseplot2 <- theme_minimal(base_family = "Roboto Condensed") +
     , axis.line.x = element_blank()
   )
 
-acess %>%
+
+
+
+acess %>% 
+  filter(quintil >0) %>%
   # # Wide to long
   # gather(threshold, acess_abs, CMA_TT_15:CMA_TT_90) %>%
   # mutate(threshold1 = as.integer(str_extract(threshold, "\\d+$"))) %>%
   # Refactor quintil
   # mutate(quintil1 = quintil - 1) %>%
   ggplot()+
-  geom_boxplot(aes(x = factor(quintil.x), y = CMATT60, color = factor(quintil.x)), 
-               outlier.colour=rgb(.5,.5,.5, alpha=0.2))+
-  # facet_grid(threshold_name ~ ., scales = "free_y")+
-  facet_wrap(~city, scales = "free")+
-  scale_color_brewer(palette = "RdBu")+
+  geom_boxplot(aes(x = factor(quintil), y = CMATQ60, color = factor(quintil)), 
+               outlier.colour=rgb(.5,.5,.5, alpha=0.1)) +
+  # facet_grid(threshold_name ~ ., scales = "free_y") +
+  facet_wrap(~city, scales = "free") +
+  scale_color_brewer(palette = "RdBu") +
   # hrbrthemes::theme_ipsum_rc() +
   labs(color = "Decil de renda",
        x = "",
        y = "Quantidade de oportunidades acessíveis",
-       title = title) + 
+       title = '') + 
   guides(color=guide_legend(nrow=1)) +
   baseplot2
   
