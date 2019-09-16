@@ -1,3 +1,10 @@
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# # adiciona sigla do municipio
+# hex_grid$muni <- sigla_muni
+
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.2.2 Agrega informacoes demograficas e uso do solo nos hexagonos
 

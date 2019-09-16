@@ -1,3 +1,10 @@
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # # adiciona sigla do municipio
+  # hex_grid$muni <- sigla_muni
+  
+  
+  
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.2.1 Cria grade de haxogonos para os municipios
 
@@ -39,7 +46,6 @@ make_hex <- function(resolution, muninho) {
     rename(id_hex = h3_address) %>%
     as_tibble() %>% 
     st_sf()
-  
   
   
 # salvar ------------------------------------------------------------------
