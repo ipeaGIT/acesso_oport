@@ -98,12 +98,12 @@ calcular_acess <- function(sigla_muni, ano) {
   # high income people = jobs with high and med education
   # low income people = jobs with low and med education
   ttmatrix[, empregos_match_decil := ifelse(decil>5, 
-                                            purrr::map2_dbl(empregos_alta, empregos_media, sum), 
-                                            purrr::map2_dbl(empregos_baixa, empregos_media, sum))]
+                                            empregos_alta + empregos_media, 
+                                            empregos_baixa + empregos_media)]
   
   ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, 
-                                              purrr::map2_dbl(empregos_alta, empregos_media, sum), 
-                                              purrr::map2_dbl(empregos_baixa, empregos_media, sum))]
+                                              empregos_alta + empregos_media, 
+                                              empregos_baixa + empregos_media)]
   
   
 ### formato final para disponibilizar dados publicamente
@@ -263,12 +263,12 @@ calcular_acess <- function(sigla_muni, ano) {
   # para transporte publico
   acess_cma_tp <- ttmatrix[mode == "transit",
                            lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
-                           , by=.(city, mode, origin, pico)]
+                           , by=.(city, mode, origin, pico, quintil, decil)]
   
   # para modos ativos
   acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
                               lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                              , by=.(city, mode, origin, pico)]
+                              , by=.(city, mode, origin, pico, quintil, decil)]
   
   
   # juntar os cma
@@ -279,7 +279,7 @@ calcular_acess <- function(sigla_muni, ano) {
     # so para modos ativos
     acess_cma <- ttmatrix[, 
                           lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                          , by=.(city, mode, origin, pico)]
+                          , by=.(city, mode, origin, pico, quintil, decil)]
     
   }
   
