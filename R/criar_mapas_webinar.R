@@ -263,14 +263,14 @@ acess_cmp_todas_edu %>%
 # abrir o acess de todas as cidades e juntar
 
 # tirar so bike
-acess_bike <- hex_dt[ mode == "bike" ]
+acess_bike <- hex_dt[ mode == "walk" ]
 
-df4 <- acess_bike[, .(Total = weighted.mean(x = CMAEM30[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
-                      Negra = weighted.mean(CMAEM30[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
-                      Branca = weighted.mean(CMAEM30[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
-                      Q1 = weighted.mean(CMAEM30[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
-                      Q5 = weighted.mean(CMAEM30[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
-
+acess_bike <- subset(acess_bike, TMIEM != Inf)
+df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+                      Negra = weighted.mean(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
+                      Branca = weighted.mean(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
+                      Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
+                      Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
     # test plot
     ggplot(df4, aes(y=city, x=Q1, xend=Q5)) + geom_dumbbell()
@@ -297,39 +297,38 @@ df4 <- acess_bike[, .(Total = weighted.mean(x = CMAEM30[which(pop_total>0)], w =
 ### Plot
 
 
+                        # temp_fig4 <- 
+                        # #    df4_cor %>%
+                        #   df4_quintil %>%  
+                        #   ggplot(aes(x = value, y = city)) +
+                        #   geom_point(aes(color=variable, size=3, alpha=.9)) +
+                        #   # geom_bar(position="stack", stat="identity") +
+                        #   scale_x_continuous(name="% de Escolas Acessíveis em < 30 min.", limits = c(0, 1), labels = scales::percent_format(accuracy = 2)) +
+                        #   scale_y_discrete(name="Cidade") +
+                        #   scale_color_brewer(palette = "Oranges", name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
+                        # #  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
+                        #   baseplot +
+                        #   guides(size = FALSE, alpha=FALSE) +
+                        #   theme(legend.position = 'top',
+                        #         legend.direction = "horizontal",
+                        #         legend.title = element_text(size = 12),
+                        #         panel.grid.major.y = element_blank() )
+                        # 
+                        # # save map
+                        # ggsave(temp_fig4, file="./figures/fig4_CMAEM30_bike_renda.png", dpi = 300, width = 10, height = 9, units = "cm")
+                        # beepr::beep()
+
 temp_fig4 <- 
-#    df4_cor %>%
-  df4_quintil %>%  
-  ggplot(aes(x = value, y = city)) +
-  geom_point(aes(color=variable, size=3, alpha=.9)) +
-  geom_bar(position="stack", stat="identity") +
-  scale_x_continuous(name="% de Escolas Acessíveis em < 30 min.", limits = c(0, 1), labels = scales::percent_format(accuracy = 2)) +
-  scale_y_discrete(name="Cidade") +
-  scale_color_brewer(palette = "Oranges", name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
-#  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
-  baseplot +
-  guides(size = FALSE, alpha=FALSE) +
-  theme(legend.position = 'top',
-        legend.direction = "horizontal",
-        legend.title = element_text(size = 12),
-        panel.grid.major.y = element_blank() )
+df4 %>%
+ggplot() + geom_dumbbell(aes(x = Q1, xend = Q5, y = forcats::fct_reorder(city, Total)), 
+                size=3, color="gray80", alpha=.8,
+                colour_x = "steelblue4", colour_xend = "springgreen4") +
+                geom_point(aes(x = Total, y = city), shape = 18, color = "black", size = 2)+
+                theme_ipsum_rc(grid= "X") +
+                labs(x = "")
 
-# save map
-ggsave(temp_fig4, file="./figures/fig4_CMAEM30_bike_renda.png", dpi = 300, width = 10, height = 9, units = "cm")
+ggsave(temp_fig4, file="./figures/fig4_TMIEM_walk_renda.png", dpi = 300, width = 10, height = 9, units = "cm")
 beepr::beep()
-
-
-
-ggplot() + geom_dumbbell(aes(x = P10, xend = P90, y = cidade), 
-                size=3, color="#e3e2e1", 
-                colour_x = "#5b8124", colour_xend = "#bad744",
-                dot_guide=TRUE, dot_guide_size=0.25) +
-  geom_point(aes(x = mean, y = cidade), shape = 18, color = "red", size = 4)+
-  scale_x_percent()+
-  theme_ipsum_rc(grid= "X")+
-  labs(x = "")
-
-
 
 
 
