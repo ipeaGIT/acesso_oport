@@ -3,6 +3,9 @@ source('./R/fun/setup.R')
 
 # FIGURAS A FAZER
 
+# 0) Ok - Mapa com municipios no Projeto
+
+
 # 1) TMI saude de media e alta - PT  (uma cidade)- rio 
  - so firula
 
@@ -12,7 +15,7 @@ source('./R/fun/setup.R')
 
 # 3) CMP - Gráfico de pontos do acesso a pé  educação infantil - população negra e branca (TODAS CIDADES)
 
-# 4) Um gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média
+# 4) Um gráfico de pontos do CMA de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média
 rafa
 
 # 5) Box plot por renda - acesso a emprego de PT - 60 min
@@ -74,7 +77,7 @@ temp_map1 <-
 ggplot() + 
   geom_sf(data=worldMap, fill="white", color="gray90") +
   geom_sf(data=brasil_sf, fill="gray85", colour = "gray85") +
-  geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="springgreen4", color="gray95", alpha=.4) +
+  geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4'
   theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
   theme_map() +
   theme(axis.text = element_blank(), axis.ticks = element_blank()) +
