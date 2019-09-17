@@ -22,7 +22,36 @@ rafa
 - firula
 
 
-# temas
+###### A. Carrega dados ---------------------------
+
+  # funcao quebra galho
+    ler_mais_muni <- function(diretorio){ #diretorio <- '../data/hex_agregados/hex_agregado_spo_09.rds'
+      message(diretorio)
+      tem_sf <-   readr::read_rds(diretorio)
+      sigla_muni <- stringi::stri_sub(diretorio, -10, -8)
+      tem_sf$muni <- sigla_muni
+      return(tem_sf)
+    }
+  
+  # dados hex agregados
+    hex_agreg <- lapply(dir("../data/hex_agregados/", full.names = TRUE, pattern = "09"), ler_mais_muni) %>% rbindlist(fill = TRUE)
+    head(hex_agreg)
+  
+  # dados acessibilidade
+    acess <- lapply(dir("../data/output_access/", full.names = TRUE), ler_mais_muni) %>% rbindlist(fill = TRUE)
+    setDT(acess)
+    setnames(acess, 'origin', 'id_hex' )
+    
+# join data sets
+  hex_dt <- left_join(acess, hex_agreg[, -"geometry", with =F], by=c("id_hex", "quintil", "decil"))
+  setDT(hex_dt)                                                               
+
+
+
+  
+  
+    
+###### B. temas para mapas ---------------------------
 
 theme_for_CMA <- function(base_size) {
   
@@ -58,45 +87,65 @@ theme_for_TMI <- function(base_size) {
     )
 }
 
-# 0) Mapa com cidades do projeto   ---------------------------------------
 
-# get World map
-  worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf()
+# base plot
+
+baseplot <- theme_minimal() +
+  theme( 
+    #axis.text.y  = element_text(face="bold")
+    #,axis.text.x  = element_text(face="bold")
+    #,
+    panel.grid.minor = element_blank()
+    ,strip.text.x = element_text(size = 9, face ="bold")
+    ,legend.text = element_text(size = 9)
+    , axis.text = element_text(size=7)
+    , axis.title = element_text(size=9)
+  )
 
 
-# load map of Brazil and municipalities
-  brasil_sf <- geobr::read_country(year=2018)
-  munis_sf <- lapply(munis_df$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
-  st_crs(munis_sf) <- st_crs(brasil_sf)
-
-# get centroids of municipalities
-  munis_centroids <- st_centroid(munis_sf)
 
 
-temp_map1 <- 
-ggplot() + 
-  geom_sf(data=worldMap, fill="white", color="gray90") +
-  geom_sf(data=brasil_sf, fill="gray85", colour = "gray85") +
-  geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4'
-  theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
-  theme_map() +
-  theme(axis.text = element_blank(), axis.ticks = element_blank()) +
-  coord_sf(xlim = c(st_bbox(brasil_sf)[[1]], st_bbox(brasil_sf)[[3]]),ylim = c(st_bbox(brasil_sf)[[2]], st_bbox(brasil_sf)[[4]])) # coord_cartesian Coordinates Zoom
-  # spherical mal?>>> coord_sf(crs = "+proj=laea +lat_0=-24 +lon_0=300 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +no_defs") 
+
+### 0) Mapa com cidades do projeto   ---------------------------------------
   
+  # get World map
+    worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf()
+  
+  
+  # load map of Brazil and municipalities
+    brasil_sf <- geobr::read_country(year=2018)
+    munis_sf <- lapply(munis_df$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
+    st_crs(munis_sf) <- st_crs(brasil_sf)
+  
+  # get centroids of municipalities
+    munis_centroids <- st_centroid(munis_sf)
+  
+  # create map
+  temp_map1 <- 
+  ggplot() + 
+    geom_sf(data=worldMap, fill="white", color="gray90") +
+    geom_sf(data=brasil_sf, fill="gray85", colour = "gray85") +
+    geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
+    theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
+    theme_map() +
+    theme(axis.text = element_blank(), axis.ticks = element_blank()) +
+    coord_sf(xlim = c(st_bbox(brasil_sf)[[1]], st_bbox(brasil_sf)[[3]]),ylim = c(st_bbox(brasil_sf)[[2]], st_bbox(brasil_sf)[[4]])) # coord_cartesian Coordinates Zoom
+    # spherical mal?>>> coord_sf(crs = "+proj=laea +lat_0=-24 +lon_0=300 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +no_defs") 
+    
+  
+  # save map
+  ggsave(temp_map1, file="./figures/map1_munis.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+  beepr::beep()
 
-# save map
-ggsave(temp_map1, file="./figures/map1_munis.png", dpi = 300, width = 16.5, height = 15, units = "cm")
-beepr::beep()
 
 
 
 
 
 
+### 1) TMI saude de media e alta - PT - rio  ---------------------------------------
 
-# 1) TMI saude de media e alta - PT - rio  ---------------------------------------
-
+  
 # abrir acess rio
 acess_rio <- read_rds("../data/output_access/acess_rio_2019.rds")
 
@@ -157,18 +206,7 @@ acess_cmp_todas_walk <- lapply(dir("../data/output_access/", full.names = TRUE),
 
 
 
-# funcao quebra galho
-ler_mais_muni <- function(diretorio){ #diretorio <- '../data/hex_agregados/hex_agregado_spo_09.rds'
-  message(diretorio)
-  tem_sf <-   readr::read_rds(diretorio)
-  sigla_muni <- stringi::stri_sub(diretorio, -10, -8)
-  tem_sf$muni <- sigla_muni
-  return(tem_sf)
-  }
 
-# dados hex agregados
-hex_agreg <- lapply(dir("../data/hex_agregados/", full.names = TRUE, pattern = "09"), ler_mais_muni) %>% rbindlist(fill = TRUE)
-head(hex_agreg)
 
 # cor
 pop_totais1 <- hex_agreg[, .(pop_negra_total = sum(cor_negra, na.rm=T),
@@ -224,36 +262,65 @@ acess_cmp_todas_edu %>%
 
 # abrir o acess de todas as cidades e juntar
 
-acess_cma_todas_bike <- lapply(dir("../data/output_access/", full.names = TRUE), ler_mais_muni) %>%
-  rbindlist(fill = TRUE) %>%
-  # tirar so bike
-  filter(mode == "bike")
+# tirar so bike
+acess_bike <- hex_dt[ mode == "bike" ]
 
-# grafico!
+df4 <- acess_bike[, .(Total = weighted.mean(x = CMAEM30[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+                      Negra = weighted.mean(CMAEM30[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
+                      Branca = weighted.mean(CMAEM30[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
+                      Q1 = weighted.mean(CMAEM30[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
+                      Q5 = weighted.mean(CMAEM30[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
 
-# grafico!
-library(ggalt)
-library(hrbrthemes)
+    # test plot
+    ggplot(df4, aes(y=city, x=Q1, xend=Q5)) + geom_dumbbell()
 
-# calcula summary
-acess_cma_todas_bike[]
+    
+# reshape: melt data.table
+  df4_long <- melt(df4, id.vars = "city")
 
-, by=city]
+# ajeitar nome das cidade
+  df4_long %<>%
+    mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
+    mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
+    
+# Reorder values and labels
+  df4_quintil <- subset(df4_long, variable %in% c('Total', 'Q1', 'Q5'))
+  df4_quintil$city <- reorder(df4_quintil$city , df4_quintil$value)
+  
+  df4_cor <- subset(df4_long, variable %in% c('Total', 'Branca', 'Negra'))
+  df4_cor$city <- reorder(df4_cor$city , df4_cor$value)
+  
 
-acess_cma_todas_bike %>%
-  select(city, CMAEM30) %>%
-  # ajeitar as cidade
-  mutate(cidade = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
-  mutate(cidade = factor(cidade, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
-  # calcular os valores
-  group_by(cidade) %>%
-  summarise(mean = mean(CMAEM30, na.rm = TRUE),
-            P10 = quantile(CMAEM30, 0.1, na.rm = TRUE),
-            P90 = quantile(CMAEM30, 0.9, na.rm = TRUE)) %>%
-  mutate(cidade = forcats::fct_reorder(cidade, P90)) %>%
-  ggplot()+
-  geom_dumbbell(aes(x = P10, xend = P90, y = cidade), 
+
+
+### Plot
+
+
+temp_fig4 <- 
+#    df4_cor %>%
+  df4_quintil %>%  
+  ggplot(aes(x = value, y = city)) +
+  geom_point(aes(color=variable, size=3, alpha=.9)) +
+  geom_bar(position="stack", stat="identity") +
+  scale_x_continuous(name="% de Escolas Acessíveis em < 30 min.", limits = c(0, 1), labels = scales::percent_format(accuracy = 2)) +
+  scale_y_discrete(name="Cidade") +
+  scale_color_brewer(palette = "Oranges", name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
+#  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
+  baseplot +
+  guides(size = FALSE, alpha=FALSE) +
+  theme(legend.position = 'top',
+        legend.direction = "horizontal",
+        legend.title = element_text(size = 12),
+        panel.grid.major.y = element_blank() )
+
+# save map
+ggsave(temp_fig4, file="./figures/fig4_CMAEM30_bike_renda.png", dpi = 300, width = 10, height = 9, units = "cm")
+beepr::beep()
+
+
+
+ggplot() + geom_dumbbell(aes(x = P10, xend = P90, y = cidade), 
                 size=3, color="#e3e2e1", 
                 colour_x = "#5b8124", colour_xend = "#bad744",
                 dot_guide=TRUE, dot_guide_size=0.25) +
@@ -262,6 +329,18 @@ acess_cma_todas_bike %>%
   theme_ipsum_rc(grid= "X")+
   labs(x = "")
 
+
+
+
+
+
+
+# grafico!
+
+
+# grafico!
+library(ggalt)
+library(hrbrthemes)
 
 
 
