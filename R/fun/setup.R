@@ -21,6 +21,7 @@ library(extrafont)    # fontes de texto
 library(knitr)
 library(furrr)
 library(purrr)
+library(forcats)
 library(future.apply) # Aplicar funcoes em paralelo
 # library(h3jsr) # H3 grade hexagonal
 library(dplyr)
