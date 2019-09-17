@@ -325,14 +325,14 @@ acess_cmp_todas_edu %>%
 # selciona so Walking
 acess_walk <- hex_dt[ mode == "walk" ]
 
-# Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 120 min.
-acess_walk[, TMIEM := if_else(TMIEM==Inf, 90, TMIEM)]
+# Se nenhuma atividade acessivel (TMIEI==Inf), entao imputar TMIEI de 120 min.
+acess_walk[, TMIEI := if_else(TMIEI==Inf, 90, TMIEI)]
 
-df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
-                      Negra = weighted.mean(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
-                      Branca = weighted.mean(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
-                      Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
-                      Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
+df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEI[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+                      Negra = weighted.mean(TMIEI[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
+                      Branca = weighted.mean(TMIEI[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
+                      Q1 = weighted.mean(TMIEI[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
+                      Q5 = weighted.mean(TMIEI[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
 
 # ajeitar nome das cidade
@@ -462,3 +462,20 @@ acess %>%
 
 ggsave(file="./figures/fig5-boxplot_renda.png", dpi = 300, width = 16.5, height = 20, units = "cm")
   
+
+
+
+
+
+
+
+
+
+acess_bike[, .(Negra=sum(cor_negra[which(TMIEM>60)] ,na.rm=T) /sum(cor_negra, na.rm=T),
+               Branca=sum(cor_branca[which(TMIEM>60)] ,na.rm=T) /sum(cor_branca, na.rm=T)), by=city]
+
+bike
+
+
+
+
