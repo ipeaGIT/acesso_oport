@@ -114,23 +114,24 @@ baseplot <- theme_minimal() +
   
   
   # load map of Brazil and municipalities
-    brasil_sf <- geobr::read_country(year=2018)
+    states_sf <- geobr::read_state(code_state = "all", year = 2018)
     munis_sf <- lapply(munis_df$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
     st_crs(munis_sf) <- st_crs(brasil_sf)
   
   # get centroids of municipalities
     munis_centroids <- st_centroid(munis_sf)
+    munis_tp_centroids <- subset(munis_centroids, code_muni %in% munis_df$code_muni[which(munis_df$modo=='todos')])
     
-    # get states
-    states <- geobr::read_state(code_state = "all", year = 2018)
+    
+  
   
   # create map
   temp_map1 <- 
   ggplot() + 
     geom_sf(data=worldMap, fill="white", color="gray90") +
-    geom_sf(data=brasil_sf, fill="gray85", colour = "gray85") +
-    geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
-    geom_sf(data = states, fill = NA)+
+#    geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
+#    geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
+   geom_sf(data=st_buffer(munis_tp_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
     theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
     theme_map() +
     theme(axis.text = element_blank(), axis.ticks = element_blank()) +
@@ -138,8 +139,10 @@ baseplot <- theme_minimal() +
     # spherical mal?>>> coord_sf(crs = "+proj=laea +lat_0=-24 +lon_0=300 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +no_defs") 
     
   
+  
+  
   # save map
-  ggsave(temp_map1, file="./figures/map1_munis.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+  ggsave(temp_map1, file="./figures/map1_munis1.png", dpi = 300, width = 16.5, height = 15, units = "cm")
   beepr::beep()
 
 
