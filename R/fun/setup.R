@@ -3,6 +3,7 @@ Sys.setenv(TZ='UTC') # Fuso horario local
 # carregar bibliotecas
 
 library(ggplot2)      # visualizacao de dados
+library(ggthemes)     # temas para visualizacao de dados
 library(sf)           # leitura e manipulacao de dados espaciais
 library(data.table)   # manipulacao de dados
 # library(read.dbc)     # leitura de bases relacionais em Microsoft Access

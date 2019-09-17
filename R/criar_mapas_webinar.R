@@ -13,6 +13,7 @@ source('./R/fun/setup.R')
 # 3) CMP - Gráfico de pontos do acesso a pé  educação infantil - população negra e branca (TODAS CIDADES)
 
 # 4) Um gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média
+rafa
 
 # 5) Box plot por renda - acesso a emprego de PT - 60 min
 - firula
@@ -53,6 +54,41 @@ theme_for_TMI <- function(base_size) {
       
     )
 }
+
+# 0) Mapa com cidades do projeto   ---------------------------------------
+
+# get World map
+  worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf()
+
+
+# load map of Brazil and municipalities
+  brasil_sf <- geobr::read_country(year=2018)
+  munis_sf <- lapply(munis_df$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
+  st_crs(munis_sf) <- st_crs(brasil_sf)
+
+# get centroids of municipalities
+  munis_centroids <- st_centroid(munis_sf)
+
+
+temp_map1 <- 
+ggplot() + 
+  geom_sf(data=worldMap, fill="white", color="gray90") +
+  geom_sf(data=brasil_sf, fill="gray85", colour = "gray85") +
+  geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="springgreen4", color="gray95", alpha=.4) +
+  theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
+  theme_map() +
+  theme(axis.text = element_blank(), axis.ticks = element_blank()) +
+  coord_sf(xlim = c(st_bbox(brasil_sf)[[1]], st_bbox(brasil_sf)[[3]]),ylim = c(st_bbox(brasil_sf)[[2]], st_bbox(brasil_sf)[[4]])) # coord_cartesian Coordinates Zoom
+  # spherical mal?>>> coord_sf(crs = "+proj=laea +lat_0=-24 +lon_0=300 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +no_defs") 
+  
+
+# save map
+ggsave(temp_map1, file="./figures/map1_munis.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+beepr::beep()
+
+
+
+
 
 
 
