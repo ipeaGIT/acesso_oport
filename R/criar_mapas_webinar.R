@@ -7,11 +7,11 @@ source('./R/fun/setup.R')
 
 
 # 1) TMI saude de media e alta - PT  (uma cidade)- rio 
- - so firula
+ # - so firula
 
 
 # 2) CMA empregos 60 min - PT (duas cidades) - BHe Fortaleza
-- so firula
+# - so firula
 
 # 3) CMP - Gráfico de pontos do acesso a pé  educação infantil - população negra e branca (TODAS CIDADES)
 
@@ -53,7 +53,7 @@ rafa
     
 ###### B. temas para mapas ---------------------------
 
-theme_for_CMA <- function(base_size) {
+theme_for_CMA <- function(base_size, ...) {
   
   theme_void(base_family="Roboto Condensed") %+replace%
     
@@ -64,7 +64,8 @@ theme_for_CMA <- function(base_size) {
       legend.key.height = unit(0.2,"cm"),
       legend.text=element_text(size=rel(0.5)),
       legend.title=element_text(size=rel(0.5)),
-      plot.title = element_text(hjust = 0, vjust = 4)
+      # plot.title = element_text(hjust = 0, vjust = 4),
+      ...
       
       
     )
@@ -119,6 +120,9 @@ baseplot <- theme_minimal() +
   
   # get centroids of municipalities
     munis_centroids <- st_centroid(munis_sf)
+    
+    # get states
+    states <- geobr::read_state(code_state = "all", year = 2018)
   
   # create map
   temp_map1 <- 
@@ -126,6 +130,7 @@ baseplot <- theme_minimal() +
     geom_sf(data=worldMap, fill="white", color="gray90") +
     geom_sf(data=brasil_sf, fill="gray85", colour = "gray85") +
     geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
+    geom_sf(data = states, fill = NA)+
     theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
     theme_map() +
     theme(axis.text = element_blank(), axis.ticks = element_blank()) +
@@ -144,22 +149,47 @@ baseplot <- theme_minimal() +
 
 
 ### 1) TMI saude de media e alta - PT - rio  ---------------------------------------
-
+  
+  
+# linhas capacidade
+linhas_hm_rio <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%
+  filter(Cidade == "Rio de Janeiro")
   
 # abrir acess rio
 acess_rio <- read_rds("../data/output_access/acess_rio_2019.rds")
+  
+# abrir muni
+muni_rio <- read_rds("../data-raw/municipios/rio/municipio_rio.rds")
 
-# tirar so pt e pico
+# tirar so pt e pico e colocar em format long
 acess_rio_pt_pico <- acess_rio %>%
-  filter(mode == "transit" & pico == 1)
+  filter(mode == "transit" & pico == 1) %>%
+  # tirar so saude medio e alta
+  select(TMISM, TMISA) %>%
+  gather(ind, valor, TMISM:TMISA)
 
 # fazer grafico
-acess_rio %>%
-  mutate(TMISM = ifelse(TMISM > 40, 40, TMISM)) %>%
+acess_rio_pt_pico %>%
+  mutate(valor = ifelse(valor > 40, 40, valor)) %>%
+  mutate(ind = factor(ind, 
+                      levels = c("TMISM", "TMISA"), 
+                      labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade"))) %>%
   ggplot()+
-  geom_sf(aes(fill = TMISM), color = NA, alpha=.7)  +
-  viridis::scale_fill_viridis( direction = -1) +
+  geom_sf(data = muni_rio, fill = NA)+
+  geom_sf(aes(fill = valor), color = NA, alpha=.7)  +
+  geom_sf(data = linhas_hm_rio, size=0.7, color="#2340e7")+
+  viridis::scale_fill_viridis( direction = -1,
+                               breaks = c(0, 10, 20, 30, 40),
+                               labels = c(0, 10, 20, 30, "+40 min")) +
+  labs(fill = "Tempo até a oportunidade\n mais próxima")+
+  facet_wrap(~ind, ncol = 1)+
   theme_for_TMI() 
+
+# save map
+ggsave(file="./figures/fig1-TMI_SM_TP.png", dpi = 300, width = 16.5, height = 20, units = "cm")
+
+
+
 
 
 
@@ -172,26 +202,53 @@ acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>%
 acess_bho <- read_rds("../data/output_access/acess_bho_2019.rds") %>%
   filter(mode == "transit" & pico == 1)
 
-library(patchwork)
+# linhas capacidade
+linhas_hm_bho <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%
+  filter(Cidade == "Belo Horizonte")
 
+library(patchwork)
+library(cowplot)
 
 # fazer plots
-acess_for %>%
+plot1 <- acess_for %>%
   ggplot()+
-  geom_sf(aes(fill = CMATT60), color = NA, alpha=.9)+
+  geom_sf(aes(fill = CMATT30), color = NA, alpha=.9)+
   viridis::scale_fill_viridis(option = "B",
+                              limits = c(0, 0.7),
+                              breaks = c(0.001, 0.35, 0.7),
                               labels = scales::percent) +
   theme_for_CMA()+
   labs(fill = "",
-       title = "") +
-acess_bho %>%
+       title = "Fortaleza") +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+
+
+plot2 <- acess_bho %>%
   ggplot()+
-  geom_sf(aes(fill = CMATT60), color = NA, alpha=.9)+
+  geom_sf(aes(fill = CMATT30), color = NA, alpha=.9)+
+  geom_sf(data = linhas_hm_bho, size=0.9, color="#d7301f")+
   viridis::scale_fill_viridis(option = "B",
-                              labels = scales::percent) +
-  theme_for_CMA()+
-  labs(fill = "",
-       title = "")
+                              limits = c(0, 0.7),
+                              breaks = c(0.001, 0.35, 0.7),
+                              labels = c(0, 35, "70%")) +
+  theme_for_CMA(plot.title = element_text(hjust = 0.5))+
+  labs(fill = "Porcentagem de\n oportunidades acessíveis",
+       title = "Belo Horizonte")
+
+
+legenda <- get_legend(plot2 + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
+
+temp <- plot_grid(plot1, plot2 + theme(legend.position = "none"))
+
+
+plot_grid(temp, legenda,  ncol = 1, rel_heights = c(1, .2))
+
+
+ggsave(file="./figures/fig2-CMA_for_bho.png", dpi = 300, width = 16.5, height = 12, units = "cm")
+
 
 
 
@@ -359,23 +416,6 @@ acess <- lapply(path_acess, read_rds) %>% rbindlist() %>%
   # pegar so TP
   filter(mode == "transit")
 
-# # Pegar arquivo com os hexagonos com as atividades
-# dir_hex <- sprintf("../data/hex_agregado_quintil/hex_agregado_quintil_%s.rds", cidade)
-
-# # abrir oportunidades com hexagonos
-# hexagonos_sf <- read_rds(dir_hex) %>%
-#   st_set_geometry(NULL) %>%
-#   select(id_hex, pop_total, quintil) %>%
-#   ungroup()
-# 
-# # trazer a informacoa da renda para o hexagono na base da acessibilidade
-# acess_quintil <- merge(setDT(acess), setDT(hexagonos_sf), 
-#                        by.x = "origin",
-#                        by.y = "id_hex",
-#                        all.x = TRUE)
-# 
-# # tirar populacao zero
-# acess_quintil <- acess_quintil[pop_total > 0]
 
 # BOXPLOT ----------------------------------------------------------------------------------------
 
@@ -407,17 +447,22 @@ acess %>%
   # mutate(threshold1 = as.integer(str_extract(threshold, "\\d+$"))) %>%
   # Refactor quintil
   # mutate(quintil1 = quintil - 1) %>%
+  mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
+  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
   ggplot()+
   geom_boxplot(aes(x = factor(quintil), y = CMATQ60, color = factor(quintil)), 
                outlier.colour=rgb(.5,.5,.5, alpha=0.1)) +
   # facet_grid(threshold_name ~ ., scales = "free_y") +
   facet_wrap(~city, scales = "free") +
-  scale_color_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "Spectral") +
   # hrbrthemes::theme_ipsum_rc() +
   labs(color = "Decil de renda",
        x = "",
-       y = "Quantidade de oportunidades acessíveis",
+       y = "Porcentagem de oportunidades acessíveis",
        title = '') + 
   guides(color=guide_legend(nrow=1)) +
   baseplot2
+
+
+ggsave(file="./figures/fig5-boxplot_renda.png", dpi = 300, width = 16.5, height = 20, units = "cm")
   
