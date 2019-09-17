@@ -25,6 +25,8 @@ library(forcats)
 library(future.apply) # Aplicar funcoes em paralelo
 # library(h3jsr) # H3 grade hexagonal
 library(dplyr)
+library(hrbrthemes)
+library(patchwork)
 # library(Hmisc) # calcular quantis ponderados
 # library(osmdata) # Download de dados do OpenStreeteMaps (OSM)
 library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/opentripplanner
