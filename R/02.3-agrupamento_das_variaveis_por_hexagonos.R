@@ -1,10 +1,3 @@
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# # adiciona sigla do municipio
-# hex_grid$muni <- sigla_muni
-
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.2.2 Agrega informacoes demograficas e uso do solo nos hexagonos
 
@@ -37,6 +30,8 @@ escolas <- fread("../data/censo_escolar/censo_escolar_2015.csv") %>%
   # # Transformar para formato longo
   # tidyr::gather(tipo, mat_n, mat_infantil:mat_medio)
 
+# somente escolas publicas
+escolas <- subset(escolas, rede !="Privada")
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
@@ -190,6 +185,8 @@ hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
 # substitui NAs por zeros
 hex_muni_fim[is.na(hex_muni_fim)] <- 0
 
+# adiciona sigla do municipio
+hex_muni_fim$muni <- sigla_muni
 
 
   # Salva grade de hexagonos com todas informacoes de uso do soloe
