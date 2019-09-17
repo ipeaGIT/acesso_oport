@@ -16,7 +16,7 @@ source('./R/fun/setup.R')
 calcular_acess <- function(sigla_muni, ano) {
   
   # sigla_muni <- "bho"; ano=2019
-  # sigla_muni <- "for"; ano=2019
+  # sigla_muni <- "spo"; ano=2019
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
