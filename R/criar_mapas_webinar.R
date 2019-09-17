@@ -262,36 +262,26 @@ acess_cmp_todas_edu %>%
 
 # abrir o acess de todas as cidades e juntar
 
-# tirar so bike
-acess_bike <- hex_dt[ mode == "walk" ]
+# selciona so Walking
+acess_walk <- hex_dt[ mode == "walk" ]
 
-acess_bike <- subset(acess_bike, TMIEM != Inf)
-df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+# Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 120 min.
+acess_walk[, TMIEM := if_else(TMIEM==Inf, 90, TMIEM)]
+
+df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
                       Negra = weighted.mean(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
                       Branca = weighted.mean(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
                       Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
                       Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
-    # test plot
-    ggplot(df4, aes(y=city, x=Q1, xend=Q5)) + geom_dumbbell()
-
-    
-# reshape: melt data.table
-  df4_long <- melt(df4, id.vars = "city")
 
 # ajeitar nome das cidade
-  df4_long %<>%
+  df4 %<>%
     mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
     mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
     
-# Reorder values and labels
-  df4_quintil <- subset(df4_long, variable %in% c('Total', 'Q1', 'Q5'))
-  df4_quintil$city <- reorder(df4_quintil$city , df4_quintil$value)
-  
-  df4_cor <- subset(df4_long, variable %in% c('Total', 'Branca', 'Negra'))
-  df4_cor$city <- reorder(df4_cor$city , df4_cor$value)
-  
 
+  
 
 
 ### Plot
@@ -319,15 +309,19 @@ df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = p
                         # beepr::beep()
 
 temp_fig4 <- 
+
 df4 %>%
 ggplot() + geom_dumbbell(aes(x = Q1, xend = Q5, y = forcats::fct_reorder(city, Total)), 
-                size=3, color="gray80", alpha=.8,
-                colour_x = "steelblue4", colour_xend = "springgreen4") +
-                geom_point(aes(x = Total, y = city), shape = 18, color = "black", size = 2)+
+                size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
+                geom_point(aes(x = Total, y = city), color = "black", size = 2)+
+              scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), name="", labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
+              scale_x_continuous(name="Minutes", limits = c(0, 40)) +
+              scale_y_discrete(name="") +
+  
                 theme_ipsum_rc(grid= "X") +
                 labs(x = "")
 
-ggsave(temp_fig4, file="./figures/fig4_TMIEM_walk_renda.png", dpi = 300, width = 10, height = 9, units = "cm")
+ggsave(temp_fig4, file="./figures/fig4_TMIEM_walk_renda.png", dpi = 300, width = 17, height = 17, units = "cm")
 beepr::beep()
 
 
