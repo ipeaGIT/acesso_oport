@@ -158,22 +158,22 @@ muni_rio <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_
 acess_rio_pt_pico <- acess_rio %>%
   filter(mode == "transit" & pico == 1) %>%
   # tirar so saude medio e alta
-  select(TMIEI, TMIEM) %>%
-  gather(ind, valor, TMIEI:TMIEM)
+  select(TMISM, TMISA) %>%
+  gather(ind, valor, TMISM:TMISA)
 
-acess_rio$TMIEM
+acess_rio$saude
 
 # fazer grafico
 fig2 <- 
   acess_rio_pt_pico %>%
   mutate(valor = ifelse(valor > 40, 40, valor)) %>%
   mutate(ind = factor(ind, 
-                      levels = c("TMIEI", "TMIEM"), 
+                      levels = c("TMISM", "TMISA"), 
                       labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade"))) %>%
   ggplot()+
   geom_sf(data = muni_rio, fill = NA) +
   geom_sf(aes(fill = valor), color = NA, alpha=.9)  +
-#  geom_sf(data = linhas_hm_rio, size=0.7, color="#2340e7")+
+  geom_sf(data = linhas_hm_rio, size=0.3, color="gray40")+
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 10, 20, 30, 40),
                                labels = c(0, 10, 20, 30, "+40 min")) +
@@ -222,7 +222,7 @@ plot1 <- acess_for %>%
 plot2 <- acess_bho %>%
   ggplot()+
   geom_sf(aes(fill = CMATT30), color = NA, alpha=.9)+
- # geom_sf(data = linhas_hm_bho, size=0.9, color="#d7301f")+
+  geom_sf(data = linhas_hm_bho, size=0.5, color="gray50")+
   viridis::scale_fill_viridis(option = "B",
                               limits = c(0, 0.7),
                               breaks = c(0.001, 0.35, 0.7),
