@@ -1,6 +1,10 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
+library(ggalt)
+library(hrbrthemes)
+
+
 # FIGURAS A FAZER
 
 # 0) Ok - Mapa com municipios no Projeto
@@ -158,22 +162,22 @@ muni_rio <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_
 acess_rio_pt_pico <- acess_rio %>%
   filter(mode == "transit" & pico == 1) %>%
   # tirar so saude medio e alta
-  select(TMIEI, TMIEM) %>%
-  gather(ind, valor, TMIEI:TMIEM)
+  select(TMISM, TMISA) %>%
+  gather(ind, valor, TMISM:TMISA)
 
-acess_rio$TMIEM
+acess_rio$saude
 
 # fazer grafico
 fig2 <- 
   acess_rio_pt_pico %>%
   mutate(valor = ifelse(valor > 40, 40, valor)) %>%
   mutate(ind = factor(ind, 
-                      levels = c("TMIEI", "TMIEM"), 
+                      levels = c("TMISM", "TMISA"), 
                       labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade"))) %>%
   ggplot()+
   geom_sf(data = muni_rio, fill = NA) +
   geom_sf(aes(fill = valor), color = NA, alpha=.9)  +
-#  geom_sf(data = linhas_hm_rio, size=0.7, color="#2340e7")+
+  geom_sf(data = linhas_hm_rio, size=0.3, color="gray40")+
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 10, 20, 30, 40),
                                labels = c(0, 10, 20, 30, "+40 min")) +
@@ -182,7 +186,7 @@ fig2 <-
   theme_for_TMI()
 
 # save map
-ggsave(fig2, file="./figures/fig2-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
+ggsave(fig2, file="./figures/fig2-TMI_SM_TP.png", dpi = 500, width = 8, height = 10, units = "cm")
 beep()
 
 
@@ -222,7 +226,7 @@ plot1 <- acess_for %>%
 plot2 <- acess_bho %>%
   ggplot()+
   geom_sf(aes(fill = CMATT30), color = NA, alpha=.9)+
- # geom_sf(data = linhas_hm_bho, size=0.9, color="#d7301f")+
+  geom_sf(data = linhas_hm_bho, size=0.5, color="gray50")+
   viridis::scale_fill_viridis(option = "B",
                               limits = c(0, 0.7),
                               breaks = c(0.001, 0.35, 0.7),
@@ -333,9 +337,6 @@ unique(df4$city)
 
 
 
-library(ggalt)
-library(hrbrthemes)
-  
   
 temp_fig4 <- 
   
@@ -399,72 +400,108 @@ path_acess <- dir("../data/output_access/",
                   full.names = TRUE, 
                   pattern = paste0(munis_df[modo == "todos"]$abrev_muni, collapse = "|"))
 
-acess_bike <- hex_dt %>%
+acess_walk <- hex_dt %>%
   # pegar so TP
-  filter(mode == "bike")
+  filter(mode == "walk")
 
 
 
 # title <- bquote("Distribuição da acessibilidade por"~bold(.("transporte público"))~"à"~bold(.("oportunidades de trabalho")))
 
-baseplot2 <- theme_minimal(base_family = "Roboto Condensed") +
+# baseplot2 <- theme_minimal(base_family = "Roboto Condensed") +
+#   theme( 
+#     # plot.background = element_rect(fill = "grey85"),
+#     axis.text.y  = element_text(face="bold")
+#     # ,axis.text.x  = element_text(face="bold")
+#     ,panel.grid.minor = element_blank()
+#     ,strip.text = element_text(size = 8, face ="bold")
+#     ,legend.text = element_text(size = 8)
+#     , legend.position = "top"
+#     , axis.title = element_text(size = 8)
+#     , title = element_text(size = 9)
+#     , plot.margin=unit(c(2,0,0,0),"mm")
+#     , axis.ticks.x = element_blank()
+#     , axis.line.x = element_blank()
+#     , panel.background = element_rect(fill="gray90")
+#   )
+baseplot2 <- theme_minimal() +
   theme( 
-    # plot.background = element_rect(fill = "grey85"),
     axis.text.y  = element_text(face="bold")
-    # ,axis.text.x  = element_text(face="bold")
     ,panel.grid.minor = element_blank()
-    ,strip.text = element_text(size = 8, face ="bold")
-    ,legend.text = element_text(size = 8)
+    ,strip.text = element_text(size = 11, face ="bold")
+    ,legend.text = element_text(size = 11)
     , legend.position = "top"
-    , axis.title = element_text(size = 8)
     , axis.text.x = element_blank()
-    , title = element_text(size = 9)
-    , plot.margin=unit(c(2,0,0,0),"mm")
-    , axis.ticks.x = element_blank()
-    , axis.line.x = element_blank()
+    
   )
 
-
-acess_bike %>% 
-  filter(quintil >0) %>%
-  mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
+acess_walk %>% 
+  filter(decil >0) %>%
+  mutate(city = ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city))) %>%
   # filtrar so as cidades de tamanho semelhante
-  filter(city %in% c("for", "bho", "cur")) %>%
-  # # Wide to long
-  # gather(threshold, acess_abs, CMA_TT_15:CMA_TT_90) %>%
-  # mutate(threshold1 = as.integer(str_extract(threshold, "\\d+$"))) %>%
-  # Refactor quintil
-  # mutate(quintil1 = quintil - 1) %>%
+  filter(city %in% c("man", "rec", "cur")) %>%
   mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
   ggplot()+
-  geom_boxplot(aes(x = factor(quintil), y = CMATQ45, fill = factor(quintil)),
+  geom_boxplot(aes(x = factor(decil), y = CMATQ30, weight=pop_total, color = factor(decil)),
                # size = 1, 
-               color = "black",
-               outlier.colour=rgb(.5,.5,.5, alpha=0.1)) +
+               outlier.colour=rgb(.5,.5,.5, alpha=0.05)) +
   # facet_grid(threshold_name ~ ., scales = "free_y") +
   facet_wrap(~city) +
-  scale_fill_brewer(palette = "YlOrBr") +
-  scale_y_percent()+
+  scale_colour_brewer(palette = "RdBu", labels=c('D1 Pobres', paste0('D', c(2:9)), 'D10 ricos'), name='Decil') +
+  scale_y_percent() +
   # hrbrthemes::theme_ipsum_rc() +
   labs(fill = "Quintil de renda",
        x = "",
-       y = "Porcentagem de oportunidades acessíveis",
-       title = "Acessibilidade por bicicleta em 45 minutos para oportunidades de trabalho por quintil de renda") + 
+       y = "Porcentagem de oportunidades acessíveis") + 
   guides(color=guide_legend(nrow=1)) +
   baseplot2
 
 
-ggsave(file="./figures/fig5-boxplot_renda_bike_CMATQ45.png", dpi = 300, width = 16.5, height = 15, units = "cm")
-
+ggsave(file="./figures/fig5-boxplot_renda_walk_CMATQ30.png", dpi = 300, width = 25, height = 15, units = "cm")
+beep()
 
 
 
 
 # PLOT TESTE
 
-teste <- setDT(acess_bike)[, .(Negra=sum(cor_negra[which(TMIEM>30)] ,na.rm=T) /sum(cor_negra, na.rm=T),
+teste <- setDT(acess_walk)[, .(Negra=sum(cor_negra[which(TMIEM>30)] ,na.rm=T) /sum(cor_negra, na.rm=T),
                Branca=sum(cor_branca[which(TMIEM>30)] ,na.rm=T) /sum(cor_branca, na.rm=T)), 
            by=city]
+
+
+
+
+
+teste %>%
+  ggplot() + 
+  geom_dumbbell(aes(x = Branca    , xend = Negra         , y = forcats::fct_reorder(city, Negra )), 
+                size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
+ # geom_point(aes(x = Total, y = city), color = "black", size = 2)+
+  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
+                     name="", 
+                     labels=c('Pobres Q1',  'Ricos Q5')) +
+  scale_x_continuous(name="", limits = c(0, 24),
+                     breaks = c(0, 5, 10, 15, 20),
+                     labels = c(0, 5,  10, 15,"20 minutos")) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
+            aes(x = Q1, y = city),
+            label = "Pobres Q1", fontface = "bold",
+            color = "springgreen4",
+            hjust = -0.5) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
+            aes(x = Q5, y = city),
+            label = "Ricos Q5", fontface = "bold",
+            color = "steelblue4",
+            hjust = 1.5) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
+            aes(x = Total, y = city),
+            label = "Total", fontface = "bold",
+            color = "black",
+            vjust = -1) +
+  expand_limits(y = 21)+
+  theme_ipsum_rc(grid= "X") +
+  labs(x = "", y = "", title = "")
 
 
 
