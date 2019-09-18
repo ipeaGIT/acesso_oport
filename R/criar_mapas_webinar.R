@@ -324,8 +324,8 @@ unique(df4$city)
 
 
 # ajeitar nome das cidade
-  df4 %<>%
-    mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
+  df4 <- df4 %>%
+    mutate(city = ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city))) %>%
     mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
     
 
