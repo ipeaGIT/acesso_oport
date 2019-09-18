@@ -133,7 +133,7 @@ baseplot <- theme_minimal() +
   
   
   # save map
-  ggsave(temp_map1, file="./figures/map1_munis1.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+  ggsave(temp_map1, file="./figures/fig1_munis1.png", dpi = 200, width = 16.5, height = 15, units = "cm")
   beepr::beep()
 
 
@@ -155,6 +155,9 @@ acess_rio <- read_rds("../data/output_access/acess_rio_2019.rds")
 # abrir muni
 muni_rio <- read_rds("../data-raw/municipios/rio/municipio_rio.rds")
 
+muni_rio <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_df$abrev_muni=="rio")])
+
+
 # tirar so pt e pico e colocar em format long
 acess_rio_pt_pico <- acess_rio %>%
   filter(mode == "transit" & pico == 1) %>%
@@ -162,28 +165,28 @@ acess_rio_pt_pico <- acess_rio %>%
   select(TMISM, TMISA) %>%
   gather(ind, valor, TMISM:TMISA)
 
+
 # fazer grafico
-acess_rio_pt_pico %>%
+fig2 <- 
+  acess_rio_pt_pico %>%
   mutate(valor = ifelse(valor > 40, 40, valor)) %>%
   mutate(ind = factor(ind, 
                       levels = c("TMISM", "TMISA"), 
                       labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade"))) %>%
   ggplot()+
-  geom_sf(data = muni_rio, fill = NA)+
-  geom_sf(aes(fill = valor), color = NA, alpha=.7)  +
-  geom_sf(data = linhas_hm_rio, size=0.7, color="#2340e7")+
+  geom_sf(data = muni_rio, fill = NA) +
+  geom_sf(aes(fill = valor), color = NA, alpha=.9)  +
+#  geom_sf(data = linhas_hm_rio, size=0.7, color="#2340e7")+
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 10, 20, 30, 40),
                                labels = c(0, 10, 20, 30, "+40 min")) +
   labs(fill = "Tempo até a oportunidade\n mais próxima")+
   facet_wrap(~ind, ncol = 1)+
-  theme_for_TMI() 
+  theme_for_TMI()
 
 # save map
-ggsave(file="./figures/fig1-TMI_SM_TP.png", dpi = 300, width = 16.5, height = 20, units = "cm")
-
-
-
+ggsave(fig2, file="./figures/fig2-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
+beep()
 
 
 
@@ -222,7 +225,7 @@ plot1 <- acess_for %>%
 plot2 <- acess_bho %>%
   ggplot()+
   geom_sf(aes(fill = CMATT30), color = NA, alpha=.9)+
-  geom_sf(data = linhas_hm_bho, size=0.9, color="#d7301f")+
+ # geom_sf(data = linhas_hm_bho, size=0.9, color="#d7301f")+
   viridis::scale_fill_viridis(option = "B",
                               limits = c(0, 0.7),
                               breaks = c(0.001, 0.35, 0.7),
@@ -241,9 +244,8 @@ temp <- plot_grid(plot1, plot2 + theme(legend.position = "none"))
 plot_grid(temp, legenda,  ncol = 1, rel_heights = c(1, .2))
 
 
-ggsave(file="./figures/fig2-CMA_for_bho.png", dpi = 300, width = 16.5, height = 12, units = "cm")
-
-
+ggsave(file="./figures/fig3-CMA_for_bho.png", dpi = 300, width = 14, height = 10, units = "cm")
+beep()
 
 
 # 3) CMP - Gráfico de pontos do acesso a pé educação infantil - população negra e bra --------
@@ -256,22 +258,16 @@ acess_cmp_todas_walk <- lapply(dir("../data/output_access/", full.names = TRUE),
   filter(mode == "walk")
 
 
-# cor
-pop_totais1 <- hex_agreg[, .(pop_negra_total = sum(cor_negra, na.rm=T),
-                            pop_branca_total = sum(cor_branca, na.rm=T),
-                             pop_total_total = sum(pop_total, na.rm=T)), by= muni]
-# renda
-pop_totais1 <- hex_agreg[, .(pop_quintil1 = ifelse(quintil==1, sum(pop_total, na.rm=T), NA),
-                             pop_quintil5 = ifelse(quintil==5, sum(pop_total, na.rm=T),NA)), by= muni ]
+# cor e renda
+pop_totais <- hex_agreg[, .(pop_negra_total = sum(cor_negra, na.rm=T),
+                             pop_branca_total = sum(cor_branca, na.rm=T),
+                             pop_total_total = sum(pop_total, na.rm=T),
+                             quintil1  = sum(pop_total[which(quintil==1)], na.rm=T),
+                             quintil5  = sum(pop_total[which(quintil==5)], na.rm=T)
+                             ), by= muni]
 
 
-temp1 <- hex_agreg[ quintil %in% c(1, 5)]
-temp2 <- temp1[ pop_total>0, .(pop_quintil =  sum(pop_total, na.rm=T)), by= .(muni, quintil) ]
-temp3 <- spread(temp2, quintil, pop_quintil)
-names(temp3) <- c('muni', 'quintil1', 'quintil5')
 
-# agrega totais de pop de cada muni
-pop_totais <- left_join(pop_totais1, temp3)
 
 
 # tem que filtrar zonas que tenha alguma escola de edu infantil!
@@ -284,7 +280,7 @@ acess_cmp_todas_edu <- acess_cmp_todas_walk %>%
 
 
 
-
+acess_cmp_todas_walk$TMIEI
 
 
 # grafico!
@@ -313,14 +309,15 @@ acess_cmp_todas_edu %>%
 # selciona so Walking
 acess_walk <- hex_dt[ mode == "walk" ]
 
-# Se nenhuma atividade acessivel (TMIEI==Inf), entao imputar TMIEI de 120 min.
-acess_walk[, TMIEI := if_else(TMIEI==Inf, 90, TMIEI)]
+# Se nenhuma atividade acessivel (TMIEF==Inf), entao imputar TMIEF de 120 min.
+acess_walk[, TMIEF := ifelse(TMIEF==Inf, NA, TMIEF)]
 
-df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEI[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
-                      Negra = weighted.mean(TMIEI[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
-                      Branca = weighted.mean(TMIEI[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
-                      Q1 = weighted.mean(TMIEI[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
-                      Q5 = weighted.mean(TMIEI[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
+acess_walk$TMIEF
+df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEF[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+                      Negra = weighted.mean(TMIEF[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
+                      Branca = weighted.mean(TMIEF[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
+                      Q1 = weighted.mean(TMIEF[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
+                      Q5 = weighted.mean(TMIEF[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
 
 # ajeitar nome das cidade
@@ -341,7 +338,7 @@ temp_fig4 <-
   
   df4 %>%
   ggplot() + 
-  geom_dumbbell(aes(x = Q1, xend = Q5, y = forcats::fct_reorder(city, Q1)), 
+  geom_dumbbell(aes(x = Negra    , xend = Branca        , y = forcats::fct_reorder(city, Q1)), 
                            size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
   geom_point(aes(x = Total, y = city), color = "black", size = 2)+
   scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
@@ -352,12 +349,12 @@ temp_fig4 <-
                      labels = c(0, 10, 20, 30, "40 minutos")) +
   geom_text(data = filter(df4, city == "Sao Goncalo"),
             aes(x = Q1, y = city),
-            label = "Q1", fontface = "bold",
+            label = "Pobres Q1", fontface = "bold",
             color = "steelblue4",
             hjust = -0.5) +
   geom_text(data = filter(df4, city == "Sao Goncalo"),
             aes(x = Q5, y = city),
-            label = "Q5", fontface = "bold",
+            label = "Ricos Q5", fontface = "bold",
             color = "springgreen4",
             hjust = 1.5) +
   geom_text(data = filter(df4, city == "Sao Goncalo"),
@@ -371,8 +368,8 @@ temp_fig4 <-
 
 
 
-ggsave(temp_fig4, file="./figures/fig4_TMIEI_walk_renda.png", dpi = 300, width = 16, height = 14, units = "cm")
-
+ggsave(temp_fig4, file="./figures/fig4_TMIEI_walk_renda.png", dpi = 300, width = 16, height = 16, units = "cm")
+beep()
 
 
 
@@ -402,7 +399,6 @@ acess_bike <- hex_dt %>%
   filter(mode == "bike")
 
 
-# BOXPLOT ----------------------------------------------------------------------------------------
 
 # title <- bquote("Distribuição da acessibilidade por"~bold(.("transporte público"))~"à"~bold(.("oportunidades de trabalho")))
 

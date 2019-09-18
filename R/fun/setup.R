@@ -26,6 +26,7 @@ library(future.apply) # Aplicar funcoes em paralelo
 # library(h3jsr) # H3 grade hexagonal
 library(dplyr)
 library(hrbrthemes)
+library(beepr)
 library(patchwork)
 # library(Hmisc) # calcular quantis ponderados
 # library(osmdata) # Download de dados do OpenStreeteMaps (OSM)
