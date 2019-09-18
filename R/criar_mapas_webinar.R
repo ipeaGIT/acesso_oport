@@ -38,10 +38,6 @@ source('./R/fun/setup.R')
   setDT(hex_dt)                                                               
 
 
-
-  
-  
-    
 ###### B. temas para mapas ---------------------------
 
 theme_for_CMA <- function(base_size, ...) {
@@ -162,16 +158,17 @@ muni_rio <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_
 acess_rio_pt_pico <- acess_rio %>%
   filter(mode == "transit" & pico == 1) %>%
   # tirar so saude medio e alta
-  select(TMISM, TMISA) %>%
-  gather(ind, valor, TMISM:TMISA)
+  select(TMIEI, TMIEM) %>%
+  gather(ind, valor, TMIEI:TMIEM)
 
+acess_rio$TMIEM
 
 # fazer grafico
 fig2 <- 
   acess_rio_pt_pico %>%
   mutate(valor = ifelse(valor > 40, 40, valor)) %>%
   mutate(ind = factor(ind, 
-                      levels = c("TMISM", "TMISA"), 
+                      levels = c("TMIEI", "TMIEM"), 
                       labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade"))) %>%
   ggplot()+
   geom_sf(data = muni_rio, fill = NA) +
@@ -309,15 +306,16 @@ acess_cmp_todas_edu %>%
 # selciona so Walking
 acess_walk <- hex_dt[ mode == "walk" ]
 
-# Se nenhuma atividade acessivel (TMIEF==Inf), entao imputar TMIEF de 120 min.
-acess_walk[, TMIEF := ifelse(TMIEF==Inf, NA, TMIEF)]
 
-acess_walk$TMIEF
-df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEF[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
-                      Negra = weighted.mean(TMIEF[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
-                      Branca = weighted.mean(TMIEF[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
-                      Q1 = weighted.mean(TMIEF[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
-                      Q5 = weighted.mean(TMIEF[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
+# Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 120 min.
+acess_walk[, TMIEM := ifelse(TMIEM==Inf, NA, TMIEM)]
+
+acess_walk$TMIEM
+df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+                      Negra = weighted.mean(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
+                      Branca = weighted.mean(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
+                      Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
+                      Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
 
 # ajeitar nome das cidade
@@ -338,7 +336,7 @@ temp_fig4 <-
   
   df4 %>%
   ggplot() + 
-  geom_dumbbell(aes(x = Negra    , xend = Branca        , y = forcats::fct_reorder(city, Q1)), 
+  geom_dumbbell(aes(x = Q5    , xend = Q1        , y = forcats::fct_reorder(city, Q1)), 
                            size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
   geom_point(aes(x = Total, y = city), color = "black", size = 2)+
   scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
@@ -350,12 +348,12 @@ temp_fig4 <-
   geom_text(data = filter(df4, city == "Sao Goncalo"),
             aes(x = Q1, y = city),
             label = "Pobres Q1", fontface = "bold",
-            color = "steelblue4",
+            color = "springgreen4",
             hjust = -0.5) +
   geom_text(data = filter(df4, city == "Sao Goncalo"),
             aes(x = Q5, y = city),
             label = "Ricos Q5", fontface = "bold",
-            color = "springgreen4",
+            color = "steelblue4",
             hjust = 1.5) +
   geom_text(data = filter(df4, city == "Sao Goncalo"),
             aes(x = Total, y = city),
