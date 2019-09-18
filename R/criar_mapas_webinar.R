@@ -304,11 +304,11 @@ acess_cmp_todas_edu %>%
 # abrir o acess de todas as cidades e juntar
 
 # selciona so Walking
-acess_walk <- hex_dt[ mode == "walk" ]
+acess_walk <- hex_dt[ mode == "bike" ]
 
 
 # Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 120 min.
-acess_walk[, TMIEM := ifelse(TMIEM==Inf, NA, TMIEM)]
+acess_walk[, TMIEM := ifelse(TMIEM==Inf, 90, TMIEM)]
 
 acess_walk$TMIEM
 df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
@@ -342,20 +342,20 @@ temp_fig4 <-
   scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
                      name="", 
                      labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
-  scale_x_continuous(name="", limits = c(0, 40),
-                     breaks = c(0, 10, 20, 30, 40),
-                     labels = c(0, 10, 20, 30, "40 minutos")) +
-  geom_text(data = filter(df4, city == "Sao Goncalo"),
+  scale_x_continuous(name="", limits = c(0, 24),
+                     breaks = c(0, 5, 10, 15, 20),
+                     labels = c(0, 5,  10, 15,"20 minutos")) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
             aes(x = Q1, y = city),
             label = "Pobres Q1", fontface = "bold",
             color = "springgreen4",
             hjust = -0.5) +
-  geom_text(data = filter(df4, city == "Sao Goncalo"),
+  geom_text(data = filter(df4, city == "Sao Luis"),
             aes(x = Q5, y = city),
             label = "Ricos Q5", fontface = "bold",
             color = "steelblue4",
             hjust = 1.5) +
-  geom_text(data = filter(df4, city == "Sao Goncalo"),
+  geom_text(data = filter(df4, city == "Sao Luis"),
             aes(x = Total, y = city),
             label = "Total", fontface = "bold",
             color = "black",
@@ -364,15 +364,17 @@ temp_fig4 <-
   theme_ipsum_rc(grid= "X") +
   labs(x = "", y = "", title = "")
 
+# TME bike
+# tme walk
 
 
-ggsave(temp_fig4, file="./figures/fig4_TMIEI_walk_renda.png", dpi = 300, width = 16, height = 16, units = "cm")
+ggsave(temp_fig4, file="./figures/fig4_TMIEM_bike_renda90.png", dpi = 300, width = 16, height = 16, units = "cm")
 beep()
 
 
 
 
-# grafico!
+  # grafico!
 
 
 # grafico!
