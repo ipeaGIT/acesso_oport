@@ -318,9 +318,14 @@ df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = p
                       Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
 
+unique(acess_walk$muni)
+unique(df4$city)
+
+
+
 # ajeitar nome das cidade
-  df4 %<>%
-    mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
+  df4 <- df4 %>%
+    mutate(city = ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city))) %>%
     mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
     
 
