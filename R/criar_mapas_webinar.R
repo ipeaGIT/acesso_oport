@@ -1,6 +1,10 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
+library(ggalt)
+library(hrbrthemes)
+
+
 # FIGURAS A FAZER
 
 # 0) Ok - Mapa com municipios no Projeto
@@ -182,7 +186,7 @@ fig2 <-
   theme_for_TMI()
 
 # save map
-ggsave(fig2, file="./figures/fig2-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
+ggsave(fig2, file="./figures/fig2-TMI_SM_TP.png", dpi = 500, width = 8, height = 10, units = "cm")
 beep()
 
 
@@ -333,9 +337,6 @@ unique(df4$city)
 
 
 
-library(ggalt)
-library(hrbrthemes)
-  
   
 temp_fig4 <- 
   
@@ -456,8 +457,8 @@ acess_walk %>%
   baseplot2
 
 
-ggsave(file="./figures/fig5-boxplot_renda_walk_CMATQ30.png", dpi = 300, width = 16.5, height = 15, units = "cm")
-
+ggsave(file="./figures/fig5-boxplot_renda_walk_CMATQ30.png", dpi = 300, width = 25, height = 15, units = "cm")
+beep()
 
 
 
@@ -467,6 +468,40 @@ ggsave(file="./figures/fig5-boxplot_renda_walk_CMATQ30.png", dpi = 300, width = 
 teste <- setDT(acess_walk)[, .(Negra=sum(cor_negra[which(TMIEM>30)] ,na.rm=T) /sum(cor_negra, na.rm=T),
                Branca=sum(cor_branca[which(TMIEM>30)] ,na.rm=T) /sum(cor_branca, na.rm=T)), 
            by=city]
+
+
+
+
+
+teste %>%
+  ggplot() + 
+  geom_dumbbell(aes(x = Branca    , xend = Negra         , y = forcats::fct_reorder(city, Negra )), 
+                size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
+ # geom_point(aes(x = Total, y = city), color = "black", size = 2)+
+  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
+                     name="", 
+                     labels=c('Pobres Q1',  'Ricos Q5')) +
+  scale_x_continuous(name="", limits = c(0, 24),
+                     breaks = c(0, 5, 10, 15, 20),
+                     labels = c(0, 5,  10, 15,"20 minutos")) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
+            aes(x = Q1, y = city),
+            label = "Pobres Q1", fontface = "bold",
+            color = "springgreen4",
+            hjust = -0.5) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
+            aes(x = Q5, y = city),
+            label = "Ricos Q5", fontface = "bold",
+            color = "steelblue4",
+            hjust = 1.5) +
+  geom_text(data = filter(df4, city == "Sao Luis"),
+            aes(x = Total, y = city),
+            label = "Total", fontface = "bold",
+            color = "black",
+            vjust = -1) +
+  expand_limits(y = 21)+
+  theme_ipsum_rc(grid= "X") +
+  labs(x = "", y = "", title = "")
 
 
 
