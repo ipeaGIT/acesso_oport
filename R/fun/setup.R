@@ -1,7 +1,7 @@
 Sys.setenv(TZ='UTC') # Fuso horario local
 
 # carregar bibliotecas
-
+library(raster)
 library(ggplot2)      # visualizacao de dados
 library(ggthemes)     # temas para visualizacao de dados
 library(sf)           # leitura e manipulacao de dados espaciais

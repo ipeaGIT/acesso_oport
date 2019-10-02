@@ -78,10 +78,12 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=gerar_pontos_OTP)
 source("./R/fun/criar_script_python_parallel_multiple.R")
 
 # pico
-pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 6, until = 8, every = 15)
+pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes, 
+         from = 6, until = 8, every = 15, modo = "tp")
 
 # fora pico, # apenas modo transporte publico
-pblapply(munis_df$abrev_muni, criar_script_python_paral_modes, from = 14, until = 16, every = 15, modo='tp') 
+pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes, 
+         from = 14, until = 16, every = 15, modo='tp') 
 
 # para as cidades sem gtfs, sera somente transporte ativo
 # cidades: bsb, sal, man, rec, goi, bel, gua, cam, slz, sgo, mac, duq, cgr, nat
