@@ -12,132 +12,28 @@ ref https://github.com/rafapereirabr/thesis/blob/master/Rscripts/0%20Rio%20place
 source('./R/fun/setup.R')
 
 
-
-### 1.1 Dowlonad CNES data from datasus ---------------------------------
-
-#  documentation > ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Doc/IT_CNES_1706.pdf
-# tabulacao > ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Auxiliar/TAB_CNES.zip
-# complete hierarchy data > ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/STRJ1506.dbc
-
-### Download cnes data with classification of hospitals hierarchy for all states
-
-# Function do download CNES data from data sus
-  # adapted from https://gist.github.com/fernandobarbalho/0cf27d994e39700663551b2d14387b08
-  download_cnes_datasus <- function(UF, ANO, MES){
-
-                            # URL to download from
-                            str_download <- paste0("ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/ST/ST", UF, ANO, MES,".dbc")
-                            
-                            # create temporary file
-                            tempf <- paste0(tempdir(),"/",'cnes_20',ANO,MES,'_',UF,".dbc") 
-                            
-                            # download data to temporary file
-                            download.file(str_download,destfile = tempf, mode='wb') 
-                            
-                            # read data from temporary file
-                            datasus <- read.dbc::read.dbc(tempf)
-                            
-                            # create State and date columns
-                            datasus$abbrev_uf <- UF
-                            datasus$date <- paste0('20',ANO,MES)
-                            
-                            # save data
-                            readr::write_rds(datasus, paste0('../data-raw/hospitais/','cnes_20',ANO,MES,'_',UF,".rds"))
-                          }
-
-
-# list of states
-  all_states <- c("RO", "AC", "AM", "RR", "PA",
-                  "AP", "TO", "MA", "PI", "CE",
-                  "RN", "PB", "PE", "AL", "SE",
-                  "BA", "MG", "ES", "RJ", "SP",
-                  "PR", "SC", "RS", "MS", "MT",
-                  "GO", "DF")
-
-
-# Preparar processamento em paralelo usando future.apply
-  future::plan(future::multiprocess)
-
-# Loop over months
-  meses <- c(paste0("0", 1:9), 10:12)
-
-# all data
-  # ano = '15'
-  # mes= '05'
-  
-  
-# download cnes data
-  for (i in meses){
-    
-      # Definir ano para download
-      ano = '15'
-      message(paste0("Baixando dados do mes ",i,"\n"))
-  
-      # Aplica funcao para baixar arquivos dos estados em paralelo
-      future.apply::future_lapply(X =all_states, FUN=download_cnes_datasus, ANO=ano, MES=i)
-  }
-    
-  
-  
-  
-### 1.2 Dowlonad CNES ativos from http://dados.gov.br ---------------------------------
-  # this data base brings more info on health facilitilies
-  # dara url
-    url_cnes <- "http://i3geo.saude.gov.br/i3geo/ogc.php?service=WFS&version=1.0.0&request=GetFeature&typeName=cnes_ativo&outputFormat=CSV"
-  
-  # # trying to read directly
-  #   cnes <- data.table::fread(url_cnes)
-  #   cnes <- read.csv(url_cnes)
-  
-  # download and save
-    download.file(url=url_cnes, destfile = '../data-raw/hospitais/cnes_ativos_201806.csv', mode='w')
-
-
-  
-  
-### 1.3 Download geocoded CNES data ------------------------------------
-  cnes_geo <- geobr::read_health_facilities(code = "all")
-  sf::st_crs(cnes_geo)
-  head(cnes_geo)
-  
-  # salva em data-raw
-  readr::write_rds(cnes_geo, "../data-raw/hospitais/cnes_geocoded.rds")
-  
-  
-  
-# ### 1.4 Download geocoded PMAQ data ------------------------------------
+# ### 1.1 Download geocoded PMAQ data ------------------------------------
 #   # better geocoded info for basic services
 #   # source: http://aps.saude.gov.br/ape/pmaq
 #   # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
-#   
-#   
-#   
-  library(readxl)
 
   # read original Excel sheet
-  df <- readxl::read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+  pmaq_df <- readxl::read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
                    sheet = 'Módulo I', col_types = rep("text", 425))
   
-# save as .csv
-  fwrite(df, '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
-  rm(df)
-  gc(reset = T)
-  
-  
-# Read PMAQ data
-  dt <- fread('../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.csv')
 
   
 # clean PMAQ data
   
 # remove invalid lat long info
-  head(dt$LONGITUDE)
-  dt <- subset(dt, LATITUDE !="0" )
-  dt <- subset(dt, LATITUDE !="0.0" )
-  dt <- subset(dt, LATITUDE !="9997" )
+  head(pmaq_df$LONGITUDE)
+  pmaq_df <- subset(pmaq_df, LATITUDE !="0" )
+  pmaq_df <- subset(pmaq_df, LATITUDE !="0.0" )
+  pmaq_df <- subset(pmaq_df, LATITUDE !="9997" )
 
-## Fix lat long info
-  
+
+
+### Fix lat long info
   
 # identificar cidades do projeto com dois digitos de latitude
 munis <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>%
@@ -152,11 +48,11 @@ munis <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.na
   # municipio so tem 6 digitos
   mutate(code_muni = substr(code_muni, 1,6)) %>%
   # selecionar so as colunas necessarias
-  select(code_muni, lat_digits)
+  dplyr::select(code_muni, lat_digits)
   
 
-# trazer a quantidade de digitos para o dt
-dt_digitos <- dt %>%
+# trazer a quantidade de digitos para o pmaq_df
+pmaq_df_digitos <- pmaq_df %>%
   rename(code_muni = IBGE) %>%
   # selecionar so os municipios do projeto
   filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
@@ -164,7 +60,7 @@ dt_digitos <- dt %>%
   left_join(munis, by = "code_muni")
 
 # criar dataframe com as coordenadas ajeitadas
-dt_coords_fixed <- dt_digitos %>%
+pmaq_df_coords_fixed <- pmaq_df_digitos %>%
   # o ponto na longitude vai ser sempre depois do segundo numerico
   mutate(lon = sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LONGITUDE)) %>%
   # o ponto na latitude vai depender do nchar
@@ -175,52 +71,42 @@ dt_coords_fixed <- dt_digitos %>%
 
 
 # teste
-dt_coords_fixed %>%
+pmaq_df_coords_fixed %>%
   to_spatial() %>%
   mapview()
 
 
+# save as .csv
+fwrite(pmaq_df_coords_fixed, '../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv')
+gc(reset = T)
+
+
+# # Read PMAQ data
+# pmaq_df_coords_fixed <- fread('../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv')
+
 
 ### 2. Leitura dos dados ---------------------------------
   
-  
-# 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
-  
-  # Listar arquivos
-  rdsfiles <- list.files('../data-raw/hospitais/', pattern = ".rds", full.names = T)
-  rds_2019 <- rdsfiles[rdsfiles %like% 2019]
-  
-  # leitura de todos arquivos
-  future::plan(future::multiprocess)
-  cnes19 <- future.apply::future_lapply(X=rds_2019, FUN=readr::read_rds) %>% rbindlist(fill=TRUE)
-  
 
-# 2.2 ler CNES de 2015 - traz info de nivel hierarquico
-  rds_2015 <- rdsfiles[rdsfiles %like% 2015]
-  cnes15 <- future.apply::future_lapply(X=rds_2015, FUN=readr::read_rds) %>% rbindlist(fill=TRUE)
-  
-  
-# 2.3 ler CNES ativos de 2018 (baixados de dados.gov.br)- traz nome fantasia das instituicoes
-  cnes18 <- fread('../data-raw/hospitais/cnes_ativos_201806.csv')
-  
-  
-# 2.4 CNES geo de traz lat e long (atualizacao em varios anos)
-  cnes_geo <- readr::read_rds("../data-raw/hospitais/cnes_geocoded.rds")
-  
-  
-  
-  
+
+## 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
+
+cnes19 <- readxl::read_xlsx(path = '../data-raw/hospitais/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
+                        sheet = 'BANCO', skip = 14, col_types = rep("text", 30))
+
+# remove 1st NA rows
+cnes19 <- cnes19[-c(1:3),]
+head(cnes19)
+
+# rename columns
+names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_alta_ambu_est", "complex_alta_ambu_mun", "complex_baix_ambu_est", "complex_baix_ambu_mun", "complex_medi_ambu_est", "complex_medi_ambu_mun", "complex_alta_hosp_est", "complex_alta_hosp_mun", "complex_baix_hosp_est", "complex_baix_hosp_mun", "complex_medi_hosp_est", "complex_medi_hosp_mun", "complex_nao_aplic_est", "complex_nao_aplic_mun")
+
+
+
   
 ### 3.Limpeza dos dados ---------------------------------
   
-# CNES to characther
-  setnames(cnes18, old = 'co_cnes', new = 'CNES')
-  
-  setDT(cnes19)[, CNES := as.character(CNES) ] 
-  setDT(cnes15)[, CNES := as.character(CNES) ] 
-  setDT(cnes18)[, CNES := as.character(CNES) ] 
-  
-  
+
 
 # Keep only columns we will use
   cnes_filtered <- cnes19[, .(CNES, CODUFMUN, COD_CEP, PF_PJ, NIV_HIER, VINC_SUS, ATENDAMB, ATENDHOS, abbrev_uf, date) ]
@@ -240,40 +126,23 @@ dt_coords_fixed %>%
   
 
 # Filter 1: healthcare facilities operating with the public health system
-  cnes_filter1 <- cnes_filtered[ VINC_SUS==1, ]
+  cnes_filter1 <- cnes19[ `ATENDE SUS`== 'SIM', ]
   
   
 # Filter 2: Pessoa juridica
-  cnes_filter2 <- cnes_filter1[ PF_PJ==3, ]
+  cnes_filter2 <- cnes_filter1[ PESSOA_FÍSICA_OU_PESSOA_JURÍDI== 'PESSOA_JURÍDICA', ]
 
-  
 # filter 3: Only municipalities in the project
-  cnes_filter3 <- subset(cnes_filter2, CODUFMUN %in% substr(munis_df$code_muni, 1,6))
+  cnes_filter3 <- subset(cnes_filter2, IBGE %in% substr(munis_df$code_muni, 1,6))
   
 # filter 4: Only atendimento hospitalar ou ambulatorial
-  cnes_filter4 <- cnes_filter3[ ATENDHOS==1 | ATENDAMB==1]
+  cnes_filter4 <- cnes_filter3[ instal_fisica_ambu=="SIM" | instal_fisica_hospt=="SIM", ]
   
   
-# filter 5: remove duplicates and keep CEP of latest date
-  
-    # # health facilities with more than one cep
-    # a <- table(cnes_filter4$CNES) %>% sort()
-    # a <- a[a>6]
-  
-  # format date info
-   cnes_filter4[, date := parse_date_time(date, "ym")]
-   
-  # remove duplicates
-   cnes_filter5 <- cnes_filter4[, .(CEP = COD_CEP[which.max(date)]), by=.( CNES, CODUFMUN)]
-
-   
-# filter 6. Remove special categories of facilities 
-   
-   # Add names
-   cnes_filter6 <- left_join(cnes_filter5, cnes18, by = "CNES") %>% setDT()
+# filter 5. Remove special categories of facilities 
    
    # 6.1 Delete prison hospitals, research centers, police hospitals etc
-   to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL'
+   to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA'
                   # PADI = Programa de Atenção Domiciliar ao Idoso
                   # DE REGULACAO = gestora de servico
                   # CAPS - CENTRO DE ATENCAO PSICOSSOCIAL - saude mental e drogas
@@ -282,21 +151,41 @@ dt_coords_fixed %>%
 
       
    # 6.2 Delete Home care, tele saude, unidades moveis de saude
-   to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR'
+   to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DISTRIB DE ORGAOS'
    
  # apply filter 6
-   cnes_filter6 <- cnes_filter6[ no_fantasia %nlike% to_remove1 ]
-   cnes_filter6 <- cnes_filter6[ ds_tipo_unidade %nlike% to_remove2 ]
+   cnes_filter5 <- cnes_filter4[ ESTABELECIMENTO %nlike% to_remove1 ]
+   cnes_filter5 <- cnes_filter5[ TIPO_UNIDADE %nlike% to_remove2 ]
    # test >>> cnes_filter6[ CNES =='6771963']
    
    
-   
-   
-   
-### 4. Recupera Nivel hierarquico  ---------------------------------
 
+### Organiza Nivel de atencao
    
    
+# convert health facilities Hierarchy into dummy variables
+   cnes_filter5[, health_low := ifelse(complex_baix_ambu_est=='X', 1,
+                                ifelse(complex_baix_ambu_mun=='X', 1,
+                                ifelse(complex_baix_hosp_est=='X', 1,
+                                ifelse(complex_baix_hosp_mun=='X', 1, 0))))]
+                                  
+
+   cnes_filter5[, health_med := ifelse(complex_medi_ambu_est=='X', 1,
+                                ifelse(complex_medi_ambu_mun=='X', 1,
+                                ifelse(complex_medi_hosp_est=='X', 1,
+                                ifelse(complex_medi_hosp_mun=='X', 1, 0))))]
+   
+   
+   cnes_filter5[, health_high := ifelse(complex_alta_ambu_est=='X', 1,
+                                 ifelse(complex_alta_ambu_mun=='X', 1,
+                                 ifelse(complex_alta_hosp_est=='X', 1,
+                                 ifelse(complex_alta_hosp_mun=='X', 1, 0))))]
+                                
+ 
+table(cnes_filter5$health_low)  # 238
+table(cnes_filter5$health_med)  # 546
+table(cnes_filter5$health_high) # 273
+
    
 # Bring Hierarchy info from 2015 data
   cnes_filter6[cnes15, on='CNES', NIV_HIER := i.NIV_HIER]
@@ -306,27 +195,46 @@ dt_coords_fixed %>%
 
 
   
-# Recode health facilities Hierarchy -----
-# based on PDF (Manual tecnico do cadastro nacional de estabelecimentos de saude - versao 2) p. 131
-  new_cnes19[ , hierarq := ifelse(NIV_HIER =="01", "Low"
-                                   ,ifelse(NIV_HIER =="02", "Medium"
-                                           ,ifelse(NIV_HIER =="03", "Medium"
-                                                   ,ifelse(NIV_HIER =="04", "High"
-                                                           ,ifelse(NIV_HIER =="05", "Low + Medium"
-                                                                   ,ifelse(NIV_HIER =="06", "Medium"
-                                                                           ,ifelse(NIV_HIER =="07", "Medium + High"
-                                                                                   ,ifelse(NIV_HIER =="08", "High", NA))))))))]
-
-
-# convert health facilities Hierarchy into dummy variables
-  new_cnes19[ , health_low := ifelse( grepl("Low", hierarq), 1, 0) ]
-  new_cnes19[ , health_med := ifelse( grepl("Medium", hierarq), 1, 0) ]
-  new_cnes19[ , health_high := ifelse( grepl("High", hierarq), 1, 0) ]
-
    
-   
-### 5. Recuperar Lat Long  ---------------------------------
+### 4. Corrigir Lat Long  ---------------------------------
 
+  
+  
+  
+  ### Fix lat long info
+  
+  
+  # trazer a quantidade de digitos para o cnes19
+  cnes19_df_digitos <- cnes19 %>%
+    rename(code_muni = IBGE) %>%
+    # selecionar so os municipios do projeto
+    filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
+    mutate(code_muni = as.character(code_muni)) %>%
+    left_join(munis, by = "code_muni")
+  
+  # criar dataframe com as coordenadas ajeitadas
+  cnes19_df_coords_fixed <- cnes19_df_digitos %>%
+    # o ponto na longitude vai ser sempre depois do segundo numerico
+    mutate(lon = sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LONGITUDE)) %>%
+    # o ponto na latitude vai depender do nchar
+    mutate(lat = ifelse(lat_digits == 1, sub("(^?-\\d{1})(\\d+)", "\\1\\.\\2", LATITUDE),
+                        sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LATITUDE))) %>%
+    mutate(lon = as.numeric(lon),
+           lat = as.numeric(lat))
+  
+  
+  # teste
+  cnes19_df_coords_fixed %>%
+    to_spatial() %>%
+    mapview()
+  
+  
+  
+  
+  
+  
+  
+  
 # subset keep Only municipalities in the project
 cnes_geo_filter <- subset(cnes_geo, code_muni %in% substr(munis_df$code_muni, 1,6))
 
