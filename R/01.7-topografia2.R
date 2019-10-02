@@ -26,6 +26,11 @@ source('./R/fun/setup.R')
 crop_save_raster <- function(sigla_muni) {
   
   
+  my_merge <- function(...) {
+    
+    x <- raster::merge(..., tolerance = 10)
+  }
+  
   # listar arquivos .tiff na pasta
   dir <- sprintf("../data-raw/topografia2/Topografia/%s", sigla_muni)
   files <- dir(dir, full.names = T, pattern = ".tif$")
@@ -41,9 +46,10 @@ crop_save_raster <- function(sigla_muni) {
     # onde o segundo raster da funcao eh o raster de referencia
     # nesse caso sempre pegar o primeiro raster como referencia para o resample
     
-    elev_img_corrigido <- c(elev_img[[1]], map(elev_img[c(-1)], raster::resample, elev_img[[1]]))
+    # elev_img_corrigido <- c(elev_img[[1]], map(elev_img[c(-1)], raster::resample, elev_img[[1]]))
     
-    elev_img_bind <- do.call(raster::merge, elev_img_corrigido)
+    # elev_img_bind <- do.call(raster::merge, elev_img_corrigido)
+    elev_img_bind <- do.call(my_merge, elev_img)
     }
   
   # carrega shape do municipio
@@ -62,7 +68,7 @@ crop_save_raster <- function(sigla_muni) {
   elev_img_fim <- raster::crop(elev_img_bind, e)
   
   # salvar
-  output <- sprintf("../data/topografia/topografia_teste_%s.tif", sigla_muni)
+  output <- sprintf("../data/topografia2/topografia2_%s.tif", sigla_muni)
   raster::writeRaster(elev_img_fim, output, format="GTiff", overwrite=TRUE)
 }
 
