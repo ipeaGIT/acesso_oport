@@ -41,23 +41,23 @@ library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/
 munis_df <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
                                      5300108, 2927408, 1302603, 2611606, 5208707, 1501402,
                                      3518800, 3509502, 2111300, 3304904, 2704302, 3301702,
-                                     5002704, 2408102),
+                                     5002704, 2408102, 2211001),
                         abrev_muni=c('for', 'spo', 'rio', 'cur', 'poa', 'bho', 
                                      'bsb', 'sal', 'man', 'rec', 'goi', 'bel',
                                      'gua', 'cam', 'slz', 'sgo', 'mac', 'duq',
-                                     'cgr', 'nat'),
+                                     'cgr', 'nat', 'ter'),
                         name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte',
                                     'Brasilia', 'Salvador', 'Manaus', 'Recife', 'Goiania', 'Belem',
                                     'Guarulhos', 'Campinas', 'Sao Luis', 'Sao Goncalo', 'Maceio', 'Duque de Caxias',
-                                    'Campo Grande', 'Natal'),
+                                    'Campo Grande', 'Natal', 'Teresina'),
                         abrev_estado=c('CE', 'SP', 'RJ', 'PR', 'RS', 'MG',
                                       'DF', 'BA', 'AM', 'PE', 'GO', 'PA',
                                       'SP', 'SP', 'MA', 'RJ', 'AL', 'RJ',
-                                      'MS', 'RN'),
+                                      'MS', 'RN', 'PI'),
                         modo = c('todos', 'todos', 'todos', 'todos', 'todos', 'todos',
+                                 'ativo', 'ativo', 'ativo', 'todos', 'ativo', 'ativo',
                                  'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
-                                 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
-                                 'ativo', 'ativo'))
+                                 'ativo', 'ativo', 'todos'))
 
 
 # library(hrbrthemes)
