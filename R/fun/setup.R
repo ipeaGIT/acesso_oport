@@ -31,6 +31,8 @@ library(patchwork)
 # library(Hmisc) # calcular quantis ponderados
 # library(osmdata) # Download de dados do OpenStreeteMaps (OSM)
 library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/opentripplanner
+library(ggmap) # geocoding
+
 
 
 
