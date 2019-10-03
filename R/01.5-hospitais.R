@@ -1,4 +1,4 @@
-ref https://github.com/rafapereirabr/thesis/blob/master/Rscripts/0%20Rio%20places_schools%20and%20hospitals.R
+# ref https://github.com/rafapereirabr/thesis/blob/master/Rscripts/0%20Rio%20places_schools%20and%20hospitals.R
 
 
 
@@ -92,10 +92,12 @@ gc(reset = T)
 ## 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
 
 cnes19 <- readxl::read_xlsx(path = '../data-raw/hospitais/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
-                        sheet = 'BANCO', skip = 14, col_types = rep("text", 30))
+                        sheet = 'BANCO', skip = 14, 
+                        col_types = c(rep("text", 11), "numeric", "numeric", rep("text", 17)))
 
 # remove 1st NA rows
 cnes19 <- cnes19[-c(1:3),]
+str(cnes19)
 head(cnes19)
 
 # rename columns
@@ -108,25 +110,8 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
   
 
 
-# Keep only columns we will use
-  cnes_filtered <- cnes19[, .(CNES, CODUFMUN, COD_CEP, PF_PJ, NIV_HIER, VINC_SUS, ATENDAMB, ATENDHOS, abbrev_uf, date) ]
-  # vars to keep
-    # CNES CHAR (7) Número nacional do estabelecimento de saúde
-    # CODUFMUN CHAR (7) Código do município do estabelecimento: UF + MUNIC (sem dígito)
-    # COD_CEP CHAR (8) Código do CEP do estabelecimento
-    # PF_PJ CHAR (1) Indicador de pessoa: 1-Física 3-Jurídica
-    # VINC_SUS CHAR (1) Vínculo com SUS: 1-Sim 0-Não
-    # NIV_HIER CHAR (2) Código do nível de hierarquia
-    # ATENDHOS CHAR (1) Indica a existência de INSTALAÇÃO FÍSICA de ATENDIMENTO HOSPITALAR para este CNES, onde: 1-sim 0-não
-    # ATENDAMB CHAR (1) Indica a existência de INSTALAÇÃO FÍSICA de ATENDIMENTO AMBULATORIAL para este CNES, onde: 1-sim 0-não
-    # abbrev_uf - abbreviation of state name
-    # date - date of reference
-  summary(cnes_filtered$NIV_HIER)
-  table(cnes_filtered$NIV_HIER)
-  
-
 # Filter 1: healthcare facilities operating with the public health system
-  cnes_filter1 <- cnes19[ `ATENDE SUS`== 'SIM', ]
+  cnes_filter1 <- setDT(cnes19)[ `ATENDE SUS`== 'SIM', ]
   
   
 # Filter 2: Pessoa juridica
@@ -198,14 +183,11 @@ table(cnes_filter5$health_high) # 273
    
 ### 4. Corrigir Lat Long  ---------------------------------
 
-  
-  
-  
   ### Fix lat long info
   
   
   # trazer a quantidade de digitos para o cnes19
-  cnes19_df_digitos <- cnes19 %>%
+  cnes19_df_digitos <- cnes_filter5 %>%
     rename(code_muni = IBGE) %>%
     # selecionar so os municipios do projeto
     filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
@@ -214,39 +196,43 @@ table(cnes_filter5$health_high) # 273
   
   # criar dataframe com as coordenadas ajeitadas
   cnes19_df_coords_fixed <- cnes19_df_digitos %>%
-    # o ponto na longitude vai ser sempre depois do segundo numerico
-    mutate(lon = sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LONGITUDE)) %>%
+    # primeiro, tirar tudo que for ponto ou virgula
+    mutate(lon = gsub("(\\.|,)", "", LONGITUDE),
+           lat = gsub("(\\.|,)", "", LATITUDE)) %>%
+    # tirar sinal de negativo
+    mutate(lon = gsub("-", "", lon),
+           lat = gsub("-", "", lat)) %>%
+    # o ponto na longitude vai ser sempre depois do segundo numerico, e vai ser sempre negativo
+    mutate(lon = sub("(^\\d{2})(\\d+)", "-\\1\\.\\2", lon)) %>%
     # o ponto na latitude vai depender do nchar
-    mutate(lat = ifelse(lat_digits == 1, sub("(^?-\\d{1})(\\d+)", "\\1\\.\\2", LATITUDE),
-                        sub("(^?-\\d{2})(\\d+)", "\\1\\.\\2", LATITUDE))) %>%
+    mutate(lat = ifelse(lat_digits == 1, sub("(^\\d{1})(\\d+)", "-\\1\\.\\2", lat),
+                        sub("(^\\d{2})(\\d+)", "-\\1\\.\\2", lat))) %>%
     mutate(lon = as.numeric(lon),
            lat = as.numeric(lat))
   
   
   # teste
   cnes19_df_coords_fixed %>%
+    filter(!is.na(lon)) %>%
     to_spatial() %>%
     mapview()
   
+  # qual o nivel de precisao das coordenadas deve ser aceito?
+  # 0.001 = 111.32 m
+  # 0.0001 = 11.132 m
+  # 0.00001 = 1.1132 m
+  
+  length(cnes19_df_coords_fixed$lon)
+  
+  cnes19_df_coords_fixed %>%
+    
+    
+    nchar(sub("(-\\d+)\\.(\\d+)", "\\2", cnes19_df_coords_fixed$lon))
   
   
   
   
   
-  
-  
-# subset keep Only municipalities in the project
-cnes_geo_filter <- subset(cnes_geo, code_muni %in% substr(munis_df$code_muni, 1,6))
-
-
-# reorganize cnes geo
-  cnes_geo_filter$code_cnes <- as.character(cnes_geo_filter$code_cnes)
-  cnes_geo_filter_df <- sfc_as_cols(cnes_geo_filter)
-  plot( cnes_geo_filter['code_muni'] )
-  
-# add lat long from the 2015 database
-  new_cnes19 <- left_join(new_cnes19, cnes_geo_filter_df[,.(code_cnes, lon, lat)], by=c('CNES'='code_cnes')) %>% setDT()
-  summary(new_cnes19$lat) # 925 NAs
   
   
 # update lat lonf info from PMAQ
