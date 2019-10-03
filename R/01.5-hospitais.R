@@ -301,7 +301,56 @@ table(cnes_filter5$health_high) # 273
     
 
     
-# Save data of health facilities
+    
+    
+    
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
+    
+    # Escolas com lat/long de baixa precisa (1 ou 2 digitos apos casa decimal)
+    setDT(escolas_etapa)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+    lat_impreciso <- subset(escolas_etapa, ndigitos <=2)$CO_ENTIDADE
+    escolas_lat_impreciso <- subset(escolas, CO_ENTIDADE %in% lat_impreciso)
+    
+    
+    # Escolas com lat/long missing  
+    CO_ENTIDADE_lat_missing <- subset(escolas_etapa, is.na(lat))$CO_ENTIDADE
+    escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
+    
+    # escolas problema
+    escolas_problema <- rbind(escolas_lat_impreciso, escolas_lat_missing)
+    
+    # lista de enderecom com problema
+    enderecos <- escolas_problema$ENDERECO
+    
+    # registar Google API Key
+    register_google(key = "")
+    
+    # geocode
+    coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
+    summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
+    
+    # Link escolas com lat lon do geocode
+    escolas_lat_missing_geocoded <- cbind(escolas_lat_missing, coordenadas_google)
+    
+    
+    # atualiza lat lon a partir de google geocode
+    escolas_etapa[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
+    setDT(escolas_etapa)[escolas_lat_missing_geocoded, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon) ]
+    
+    
+    summary(escolas$lat)
+    summary(escolas_lat_missing_geocoded$lat)
+    
+    
+    subset(escolas_etapa, !is.na(lat)) %>%
+      to_spatial() %>%
+      mapview()
+    
+    
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 6. Save data of health facilities ------------------------------------------------------------------
+    
   readr::write_rds(cnes19_df_coords_fixed, "../data/hospitais/health_facilities2019_filtered.rds")
   
   
