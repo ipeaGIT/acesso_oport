@@ -1,7 +1,3 @@
-# ref https://github.com/rafapereirabr/thesis/blob/master/Rscripts/0%20Rio%20places_schools%20and%20hospitals.R
-
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.1.5 Download dos dados geolocalizados dos estabelecimentos de saude
 ##info
