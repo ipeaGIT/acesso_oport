@@ -8,6 +8,10 @@
 source('./R/fun/setup.R')
 
 
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ### 1.1 Download geocoded PMAQ data ------------------------------------
 #   # better geocoded info for basic services
 #   # source: http://aps.saude.gov.br/ape/pmaq
@@ -81,10 +85,16 @@ gc(reset = T)
 # pmaq_df_coords_fixed <- fread('../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv')
 
 
-### 2. Leitura dos dados ---------------------------------
+
+
+
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### 2. Leitura dos dados CNES ---------------------------------
   
-
-
 ## 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
 
 cnes19 <- readxl::read_xlsx(path = '../data-raw/hospitais/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
@@ -101,9 +111,10 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
 
 
 
-  
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### 3.Limpeza dos dados ---------------------------------
-  
 
 
 # Filter 1: healthcare facilities operating with the public health system
@@ -141,7 +152,7 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
    
    
 
-### Organiza Nivel de atencao
+### Organiza Nivel de atencao criando dummy
    
    
 # convert health facilities Hierarchy into dummy variables
@@ -167,16 +178,10 @@ table(cnes_filter5$health_low)  # 238
 table(cnes_filter5$health_med)  # 546
 table(cnes_filter5$health_high) # 273
 
-   
-# Bring Hierarchy info from 2015 data
-  cnes_filter6[cnes15, on='CNES', NIV_HIER := i.NIV_HIER]
-  new_cnes19 <- copy(cnes_filter6)
-  summary(new_cnes19$NIV_HIER) # 767 NAs
-  table(new_cnes19$NIV_HIER)
-
-
   
-   
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### 4. Corrigir Lat Long  ---------------------------------
 
   ### Fix lat long info
@@ -206,29 +211,54 @@ table(cnes_filter5$health_high) # 273
     mutate(lon = as.numeric(lon),
            lat = as.numeric(lat))
   
-  
   # teste
   cnes19_df_coords_fixed %>%
     filter(!is.na(lon)) %>%
     to_spatial() %>%
     mapview()
   
+  
+  
+
+###### Identificar CNES com lat/long problematicos
+  # A poucos digitos
+  # B fora dos limites do municipio
+  
+  
   # qual o nivel de precisao das coordenadas deve ser aceito?
+  # 0.01 = 1113.2 m
   # 0.001 = 111.32 m
   # 0.0001 = 11.132 m
   # 0.00001 = 1.1132 m
   
-  length(cnes19_df_coords_fixed$lon)
+
+# A) Numero de digitos de lat/long apos ponto
+  setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  A_estbs_pouco_digito <- cnes19_df_coords_fixed[ ndigitos <=2,]
   
-  cnes19_df_coords_fixed %>%
+  
+# B) fora dos limites do municipio
+  
+  # carrega shapes
+    shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% as_tibble() %>% st_sf()
+  
+  
+
+  # convert para sf
+    cnes19_df_coords_fixed_df <- cnes19_df_coords_fixed[!(is.na(lat))] %>% st_as_sf( coords = c('lon', 'lat'))
+    temp_intersect <- sf::st_join(cnes19_df_coords_fixed_df, shps)
+  
+  # CNES que cairam fora de algum municipio
+    B_muni_fora <- subset(temp_intersect, is.na(name_muni))
+  
+  # juntar todas municipios com erro de lat/lon
+    munis_problema1 <- subset(cnes19_df_coords_fixed, CNES %in% A_estbs_pouco_digito$CNES ) 
+    munis_problema2 <-  subset(cnes19_df_coords_fixed, CNES %in% B_muni_fora$CNES )
+    munis_problema3 <-  cnes19_df_coords_fixed[ is.na(lat), ]
+    munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
+    munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
     
-    
-    nchar(sub("(-\\d+)\\.(\\d+)", "\\2", cnes19_df_coords_fixed$lon))
-  
-  
-  
-  
-  
+  # crie
   
   
 # update lat lonf info from PMAQ
