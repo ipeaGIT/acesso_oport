@@ -70,10 +70,10 @@ pmaq_df_coords_fixed <- pmaq_df_digitos %>%
          lat = as.numeric(lat))
 
 
-# teste
-pmaq_df_coords_fixed %>%
-  to_spatial() %>%
-  mapview()
+# # teste
+# pmaq_df_coords_fixed %>%
+#   to_spatial() %>%
+#   mapview()
 
 
 # save as .csv
@@ -209,11 +209,11 @@ table(cnes_filter5$health_high) # 273
     mutate(lon = as.numeric(lon),
            lat = as.numeric(lat))
   
-  # teste
-  cnes19_df_coords_fixed %>%
-    filter(!is.na(lon)) %>%
-    to_spatial() %>%
-    mapview()
+  # # teste
+  # cnes19_df_coords_fixed %>%
+  #   filter(!is.na(lon)) %>%
+  #   to_spatial() %>%
+  #   mapview()
   
   
   
@@ -268,61 +268,41 @@ table(cnes_filter5$health_high) # 273
     munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
     
     
-    
-    
 ######## Gerar input para galileo
     
+    munis_problema_galileo <- munis_problema %>%
+      select(CNES, log = LOGRADOURO, numero = NUMERO, bairro = BAIRRO, cep = CEP, cidade = MUNICÍPIO, uf = UF) %>%
+      # juntar logradouro com numero
+      mutate(rua = paste0(log, ", ", numero)) %>%
+      select(-log, -numero)
+    
+    write_delim(munis_problema_galileo, "../data-raw/hospitais/saude_2019_input_galileo.csv", delim = ";")
+    
+# depois de rodar o galileo.............
+    
+    # abrir output galileo
+    saude_output_galileo <- fread("../data-raw/hospitais/saude_2019_output_galileo.csv") %>%
+      # selecionar so os 3 e 4 estrelas
+      filter(PrecisionDepth %in% c("3 Estrelas", "4 Estrelas")) %>%
+      # substituir virgula por ponto
+      mutate(Latitude = str_replace(Latitude, ",", "\\.")) %>%
+      mutate(Longitude = str_replace(Longitude, ",", "\\.")) %>%
+      # selecionar colunas
+      select(CNES, lat = Latitude, lon = Longitude) %>%
+      mutate(CNES = as.character(CNES)) %>%
+      mutate(lat = as.numeric(lat)) %>%
+      mutate(lon = as.numeric(lon))
+    
+    # juntar com a base anterior completa
+    
+    setDT(cnes19_df_coords_fixed)[saude_output_galileo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
+    
+    summary(cnes19_df_coords_fixed$lon) # 5 NA's
     
 
-### O que fazer com missing??? Rodar no Galileo?
-    #   
-    # ceps_missing <-   a[is.na(lat)]
-    # ceps_missing <- ceps_missing[, .(CNES,  COD_CEP, CODUFMUN)]
-    # 
-    # 
-    # ceps_missing[, code_state := substr(CODUFMUN,1,2)]
-    # 
-    # # add State abbreviation
-    # ceps_missing <- ceps_missing %>% mutate(abbrev_state =  ifelse(code_state== 11, "RO",
-    #                                                      ifelse(code_state== 12, "AC",
-    #                                                             ifelse(code_state== 13, "AM",
-    #                                                                    ifelse(code_state== 14, "RR",
-    #                                                                           ifelse(code_state== 15, "PA",
-    #                                                                                  ifelse(code_state== 16, "AP",
-    #                                                                                         ifelse(code_state== 17, "TO",
-    #                                                                                                ifelse(code_state== 21, "MA",
-    #                                                                                                       ifelse(code_state== 22, "PI",
-    #                                                                                                              ifelse(code_state== 23, "CE",
-    #                                                                                                                     ifelse(code_state== 24, "RN",
-    #                                                                                                                            ifelse(code_state== 25, "PB",
-    #                                                                                                                                   ifelse(code_state== 26, "PE",
-    #                                                                                                                                          ifelse(code_state== 27, "AL",
-    #                                                                                                                                                 ifelse(code_state== 28, "SE",
-    #                                                                                                                                                        ifelse(code_state== 29, "BA",
-    #                                                                                                                                                               ifelse(code_state== 31, "MG",
-    #                                                                                                                                                                      ifelse(code_state== 32, "ES",
-    #                                                                                                                                                                             ifelse(code_state== 33, "RJ",
-    #                                                                                                                                                                                    ifelse(code_state== 35, "SP",
-    #                                                                                                                                                                                           ifelse(code_state== 41, "PR",
-    #                                                                                                                                                                                                  ifelse(code_state== 42, "SC",
-    #                                                                                                                                                                                                         ifelse(code_state== 43, "RS",
-    #                                                                                                                                                                                                                ifelse(code_state== 50, "MS",
-    #                                                                                                                                                                                                                       ifelse(code_state== 51, "MT",
-    #                                                                                                                                                                                                                              ifelse(code_state== 52, "GO",
-    #                                                                                                                                                                                                                                     ifelse(code_state== 53, "DF",NA))))))))))))))))))))))))))))
-    # 
-    # ceps_missing <- select(ceps_missing, CNES, CEP=COD_CEP, Estado=abbrev_state)
-    # fwrite(ceps_missing, "../data/hospitais/to_galileo.csv", sep=';')
-    # 
-    # 
-    #   to_spatial(a) %>% mapview()
-    #   
-  
-
     
-
 # Save data of health facilities
-  readr::write_rds(new_cnes19, "../data/hospitais/health_facilities2019_filtered.rds")
+  readr::write_rds(cnes19_df_coords_fixed, "../data/hospitais/health_facilities2019_filtered.rds")
   
   
   
