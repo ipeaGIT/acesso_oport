@@ -81,8 +81,6 @@ fwrite(pmaq_df_coords_fixed, '../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.cs
 gc(reset = T)
 
 
-# # Read PMAQ data
-# pmaq_df_coords_fixed <- fread('../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv')
 
 
 
@@ -219,7 +217,18 @@ table(cnes_filter5$health_high) # 273
   
   
   
+###### Uusa dados de lat/lon quando eles existirem na PMAQ
+  # Read PMAQ data
+  pmaq_df_coords_fixed <- fread('../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv', colClasses = 'character')
+  pmaq_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
 
+  # update lat lonf info from PMAQ
+  summary(cnes19_df_coords_fixed$lat) # 125 NAs
+  setDT(cnes19_df_coords_fixed)[pmaq_df_coords_fixed, on=c('CNES'='CNES_FINAL'), c('lat', 'lon') := list(i.lat, i.lon) ] 
+  summary(cnes19_df_coords_fixed$lat) # 125 NAs
+
+
+      
 ###### Identificar CNES com lat/long problematicos
   # A poucos digitos
   # B fora dos limites do municipio
@@ -258,13 +267,12 @@ table(cnes_filter5$health_high) # 273
     munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
     munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
     
-  # crie
-  
-  
-# update lat lonf info from PMAQ
-  new_cnes19[dt_coords_fixed, on=c('CNES'='CNES_FINAL'), c('lat', 'lon') := list(i.lat, i.lon) ] 
-  summary(new_cnes19$lat) # 795 NAs
-  
+    
+    
+    
+######## Gerar input para galileo
+    
+    
 
 ### O que fazer com missing??? Rodar no Galileo?
     #   
