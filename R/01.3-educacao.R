@@ -165,20 +165,20 @@ table(escolas_etapa$mat_medio)
 # 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
   
 # Escolas com lat/long missing  
-CO_ENTIDADE_lat_missing <- subset(escolas_etapa, is.na(lat))$CO_ENTIDADE
-escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
+  CO_ENTIDADE_lat_missing <- subset(escolas_etapa, is.na(lat))$CO_ENTIDADE
+  escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
 
-enderecos <- escolas_lat_missing$ENDERECO
+  # lista de enderecom com problema
+  enderecos <- escolas_lat_missing$ENDERECO
 
+# registar Google API Key
+  register_google(key = "")
+
+# geocode
+  coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
   
-
-
-library(ggmap)
-
-
-ggmap::geocode(escolas$ENDERECO[1])
-
-
+  
+  a <- rbindlist(coordenadas_google)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 5. trazer escolas do censo escolar 2018 ------------------------------------------------------------------
