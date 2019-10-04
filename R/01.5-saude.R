@@ -115,8 +115,13 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
 ### 3.Limpeza dos dados ---------------------------------
 
 
+# Filter 0: healthcare nao aplica
+  cnes_filter0 <- setDT(cnes19)[is.na(complex_nao_aplic_est)] 
+  cnes_filter0 <- cnes_filter0[is.na(complex_nao_aplic_mun)]
+
+
 # Filter 1: healthcare facilities operating with the public health system
-  cnes_filter1 <- setDT(cnes19)[ `ATENDE SUS`== 'SIM', ]
+  cnes_filter1 <- setDT(cnes_filter0)[ `ATENDE SUS`== 'SIM', ]
   
   
 # Filter 2: Pessoa juridica
@@ -149,37 +154,41 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
    # test >>> cnes_filter6[ CNES =='6771963']
    
    
+   
+   table(cnes_filter5$complex_baix_ambu_est, useNA = "always")
+   table(cnes_filter5$complex_baix_hosp_mun, useNA = "always")
+   table(cnes_filter5$health_low, useNA = "always")
 
 ### Organiza Nivel de atencao criando dummy
    
    
 # convert health facilities Hierarchy into dummy variables
-   cnes_filter5[, health_low := ifelse(complex_baix_ambu_est=='X', 1,
-                                ifelse(complex_baix_ambu_mun=='X', 1,
-                                ifelse(complex_baix_hosp_est=='X', 1,
-                                ifelse(complex_baix_hosp_mun=='X', 1, 0))))]
-                                  
-
-   cnes_filter5[, health_med := ifelse(complex_medi_ambu_est=='X', 1,
-                                ifelse(complex_medi_ambu_mun=='X', 1,
-                                ifelse(complex_medi_hosp_est=='X', 1,
-                                ifelse(complex_medi_hosp_mun=='X', 1, 0))))]
+   cnes_filter5[, health_low := ifelse(complex_baix_ambu_est=='X'|
+                                         complex_baix_ambu_mun=='X' |
+                                         complex_baix_hosp_est=='X' |
+                                         complex_baix_hosp_mun=='X' , 1, 0)]
    
+   cnes_filter5[, health_med := ifelse(complex_medi_ambu_est=='X'|
+                                         complex_medi_ambu_mun=='X' |
+                                         complex_medi_hosp_est=='X' |
+                                         complex_medi_hosp_mun=='X' , 1, 0)]
    
-   cnes_filter5[, health_high := ifelse(complex_alta_ambu_est=='X', 1,
-                                 ifelse(complex_alta_ambu_mun=='X', 1,
-                                 ifelse(complex_alta_hosp_est=='X', 1,
-                                 ifelse(complex_alta_hosp_mun=='X', 1, 0))))]
+   cnes_filter5[, health_high := ifelse(complex_alta_ambu_est=='X'|
+                                         complex_alta_ambu_mun=='X' |
+                                         complex_alta_hosp_est=='X' |
+                                         complex_alta_hosp_mun=='X' , 1, 0)]
                                 
  
-table(cnes_filter5$health_low)  # 238
-table(cnes_filter5$health_med)  # 550
-table(cnes_filter5$health_high) # 274
+table(cnes_filter5$health_low, useNA = "always")  # 238
+table(cnes_filter5$health_med, useNA = "always")  # 550
+table(cnes_filter5$health_high, useNA = "always") # 274
 
+cnes_filter5[, teste := sum(health_low, health_med, health_high, na.rm = TRUE), by = CNES]
   
+table(cnes_filter5$teste, useNA = "always")
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### 4. Corrigir Lat Long  ---------------------------------
 
   ### Fix lat long info
