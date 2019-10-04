@@ -173,8 +173,8 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
                                 
  
 table(cnes_filter5$health_low)  # 238
-table(cnes_filter5$health_med)  # 546
-table(cnes_filter5$health_high) # 273
+table(cnes_filter5$health_med)  # 550
+table(cnes_filter5$health_high) # 274
 
   
 
@@ -217,15 +217,15 @@ table(cnes_filter5$health_high) # 273
   
   
   
-###### Uusa dados de lat/lon quando eles existirem na PMAQ
+###### Usar dados de lat/lon quando eles existirem na PMAQ
   # Read PMAQ data
   pmaq_df_coords_fixed <- fread('../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv', colClasses = 'character')
   pmaq_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
 
-  # update lat lonf info from PMAQ
+  # update lat lon info from PMAQ
   summary(cnes19_df_coords_fixed$lat) # 125 NAs
   setDT(cnes19_df_coords_fixed)[pmaq_df_coords_fixed, on=c('CNES'='CNES_FINAL'), c('lat', 'lon') := list(i.lat, i.lon) ] 
-  summary(cnes19_df_coords_fixed$lat) # 125 NAs
+  summary(cnes19_df_coords_fixed$lat) # 124 NAs
 
 
       
@@ -251,8 +251,6 @@ table(cnes_filter5$health_high) # 273
   # carrega shapes
     shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% as_tibble() %>% st_sf()
   
-  
-
   # convert para sf
     cnes19_df_coords_fixed_df <- cnes19_df_coords_fixed[!(is.na(lat))] %>% st_as_sf( coords = c('lon', 'lat'))
     temp_intersect <- sf::st_join(cnes19_df_coords_fixed_df, shps)
@@ -262,8 +260,8 @@ table(cnes_filter5$health_high) # 273
   
   # juntar todas municipios com erro de lat/lon
     munis_problema1 <- subset(cnes19_df_coords_fixed, CNES %in% A_estbs_pouco_digito$CNES ) 
-    munis_problema2 <-  subset(cnes19_df_coords_fixed, CNES %in% B_muni_fora$CNES )
-    munis_problema3 <-  cnes19_df_coords_fixed[ is.na(lat), ]
+    munis_problema2 <- subset(cnes19_df_coords_fixed, CNES %in% B_muni_fora$CNES )
+    munis_problema3 <- cnes19_df_coords_fixed[ is.na(lat), ]
     munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
     munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
     
@@ -293,35 +291,35 @@ table(cnes_filter5$health_high) # 273
       mutate(lat = as.numeric(lat)) %>%
       mutate(lon = as.numeric(lon))
     
-    # juntar com a base anterior completa
     
+    
+  # Update lat lon info a partir de resultados do Galileo
+    summary(cnes19_df_coords_fixed$lon) # 124 NA's
     setDT(cnes19_df_coords_fixed)[saude_output_galileo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
-    
     summary(cnes19_df_coords_fixed$lon) # 5 NA's
     
 
     
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
     
-    
-    
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    # 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
-    
-    # Escolas com lat/long de baixa precisa (1 ou 2 digitos apos casa decimal)
-    setDT(escolas_etapa)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
-    lat_impreciso <- subset(escolas_etapa, ndigitos <=2)$CO_ENTIDADE
-    escolas_lat_impreciso <- subset(escolas, CO_ENTIDADE %in% lat_impreciso)
+    # A) Escolas com lat/long de baixa precisao (1 ou 2 digitos apos casa decimal)
+    setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+    lat_impreciso <- subset(cnes19_df_coords_fixed, ndigitos <=2)$CNES
+    A_cnes_lat_impreciso <- subset(cnes19_df_coords_fixed, CNES %in% lat_impreciso)
     
     
     # Escolas com lat/long missing  
-    CO_ENTIDADE_lat_missing <- subset(escolas_etapa, is.na(lat))$CO_ENTIDADE
-    escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
+    cnes_lat_missing <- subset(cnes19_df_coords_fixed, is.na(lat))$CNES
+    B_cnes_lat_missing <- subset(cnes19_df_coords_fixed, CNES %in% cnes_lat_missing)
     
     # escolas problema
-    escolas_problema <- rbind(escolas_lat_impreciso, escolas_lat_missing)
+    cnes_problema <- rbind(A_cnes_lat_impreciso, B_cnes_lat_missing)
     
-    # lista de enderecom com problema
-    enderecos <- escolas_problema$ENDERECO
+    # lista de enderecos com problema
+    cnes_problema[, endereco := paste0(CEP,", ", MUNICÍPIO) ]
+    enderecos <- cnes_problema$endereco
     
     # registrar Google API Key
     my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
@@ -329,22 +327,23 @@ table(cnes_filter5$health_high) # 273
     
     # geocode
     coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
-    summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
-    
+
     # Link escolas com lat lon do geocode
-    escolas_lat_missing_geocoded <- cbind(escolas_lat_missing, coordenadas_google)
+    cnes_problema_geocoded <- cbind(cnes_problema, coordenadas_google)
     
     
     # atualiza lat lon a partir de google geocode
-    escolas_etapa[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
-    setDT(escolas_etapa)[escolas_lat_missing_geocoded, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon) ]
+    cnes19_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
+    setDT(cnes19_df_coords_fixed)[cnes_problema_geocoded, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
     
     
-    summary(escolas$lat)
-    summary(escolas_lat_missing_geocoded$lat)
+    table(cnes19_df_coords_fixed$health_high, useNA = "always")
+    table(cnes19_df_coords_fixed$health_med, useNA = "always")
+    table(cnes19_df_coords_fixed$health_low, useNA = "always")
     
     
-    subset(escolas_etapa, !is.na(lat)) %>%
+    # view
+    subset(cnes19_df_coords_fixed, !is.na(lat)) %>%
       to_spatial() %>%
       mapview()
     
