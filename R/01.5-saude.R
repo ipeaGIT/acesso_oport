@@ -323,8 +323,9 @@ table(cnes_filter5$health_high) # 273
     # lista de enderecom com problema
     enderecos <- escolas_problema$ENDERECO
     
-    # registar Google API Key
-    register_google(key = "")
+    # registrar Google API Key
+    my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
+    register_google(key = my_api$V1)
     
     # geocode
     coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
