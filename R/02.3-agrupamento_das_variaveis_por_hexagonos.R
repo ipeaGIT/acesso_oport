@@ -13,7 +13,7 @@ source('./R/fun/setup.R')
 cnes <- readr::read_rds("../data/hospitais/health_facilities2019_filtered.rds") 
 
 cnes <- cnes[!is.na(lat),] 
-cnes <- cnes[!is.na(NIV_HIER),] 
+# cnes <- cnes[!is.na(NIV_HIER),] 
 
 cnes <- cnes %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
 
@@ -22,16 +22,16 @@ cnes <- cnes %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
 
 # Escolas  -------------------------------------
 # abrir censo escolar geo
-escolas <- fread("../data/censo_escolar/censo_escolar_2015.csv") %>%
+escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
   # Deletar escolas q nao foram localizadas
   dplyr::filter(!is.na(lat)) %>%
   # Selecionar variaveis
-  dplyr::select(cod_escola, uf, municipio, cod_mun = CO_MUNICIPIO, rede, mat_infantil, mat_fundamental, mat_medio, lon, lat) #%>%
-  # # Transformar para formato longo
+  dplyr::select(cod_escola = CO_ENTIDADE, uf = CO_UF, municipio = NO_MUNICIPIO, 
+                cod_mun = CO_MUNICIPIO, mat_infantil, mat_fundamental, mat_medio, lon, lat)
   # tidyr::gather(tipo, mat_n, mat_infantil:mat_medio)
 
-# somente escolas publicas
-escolas <- subset(escolas, rede !="Privada")
+
+
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
@@ -72,7 +72,7 @@ agrupar_variaveis <- function(sigla_muni) {
     st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
   # saude
-  cnes_filtrado <- setDT(cnes)[CODUFMUN == substr(cod_mun_ok, 1, 6)] %>% st_sf()
+  cnes_filtrado <- setDT(cnes)[code_muni == substr(cod_mun_ok, 1, 6)] %>% st_sf()
   
   
   
@@ -162,17 +162,17 @@ agrupar_variaveis <- function(sigla_muni) {
       # join espacial 
         hex_escolas <- hex_muni %>% st_join(escolas_filtrado) %>% setDT()
       
-      # Dummy para nivel de educacao em cada hexagono
-        hex_escolas[, edu_infantil := ifelse( mat_infantil > 0, 1, 0) ]
-        hex_escolas[, edu_fundamental := ifelse( mat_fundamental > 0, 1, 0) ]      
-        hex_escolas[, edu_medio := ifelse( mat_medio > 0, 1, 0) ]      
-        hex_escolas[, edu_total := ifelse( is.na(cod_escola), 0, 1) ]      
+      # # Dummy para nivel de educacao em cada hexagono
+      #   hex_escolas[, edu_infantil := ifelse( mat_infantil > 0, 1, 0) ]
+      #   hex_escolas[, edu_fundamental := ifelse( mat_fundamental > 0, 1, 0) ]      
+      #   hex_escolas[, edu_medio := ifelse( mat_medio > 0, 1, 0) ]      
+        hex_escolas[, edu_total := ifelse( is.na(cod_escola), 0, 1) ]
         
       # Summarize
         hex_escolas <- hex_escolas[, .(edu_total = sum(edu_total),
-                                      edu_infantil = sum(edu_infantil),
-                                       edu_fundamental=sum(edu_fundamental),
-                                       edu_medio=sum(edu_medio)), by = id_hex ]
+                                      edu_infantil = sum(mat_infantil),
+                                       edu_fundamental=sum(mat_fundamental),
+                                       edu_medio=sum(mat_medio)), by = id_hex ]
         
       
 
