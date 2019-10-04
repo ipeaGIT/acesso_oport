@@ -82,6 +82,8 @@ options(scipen=10000)
 # details > https://jangorecki.gitlab.io/data.cube/library/data.table/html/datatable-optimize.html
 options(datatable.optimize=Inf)
 
+# set number of threads used in data.table
+data.table::setDTthreads(percent = 100)
 
 to_spatial <- function(df1, coordenada = c("lon", "lat")) {
   x <- st_as_sf(df1, coords = coordenada, crs = 4326)
