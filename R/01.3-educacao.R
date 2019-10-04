@@ -24,6 +24,8 @@ escolas_filt <- escolas %>%
   rename(lon = LONGITUDE, lat = LATITUDE)
 
 
+# excluir escolas paralisadas
+escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALISADA")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,8 +66,8 @@ B_muni_fora <- subset(temp_intersect, is.na(name_muni))
 
 # juntar todos municipios com erro de lat/lon
 munis_problema1 <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
-munis_problema2 <-  subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
-munis_problema3 <-  escolas_filt[ is.na(lat), ]
+munis_problema2 <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
+munis_problema3 <- escolas_filt[ is.na(lat), ]
 munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
 munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates
 
@@ -116,11 +118,9 @@ educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_
   mutate(lon = as.numeric(lon),
          lat = as.numeric(lat))
 
-# juntar com a base anterior completa
-
-setDT(escolas_filt)[educacao_output_galileo, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon)]
-
-summary(escolas_filt$lon) # 181 NA's, mais nos valores de menos que 2 estrelas do galileo
+# juntar com a base anterior completa para atualizar lat e lon q veio do Galileo
+  setDT(escolas_filt)[educacao_output_galileo, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon)]
+  summary(escolas_filt$lon) # 149 NA's, mais nos valores de menos que 2 estrelas do galileo
 
 # para esses, sera utilizado o geocode do google maps 
 
@@ -138,23 +138,20 @@ summary(escolas_filt$lon) # 181 NA's, mais nos valores de menos que 2 estrelas d
 
 # Escolas com lat/long missing  
 CO_ENTIDADE_lat_missing <- subset(escolas_filt, is.na(lat))$CO_ENTIDADE
-escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
-
-# escolas problema
-# escolas_problema <- rbind(escolas_lat_impreciso, escolas_lat_missing)
-escolas_problema <- escolas_lat_missing
+escolas_problema <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
 
 # lista de enderecom com problema
 enderecos <- escolas_problema$ENDERECO
 
-# registar Google API Key
-register_google(key = "AIzaSyCJfw6ptsSFVR8NkMn4io2RyObMCBuIItE")
+# registrar Google API Key
+my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
+register_google(key = my_api$V1)
 
 # geocode
 coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
 
 # Link escolas com lat lon do geocode
-escolas_lat_missing_geocoded <- cbind(escolas_lat_missing, coordenadas_google)
+escolas_lat_missing_geocoded <- cbind(escolas_problema, coordenadas_google)
 
 summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
 
@@ -162,9 +159,6 @@ summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
 escolas_filt[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
 setDT(escolas_filt)[escolas_lat_missing_geocoded, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon) ]
 
-
-summary(escolas$lat)
-summary(escolas_lat_missing_geocoded$lat)
 summary(escolas_filt$lat)
 
 
@@ -185,14 +179,20 @@ escolas_google_mal_geo <- escolas_filt %>%
 
 mapview(escolas_google_mal_geo)
 
-# maior parte dessas escolas estao no brasil, mas na regiao metropolitana dos municipais
-# dois casos extremos de mal georreferenciamento (um no ponto (0,0), outro na tailandia)
+# Retorna somente os ceps dos que deram errado para jogar no google API
+somente_ceps <- gsub("(^.*)(\\d{5}-\\d{3}.*$)", "\\2", escolas_google_mal_geo$ENDERECO)
 
-# manter somente as escolas que estao dentro dos municipios
-escolas_filt_ok <- escolas_filt %>%
-  filter(CO_ENTIDADE %nin% escolas_google_mal_geo$CO_ENTIDADE)
+# consulta google api
+coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode) %>% rbindlist()
 
 
+# atualiza lat lon a partir de google geocode
+escolas_google_bom_geo <- cbind(as.data.frame(escolas_google_mal_geo), coordenadas_google_cep)
+setDT(escolas_filt)[escolas_google_bom_geo, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon) ]
+
+subset(escolas_filt, !is.na(lat)) %>%
+  to_spatial() %>%
+  mapview()
 
 
 
@@ -204,28 +204,63 @@ escolas_filt_ok <- escolas_filt %>%
   # a info de etapa de ensino informada no dado do INEP geo
 
 # colunas de interesse: 
-colunas <- c("CO_ENTIDADE", 
+colunas <- c("CO_ENTIDADE", "NO_ENTIDADE",
              "IN_COMUM_CRECHE", "IN_COMUM_PRE", 
              "IN_COMUM_FUND_AI", "IN_COMUM_FUND_AF", 
-             "IN_COMUM_MEDIO_MEDIO", "IN_COMUM_MEDIO_NORMAL")
+             "IN_COMUM_MEDIO_MEDIO", "IN_COMUM_MEDIO_NORMAL",
+             "IN_ESP_EXCLUSIVA_CRECHE", "IN_ESP_EXCLUSIVA_PRE", 
+             "IN_COMUM_MEDIO_INTEGRADO", "IN_PROFISSIONALIZANTE",
+             "IN_ESP_EXCLUSIVA_FUND_AI", "IN_ESP_EXCLUSIVA_FUND_AF",
+             "IN_ESP_EXCLUSIVA_MEDIO_MEDIO", "IN_ESP_EXCLUSIVA_MEDIO_INTEGR",
+             "IN_ESP_EXCLUSIVA_MEDIO_NORMAL","IN_COMUM_EJA_MEDIO","IN_COMUM_EJA_PROF",
+             "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
+             "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND")
+
+
 
 # abrir
-escolas_censo <- fread("../data-raw/censo_escolar/censo_escolar_escolas_2018.CSV") %>%
-  select(!!colunas) %>%
+escolas_censo <- fread("../data-raw/censo_escolar/censo_escolar_escolas_2018.CSV", select=colunas ) %>%
   # selecionar escolas
-  filter(CO_ENTIDADE %in% escolas_filt_ok$CO_ENTIDADE) %>%
+  filter(CO_ENTIDADE %in% escolas_filt$CO_ENTIDADE) %>%
   # identificar o tipo de ensino em cada escola
-  mutate(mat_infantil = ifelse(IN_COMUM_CRECHE == 1 | IN_COMUM_PRE == 1, 1, 0)) %>%
-  mutate(mat_fundamental = ifelse(IN_COMUM_FUND_AI == 1 | IN_COMUM_FUND_AF == 1, 1, 0)) %>%
-  mutate(mat_medio = ifelse(IN_COMUM_MEDIO_MEDIO == 1 | IN_COMUM_MEDIO_NORMAL == 1, 1, 0)) %>%
+  mutate(mat_infantil = ifelse(IN_COMUM_CRECHE == 1 | 
+                                 IN_COMUM_PRE == 1 |
+                               IN_ESP_EXCLUSIVA_CRECHE == 1 |
+                               IN_ESP_EXCLUSIVA_PRE ==1, 1, 0)) %>%
+  
+  mutate(mat_fundamental = ifelse(IN_COMUM_FUND_AI == 1 | 
+                                    IN_COMUM_FUND_AF == 1 |
+                                    IN_ESP_EXCLUSIVA_FUND_AI ==1 |
+                                    IN_ESP_EXCLUSIVA_FUND_AF ==1 |
+                                    IN_COMUM_EJA_FUND ==1 |
+                                    IN_ESP_EXCLUSIVA_EJA_FUND ==1, 1, 0)) %>%
+  mutate(mat_medio = ifelse(IN_COMUM_MEDIO_MEDIO == 1 |
+                              IN_COMUM_MEDIO_NORMAL == 1 |
+                              IN_COMUM_MEDIO_INTEGRADO ==1 |
+                              IN_PROFISSIONALIZANTE ==1 |
+                              IN_ESP_EXCLUSIVA_MEDIO_MEDIO ==1 |
+                              IN_ESP_EXCLUSIVA_MEDIO_INTEGR ==1 |
+                              IN_ESP_EXCLUSIVA_MEDIO_NORMAL ==1 |
+                              IN_COMUM_EJA_MEDIO ==1 |
+                              IN_COMUM_EJA_PROF ==1 |
+                              IN_ESP_EXCLUSIVA_EJA_MEDIO ==1 |
+                              IN_ESP_EXCLUSIVA_EJA_PROF ==1 |
+                              IN_COMUM_PROF ==1 |
+                              IN_ESP_EXCLUSIVA_PROF ==1, 1, 0)) %>%
   # Selecionar variaveis
-  select(CO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio)
+  select(CO_ENTIDADE, NO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio)
 
-# 631 escolas sem informacao alguma
-sum(is.na(escolas_censo$mat_infantil))
+
+# talvez tenham q remover escolas priosionais
+# ?
+
+# 195 escolas sem informacao alguma
+setDT(escolas_censo)[, test := sum(mat_infantil, mat_fundamental, mat_medio), by=CO_ENTIDADE]
+table(escolas_censo$test)
+
 
 # juntar com a base nova
-escolas_etapa <- escolas_filt_ok %>%
+escolas_etapa <- escolas_filt %>%
   left_join(escolas_censo, by = c("CO_ENTIDADE")) # %>%
   # filter(!is.na(lon)) %>%
   # filter(!is.na(mat_infantil))
@@ -236,7 +271,6 @@ escolas_etapa <- escolas_filt_ok %>%
 #                           lat_miss_p = 100*sum(is.na(lat) /.N),
 #                           ensino_miss = sum(is.na(mat_infantil)),
 #                           ensino_miss_p = 100*sum(is.na(mat_infantil))/.N), by=CO_MUNICIPIO ][order(-lat_miss_p)]
-
 
 
 table(escolas_etapa$mat_infantil, useNA = "always")
@@ -258,20 +292,14 @@ setDT(escolas_etapa)[, mat_medio := ifelse(is.na(mat_medio) & OFERTA_ETAPA_MODAL
                                            mat_medio)]
   
 
+# restricoes em tipo de esino
+escolas_etapa[ test ==0]$RESTRICAO_ATENDIMENTO  %>% table
+table(escolas_etapa$RESTRICAO_ATENDIMENTO)
+
+
 table(escolas_etapa$mat_infantil, useNA = "always")
 table(escolas_etapa$mat_fundamental, useNA = "always")
 table(escolas_etapa$mat_medio, useNA = "always")
-
-
-# excluir escolas paralisadas
-escolas_final <- escolas_etapa %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALISADA")
-
-table(escolas_final$mat_infantil, useNA = "always")
-table(escolas_final$mat_fundamental, useNA = "always")
-table(escolas_final$mat_medio, useNA = "always")
-  
-
-
 
 
 
@@ -279,7 +307,6 @@ table(escolas_final$mat_medio, useNA = "always")
 # 5. salvar ----------------------------------------------------------------------------------------
 
 # salvar
-escolas_final %>%
-  write_rds("../data/censo_escolar/educacao_inep_2019.rds")
+  write_rds(escolas_etapa, "../data/censo_escolar/educacao_inep_2019.rds")
 
 
