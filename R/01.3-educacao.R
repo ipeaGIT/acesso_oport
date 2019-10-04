@@ -8,6 +8,9 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
+
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 1. Ler dados do INEP novos ------------------------------------------------------------------
 
@@ -17,84 +20,60 @@ escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
 # filtrar so dos nossos municipios
 escolas_filt <- escolas %>%
   filter(CO_MUNICIPIO %in% munis_df$code_muni) %>%
-  filter(CATEGORIA_ADMINISTRATIVA == "Pública")
-
-
-
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### 2. Corrigir Lat Long  ---------------------------------
-
-### Fix lat long info
-
-
-# trazer a quantidade de digitos para o cnes19
-escolas_df_digitos <- escolas_filt %>%
-  rename(code_muni = IBGE) %>%
-  # selecionar so os municipios do projeto
-  filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
-  mutate(code_muni = as.character(code_muni)) %>%
-  left_join(munis, by = "code_muni")
-
-# criar dataframe com as coordenadas ajeitadas
-cnes19_df_coords_fixed <- cnes19_df_digitos %>%
-  # primeiro, tirar tudo que for ponto ou virgula
-  mutate(lon = gsub("(\\.|,)", "", LONGITUDE),
-         lat = gsub("(\\.|,)", "", LATITUDE)) %>%
-  # tirar sinal de negativo
-  mutate(lon = gsub("-", "", lon),
-         lat = gsub("-", "", lat)) %>%
-  # o ponto na longitude vai ser sempre depois do segundo numerico, e vai ser sempre negativo
-  mutate(lon = sub("(^\\d{2})(\\d+)", "-\\1\\.\\2", lon)) %>%
-  # o ponto na latitude vai depender do nchar
-  mutate(lat = ifelse(lat_digits == 1, sub("(^\\d{1})(\\d+)", "-\\1\\.\\2", lat),
-                      sub("(^\\d{2})(\\d+)", "-\\1\\.\\2", lat))) %>%
-  mutate(lon = as.numeric(lon),
-         lat = as.numeric(lat))
-
-# # teste
-# cnes19_df_coords_fixed %>%
-#   filter(!is.na(lon)) %>%
-#   to_spatial() %>%
-#   mapview()
-
-
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 2. Checar dados de Lat Long e corrigir erros com Galileo ------------------------------------------------------------------
-
-# ver missings
-escolas_filt %>%
   filter(CATEGORIA_ADMINISTRATIVA == "Pública") %>%
-  mutate(loc_missing = ifelse(is.na(LATITUDE), "sim", "nao")) %>%
-  group_by(NO_MUNICIPIO, loc_missing) %>%
-  summarise(n = n()) %>%
-  ungroup() %>%
-  group_by(NO_MUNICIPIO) %>%
-  mutate(sum = sum(n)) %>%
-  ungroup() %>%
-  mutate(perc = n/sum) %>%
-  # View()
-  ggplot()+
-  geom_col(aes(x = NO_MUNICIPIO, y = perc, fill = loc_missing))+
-  scale_y_percent()
-
-
-ggsave("figure/diagnostico_escolas.png")
+  rename(lon = LONGITUDE, lat = LATITUDE)
 
 
 
-# pegar missings e ajeitar enderecos para o galileu
-escolas_filt_miss <- escolas_filt %>%
-  filter(is.na(LATITUDE)) %>%
-  # pegar so o codigo e o endereco
-  select(CO_ENTIDADE, ENDERECO)
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 2. Identificar CENSO ESCOLAR com lat/long problematicos
+
+# A - poucos digitos
+# B - fora dos limites do municipio
+# C - com coordenadas NA
+
+
+# qual o nivel de precisao das coordenadas deve ser aceito?
+# 0.01 = 1113.2 m
+# 0.001 = 111.32 m
+# 0.0001 = 11.132 m
+# 0.00001 = 1.1132 m
+
+
+# A) Numero de digitos de lat/long apos ponto
+setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+A_estbs_pouco_digito <- escolas_filt[ ndigitos <=2,]
+
+
+# B) fora dos limites do municipio
+
+# carrega shapes
+shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% 
+  as_tibble() %>% 
+  st_sf(crs = 4326)
+
+# convert para sf
+censoescolar2019_df_coords_fixed_df <- escolas_filt[!(is.na(lat))] %>% 
+  st_as_sf( coords = c('lon', 'lat'), crs = 4326)
+
+temp_intersect <- sf::st_join(censoescolar2019_df_coords_fixed_df, shps)
+
+# escolas que cairam fora de algum municipio
+B_muni_fora <- subset(temp_intersect, is.na(name_muni))
+
+# juntar todos municipios com erro de lat/lon
+munis_problema1 <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
+munis_problema2 <-  subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
+munis_problema3 <-  escolas_filt[ is.na(lat), ]
+munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
+munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates
+
+
+# ajeitar enderecos para o galileo
 # quebrar a string de endereco nos pontos
 # colunas: logradouro, cidade, bairro, cep, uf
-teste <- escolas_filt_miss %>%
+teste <- munis_problema %>%
   separate(ENDERECO, c("logradouro", "bairro", "cep"), "\\.") %>%
   # tirar espacos em branco
   mutate(bairro = trimws(bairro, which = "both")) %>%
@@ -117,20 +96,8 @@ teste <- escolas_filt_miss %>%
   select(CO_ENTIDADE, rua = logradouro, cidade, bairro, cep = cep1, uf)
 
 # salvar input para o galileo
-write_delim(teste, "escolas_2019_input_galileo.csv", delim = ";")  
+write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", delim = ";")  
   
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -138,27 +105,101 @@ write_delim(teste, "escolas_2019_input_galileo.csv", delim = ";")
 # depois de rodar o galileo...
 
 # abrir output do galileo
-output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_galileo.csv") %>%
+educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_galileo.csv") %>%
   # filtrar somente os maiores que 2 estrelas
   filter(PrecisionDepth %nin% c("1 Estrela", "2 Estrelas")) %>%
   # substituir virgula por ponto
   mutate(Latitude = str_replace(Latitude, ",", "\\.")) %>%
   mutate(Longitude = str_replace(Longitude, ",", "\\.")) %>%
   # selecionar colunas
-  select(CO_ENTIDADE, Latitude, Longitude)
+  select(CO_ENTIDADE, lat = Latitude, lon = Longitude) %>%
+  mutate(lon = as.numeric(lon),
+         lat = as.numeric(lat))
 
-# juntar com a base original
-escolas_galileo <- escolas_filt %>%
-  left_join(output_galileo, by = c("CO_ENTIDADE")) %>%
-  mutate(LATITUDE = ifelse(is.na(LATITUDE), Latitude, LATITUDE)) %>%
-  mutate(LONGITUDE = ifelse(is.na(LONGITUDE), Longitude, LONGITUDE)) %>%
-  # selecionar colunas
-  select(CO_MUNICIPIO, CO_ENTIDADE, lon = LONGITUDE, lat = LATITUDE)
+# juntar com a base anterior completa
+
+setDT(escolas_filt)[educacao_output_galileo, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon)]
+
+summary(escolas_filt$lon) # 181 NA's, mais nos valores de menos que 2 estrelas do galileo
+
+# para esses, sera utilizado o geocode do google maps 
 
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 3. trazer escolas do censo escolar 2018 ------------------------------------------------------------------
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 3. Recupera a info lat/long que falta usando google maps -----------------------------------------
+
+# # Escolas com lat/long de baixa precisa (1 ou 2 digitos apos casa decimal)
+# setDT(escolas_etapa)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+# lat_impreciso <- subset(escolas_etapa, ndigitos <=2)$CO_ENTIDADE
+# escolas_lat_impreciso <- subset(escolas, CO_ENTIDADE %in% lat_impreciso)
+
+
+# Escolas com lat/long missing  
+CO_ENTIDADE_lat_missing <- subset(escolas_filt, is.na(lat))$CO_ENTIDADE
+escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
+
+# escolas problema
+# escolas_problema <- rbind(escolas_lat_impreciso, escolas_lat_missing)
+escolas_problema <- escolas_lat_missing
+
+# lista de enderecom com problema
+enderecos <- escolas_problema$ENDERECO
+
+# registar Google API Key
+register_google(key = "AIzaSyCJfw6ptsSFVR8NkMn4io2RyObMCBuIItE")
+
+# geocode
+coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
+
+# Link escolas com lat lon do geocode
+escolas_lat_missing_geocoded <- cbind(escolas_lat_missing, coordenadas_google)
+
+summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
+
+# atualiza lat lon a partir de google geocode
+escolas_filt[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
+setDT(escolas_filt)[escolas_lat_missing_geocoded, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon) ]
+
+
+summary(escolas$lat)
+summary(escolas_lat_missing_geocoded$lat)
+summary(escolas_filt$lat)
+
+
+subset(escolas_filt, !is.na(lat)) %>%
+  to_spatial() %>%
+  mapview()
+
+# ainda ha escolas mal georreferenciadas!
+# identificar essas escolas e separa-las
+# convert para sf
+escolas_google_mal_geo <- escolas_filt %>%
+  filter(!is.na(lat)) %>% 
+  st_as_sf(coords = c('lon', 'lat'), crs = 4326) %>%
+  sf::st_join(shps) %>%
+  # escolas que cairam fora de algum municipio, a serem georreferenciadas na unha
+  filter(is.na(name_muni)) %>%
+  select(CO_ENTIDADE, ENDERECO)
+
+mapview(escolas_google_mal_geo)
+
+# maior parte dessas escolas estao no brasil, mas na regiao metropolitana dos municipais
+# dois casos extremos de mal georreferenciamento (um no ponto (0,0), outro na tailandia)
+
+# manter somente as escolas que estao dentro dos municipios
+escolas_filt_ok <- escolas_filt %>%
+  filter(CO_ENTIDADE %nin% escolas_google_mal_geo$CO_ENTIDADE)
+
+
+
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 4. trazer escolas do censo escolar 2018 ----------------------------------------------------------
+  
   # O Censo escolar traz dado codificada da etapa de ensino. Para as informacoes missing, a gente usa
   # a info de etapa de ensino informada no dado do INEP geo
 
@@ -172,7 +213,7 @@ colunas <- c("CO_ENTIDADE",
 escolas_censo <- fread("../data-raw/censo_escolar/censo_escolar_escolas_2018.CSV") %>%
   select(!!colunas) %>%
   # selecionar escolas
-  filter(CO_ENTIDADE %in% escolas_galileo$CO_ENTIDADE) %>%
+  filter(CO_ENTIDADE %in% escolas_filt_ok$CO_ENTIDADE) %>%
   # identificar o tipo de ensino em cada escola
   mutate(mat_infantil = ifelse(IN_COMUM_CRECHE == 1 | IN_COMUM_PRE == 1, 1, 0)) %>%
   mutate(mat_fundamental = ifelse(IN_COMUM_FUND_AI == 1 | IN_COMUM_FUND_AF == 1, 1, 0)) %>%
@@ -181,89 +222,61 @@ escolas_censo <- fread("../data-raw/censo_escolar/censo_escolar_escolas_2018.CSV
   select(CO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio)
 
 # 631 escolas sem informacao alguma
-sum( is.na(escolas_censo$mat_infantil) )
+sum(is.na(escolas_censo$mat_infantil))
 
 # juntar com a base nova
-escolas_etapa <- escolas_galileo %>%
+escolas_etapa <- escolas_filt_ok %>%
   left_join(escolas_censo, by = c("CO_ENTIDADE")) # %>%
   # filter(!is.na(lon)) %>%
   # filter(!is.na(mat_infantil))
 
-# Quantas escolas estao com dados missing (lat/long e nivel de ensino) por municipio
-setDT(escolas_etapa)[, .( total= .N,
-                          lat_miss = sum(is.na(lat)),
-                          lat_miss_p = 100*sum(is.na(lat) /.N),
-                          ensino_miss = sum(is.na(mat_infantil)),
-                          ensino_miss_p = 100*sum(is.na(mat_infantil))/.N), by=CO_MUNICIPIO ][order(-lat_miss_p)]
+# # Quantas escolas estao com dados missing (lat/long e nivel de ensino) por municipio
+# setDT(escolas_etapa)[, .( total= .N,
+#                           lat_miss = sum(is.na(lat)),
+#                           lat_miss_p = 100*sum(is.na(lat) /.N),
+#                           ensino_miss = sum(is.na(mat_infantil)),
+#                           ensino_miss_p = 100*sum(is.na(mat_infantil))/.N), by=CO_MUNICIPIO ][order(-lat_miss_p)]
 
 
 
-table(escolas_etapa$mat_infantil)
-table(escolas_etapa$mat_fundamental)
-table(escolas_etapa$mat_medio)
+table(escolas_etapa$mat_infantil, useNA = "always")
+table(escolas_etapa$mat_fundamental, useNA = "always")
+table(escolas_etapa$mat_medio, useNA = "always")
 
-# Recupera informacao de etapa de ensino do censo escolar informado no dado enviado pelo INEP geo
-  escolas_etapa <- left_join(escolas_etapa, select(escolas, CO_ENTIDADE, OFERTA_ETAPA_MODALIDADE), by='CO_ENTIDADE')
+# # Recupera informacao de etapa de ensino do censo escolar informado no dado enviado pelo INEP geo
+#   escolas_etapa <- left_join(escolas_etapa, select(escolas, CO_ENTIDADE, OFERTA_ETAPA_MODALIDADE), by='CO_ENTIDADE')
 
   # tests
   # subset(test,mat_infantil !=1 &  mat_fundamental !=1 & mat_medio ==1 )$OFERTA_ETAPA_MODALIDADE %>% table %>% View()
   
 # codifica etapa de ensino pela string
-  setDT(escolas_etapa)[, mat_infantil := ifelse(is.na(mat_infantil) & OFERTA_ETAPA_MODALIDADE %like% 'Creche|Pré-escola', 1, 0)]
-  setDT(escolas_etapa)[, mat_fundamental := ifelse(is.na(mat_fundamental) & OFERTA_ETAPA_MODALIDADE %like% 'Ensino Fundamental', 1, 0)]
-  setDT(escolas_etapa)[, mat_medio := ifelse(is.na(mat_medio) & OFERTA_ETAPA_MODALIDADE %like% "Ensino Médio|nível Médio|Curso Profissional|Curso Técnico", 1, 0)]
-  
-  
- 
-  
-  
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
-  
-# Escolas com lat/long de baixa precisa (1 ou 2 digitos apos casa decimal)
-  setDT(escolas_etapa)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
-  lat_impreciso <- subset(escolas_etapa, ndigitos <=2)$CO_ENTIDADE
-  escolas_lat_impreciso <- subset(escolas, CO_ENTIDADE %in% lat_impreciso)
+setDT(escolas_etapa)[, mat_infantil := ifelse(is.na(mat_infantil) & OFERTA_ETAPA_MODALIDADE %like% 'Creche|Pré-escola', 1, 
+                                              mat_infantil)]
+setDT(escolas_etapa)[, mat_fundamental := ifelse(is.na(mat_fundamental) & OFERTA_ETAPA_MODALIDADE %like% 'Ensino Fundamental', 1, 
+                                                 mat_fundamental)]
+setDT(escolas_etapa)[, mat_medio := ifelse(is.na(mat_medio) & OFERTA_ETAPA_MODALIDADE %like% "Ensino Médio|nível Médio|Curso Profissional|Curso Técnico", 1, 
+                                           mat_medio)]
   
 
-# Escolas com lat/long missing  
-  CO_ENTIDADE_lat_missing <- subset(escolas_etapa, is.na(lat))$CO_ENTIDADE
-  escolas_lat_missing <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
-
-# escolas problema
-  escolas_problema <- rbind(escolas_lat_impreciso, escolas_lat_missing)
-  
-# lista de enderecom com problema
-  enderecos <- escolas_problema$ENDERECO
-
-# registar Google API Key
-  register_google(key = "")
-
-# geocode
-  coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
-  summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
-  
-# Link escolas com lat lon do geocode
-  escolas_lat_missing_geocoded <- cbind(escolas_lat_missing, coordenadas_google)
+table(escolas_etapa$mat_infantil, useNA = "always")
+table(escolas_etapa$mat_fundamental, useNA = "always")
+table(escolas_etapa$mat_medio, useNA = "always")
 
 
-# atualiza lat lon a partir de google geocode
-  escolas_etapa[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
-  setDT(escolas_etapa)[escolas_lat_missing_geocoded, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon) ]
+# excluir escolas paralisadas
+escolas_final <- escolas_etapa %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALISADA")
+
+table(escolas_final$mat_infantil, useNA = "always")
+table(escolas_final$mat_fundamental, useNA = "always")
+table(escolas_final$mat_medio, useNA = "always")
   
 
-summary(escolas$lat)
-summary(escolas_lat_missing_geocoded$lat)
-
-
-subset(escolas_etapa, !is.na(lat)) %>%
-  to_spatial() %>%
-  mapview()
 
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 5. trazer escolas do censo escolar 2018 ------------------------------------------------------------------
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 5. salvar ----------------------------------------------------------------------------------------
 
 # salvar
 escolas_final %>%
