@@ -169,10 +169,10 @@ agrupar_variaveis <- function(sigla_muni) {
         hex_escolas[, edu_total := ifelse( is.na(cod_escola), 0, 1) ]
         
       # Summarize
-        hex_escolas <- hex_escolas[, .(edu_total = sum(edu_total),
-                                      edu_infantil = sum(mat_infantil),
-                                       edu_fundamental=sum(mat_fundamental),
-                                       edu_medio=sum(mat_medio)), by = id_hex ]
+        hex_escolas <- hex_escolas[, .(edu_total = sum(edu_total, na.rm = T),
+                                      edu_infantil = sum(mat_infantil, na.rm = T),
+                                       edu_fundamental=sum(mat_fundamental, na.rm = T),
+                                       edu_medio=sum(mat_medio, na.rm = T)), by = id_hex ]
         
       
 
