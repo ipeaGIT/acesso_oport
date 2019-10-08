@@ -66,7 +66,7 @@ lapply(X=a, gerar_tt_matrix)
 
 juntar_output_OTP <- function(sigla_muni, ano){
   
-  # sigla_muni <- 'bel'; ano <- 2019
+  # sigla_muni <- 'bho'; ano <- 2019
   
   # status message
   message("Working on city ", sigla_muni, "\n")
