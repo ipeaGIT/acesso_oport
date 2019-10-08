@@ -12,20 +12,20 @@ source('./R/fun/setup.R')
 # definir funcao
 corrigir_acess_extremos <- function(sigla_muni) {
  
-  # sigla_muni <- "bho"; ano <- 2019
+  # sigla_muni <- "bsb"; ano <- 2019
   
   # path in da acessibilidade
   path_in <- sprintf("../data/output_access/acess_%s_%s.rds", sigla_muni, ano)
   
   # abrir
-  acess <- read_rds(path_in)
+  acess <- readr::read_rds(path_in)
   
-  # trazer us
-  us <- read_rds(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)) %>%
+  # trazer dados de uso do solo
+  us <- readr::read_rds(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)) %>%
     st_set_geometry(NULL)
   
   # Fazer teste indicador CMATT60
-  acess_cma <- acess %>% filter(mode == "transit" & pico == 1) %>% select(origin, city, CMATT90, CMPPT90) 
+  acess_cma <- acess %>% filter(mode == "walk" & pico == 1) %>% select(origin, city, CMATT60, CMPPT60) 
   
   # juntar acessibilidade com dados de uso do solo
   acess_cma_us <- left_join(acess_cma, us, by = c("origin" = "id_hex"))
@@ -86,8 +86,7 @@ corrigir_acess_extremos <- function(sigla_muni) {
   # teste
   mapview(points %>% to_spatial(c("X", "Y"))) + acess_prob_dist
     
-   
-}
+  }
 
 
 # ATENCAO

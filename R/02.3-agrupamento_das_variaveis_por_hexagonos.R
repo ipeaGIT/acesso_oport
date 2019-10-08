@@ -205,3 +205,55 @@ hex_muni_fim$muni <- sigla_muni
 future::plan(future::multiprocess)
 #options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
 future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table', 'Hmisc'))
+
+
+
+
+
+# Checagem de resultados -------------------------------------
+
+# Fun para criar mapas interativos (html) de distribuicao espacial de uso do solo
+salva_mapas <- function(sigla_muni, var) {
+  
+  # sigla_muni <- "bsb"; ano <- 2019
+  
+  # path in da acessibilidade
+  path_in <- sprintf("../data/output_access/acess_%s_%s.rds", sigla_muni, ano)
+  
+  
+  # trazer dados de uso do solo
+  us <- readr::read_rds(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni))
+  
+  # saude
+  map_saude <- mapview(subset(us, saude_total>0), zcol = "saude_total")
+  
+  # mapshot(map_saude, file = sprintf("figures/teste_distribuicao_us/us_%s_saude.html", sigla_muni))
+  
+  # empregos
+  map_empregos <- mapview(subset(us, empregos_total>0), zcol = "empregos_total")
+  
+  #   mapshot(map_empregos, file = sprintf("figures/teste_distribuicao_us/us_%s_empregos.html", sigla_muni))
+  
+  # educacao
+  map_edu <- mapview(subset(us, edu_total>0), zcol = "edu_total")
+  
+  # mapshot(map_edu, file = sprintf("figures/teste_distribuicao_us/us_%s_educacao.html", sigla_muni))
+  
+  
+  single_map <- mapview(subset(us, saude_total>0), zcol = "saude_total") +  
+                mapview(subset(us, empregos_total>0), zcol = "empregos_total") + 
+                mapview(subset(us, edu_total>0), zcol = "edu_total")
+  
+  
+  # save
+  mapview::mapshot(single_map, remove_controls=NULL, url = sprintf("figures/teste_distribuicao_us/us_%s_all.html", sigla_muni))
+  }  
+
+# Aplica funcao para cada municipio
+
+# Parallel processing using future.apply
+future::plan(future::multiprocess)
+#options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
+future.apply::future_lapply(X = munis_df$abrev_muni, FUN=salva_mapas, future.packages=c('sf', 'dplyr', 'mapview'))
+
+
