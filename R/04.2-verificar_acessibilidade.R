@@ -1,12 +1,16 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.4.2 Verificar acessibilidade extrema
 
+# A verificacao eh feita pegando todos os hexagonos que tem menos que 1% de acessibilidade para o CMATT90
+# p/ transporte publico. O ponto de roteamento desses hexagonos sao alocados para o hexagono mais proximo 
+# que nao tenha menos que 1% de acess.
+# Hexagonos que estiverem a menos de 1km das bordas serao desconsiderados
+
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
-# Isso sera feito individualmente para cada cidade por inspecao visual
-
-inspecao_visual_acess <- function(sigla_muni) {
+# definir funcao
+corrigir_acess_extremos <- function(sigla_muni) {
  
   # sigla_muni <- "bho"; ano <- 2019
   
@@ -16,48 +20,72 @@ inspecao_visual_acess <- function(sigla_muni) {
   # abrir
   acess <- read_rds(path_in)
   
-  # Fazer teste para dois indicadores: CMA para trabalho 60 TP e TMI Saude -----------
-  
-  # CMA TT 60
-  
-  acess_cma <- acess %>% filter(mode == "transit") %>% select(origin, city, CMATT90, CMPPT90) 
-  
   # trazer us
   us <- read_rds(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)) %>%
     st_set_geometry(NULL)
   
-  # juntar
+  # Fazer teste indicador CMATT60
+  acess_cma <- acess %>% filter(mode == "transit" & pico == 1) %>% select(origin, city, CMATT90, CMPPT90) 
+  
+  # juntar acessibilidade com dados de uso do solo
   acess_cma_us <- left_join(acess_cma, us, by = c("origin" = "id_hex"))
   
-  # visualizar
+  # abrir limites
+  limits <- read_rds(sprintf("../data-raw/municipios/%s/municipio_%s.rds", sigla_muni, sigla_muni)) %>%
+    # transformar em uma linestring
+    st_cast("LINESTRING") %>%
+    st_set_crs(4326)
   
-  mapview(acess_cma, zcol = "CMATT90", lwd = 0, alpha = 0.6)
+  # extrair hexagonos que tenham uma acessibilidade menor que 1%?
+  acess_prob <- acess_cma_us %>% filter(CMATT90 < 0.01)
   
+  # extrair somente hexagonos que estejam a pelo menos 1km de distancia das bordas do municipio
+  acess_prob_dist <- acess_prob %>%
+    # extrair distancia entre hexagonos e limites da cidade
+    mutate(dist = st_distance(., limits) %>% as.numeric()) %>%
+    # extarir distancias maior que 1000m
+    filter(dist > 1000) %>%
+    # transformar para pontos
+    st_centroid()
   
-  pal <- colorNumeric(
-    palette = "inferno",
-    domain = acess_cma$CMPPT90,
-    na.color = "black")
+
+  # alocar hexagonos problematicos para hexagono nao-problematico mais proximo ------------------
   
-  popup_hex <- paste0("<b>População: </b>", acess_cma_us$pop_total, "<br/>",
-                      "<b>Oportunidades: </b>", paste0(acess_cma_us$CMPPT90*100, "%"), "<br/>",
-                      acess_cma_us$origin)
+  # pegar hexagonos nao problematicos
+  acess_nprob <- acess_cma_us %>%
+    filter(origin %nin% acess_prob_dist$origin) %>%
+    # transformar para pontos
+    st_centroid() %>%
+    # criar id
+    mutate(id = 1:n()) %>%
+    # transformar para lon lat
+    sfc_as_cols()
   
-  leaflet() %>%
-    addTiles() %>%
-    addPolygons(data = acess_cma,
-                fillColor = ~pal(CMPPT90),
-                fillOpacity = 0.3,
-                stroke = FALSE,
-                popup = popup_hex)
+  # pegar os pontos mais proximos nao-problematicos dos problematicos
+  uui <- RANN::nn2(select(acess_nprob, lon, lat), 
+                   select(acess_prob_dist %>% sfc_as_cols(), lon,lat), 1)
   
+  # entao identificar quais sao esses hexagonos
+  acess_prob_proximos <- acess_prob_dist %>% 
+    # tirar a geometria: ela agora sera nova dos outros hexagonos!
+    st_set_geometry(NULL) %>%
+    mutate(id = uui$nn.idx) %>%
+    # trazer o id completo do hex
+    left_join(acess_nprob %>% select(id, lon, lat), by = "id") %>%
+    # selecionar colunas e renomear
+    select(id_hex = origin, X = lon, Y = lat)
   
-  library(leaflet)
-  library(leafgl)
-  library(colourvalues)
+  # fim: transformar de volta para sf e juntar com os nao-problematicos
+  # abrir pontos roteaveis
+  points <- fread(sprintf("../otp/points/points_%s_09.csv", sigla_muni)) %>%
+    # selecionar so os nao problematicos
+    filter(id_hex %nin% acess_prob_proximos$id_hex) %>%
+    # juntar os problematicos corrigidos
+    rbind(acess_prob_proximos)
   
-  cols = colour_values_rgb(acess_cma$CMATT60, include_alpha = FALSE) / 255
-  
+  # teste
+  mapview(points %>% to_spatial(c("X", "Y"))) + acess_prob_dist
+    
    
 }
 
