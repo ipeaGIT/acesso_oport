@@ -33,6 +33,7 @@ library(patchwork)
 library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/opentripplanner
 library(ggmap) # geocoding
 library(h3jsr) # h3 hex
+library(bit64) # viz large numbers
 
 
 
@@ -139,6 +140,6 @@ sfc_as_cols <- function(x, names = c("lon","lat")) {
   x <- x[ , !names(x) %in% names]
   ret <- setNames(ret,names)
   ui <- dplyr::bind_cols(x,ret)
-  st_set_geometry(ui, NULL)
+  # st_set_geometry(ui, NULL)
 }
 
