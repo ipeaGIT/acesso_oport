@@ -213,12 +213,9 @@ future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_variaveis, futur
 # Checagem de resultados -------------------------------------
 
 # Fun para criar mapas interativos (html) de distribuicao espacial de uso do solo
-salva_mapas <- function(sigla_muni, var) {
+salva_mapas <- function(sigla_muni) {
   
   # sigla_muni <- "bsb"; ano <- 2019
-  
-  # path in da acessibilidade
-  path_in <- sprintf("../data/output_access/acess_%s_%s.rds", sigla_muni, ano)
   
   
   # trazer dados de uso do solo
@@ -247,7 +244,7 @@ salva_mapas <- function(sigla_muni, var) {
   
   # save
   mapview::mapshot(single_map, remove_controls=NULL, url = sprintf("figures/teste_distribuicao_us/us_%s_all.html", sigla_muni))
-  }  
+}  
 
 # Aplica funcao para cada municipio
 
