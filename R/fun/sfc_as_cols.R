@@ -14,5 +14,5 @@ sfc_as_cols <- function(x, names = c("lon","lat")) {
   x <- x[ , !names(x) %in% names]
   ret <- setNames(ret,names)
   ui <- dplyr::bind_cols(x,ret)
-  st_set_geometry(ui, NULL)
+  # st_set_geometry(ui, NULL)
 }

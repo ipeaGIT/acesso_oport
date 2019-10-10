@@ -267,12 +267,34 @@ table(cnes_filter5$teste, useNA = "always")
   # CNES que cairam fora de algum municipio
     B_muni_fora <- subset(temp_intersect, is.na(name_muni))
   
+    
+# C) Lat lon NA
+    
+    
+# D) mais de 5 estabelecimentos com coordenadas iguais
+  
+  # junta lat lon
+    cnes19_df_coords_fixed$latlon <- paste0(cnes19_df_coords_fixed$lat, '/', cnes19_df_coords_fixed$lon)
+  
+  # freq de lat lon repetido
+  tab_latlon <- cnes19_df_coords_fixed %>% count(latlon, sort = T)
+  latlon_problema <- subset(tab_latlon, n >3 & latlon != "NA/NA")
+    
+    
+    
   # juntar todas municipios com erro de lat/lon
-    munis_problema1 <- subset(cnes19_df_coords_fixed, CNES %in% A_estbs_pouco_digito$CNES ) 
-    munis_problema2 <- subset(cnes19_df_coords_fixed, CNES %in% B_muni_fora$CNES )
-    munis_problema3 <- cnes19_df_coords_fixed[ is.na(lat), ]
-    munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
+    munis_problemaA <- subset(cnes19_df_coords_fixed, CNES %in% A_estbs_pouco_digito$CNES ) 
+    munis_problemaB <- subset(cnes19_df_coords_fixed, CNES %in% B_muni_fora$CNES )
+    munis_problemaC <- cnes19_df_coords_fixed[ is.na(lat), ]
+    munis_problemaD <- subset(cnes19_df_coords_fixed, latlon %in% latlon_problema$latlon)
+    
+
+    
+    munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
     munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
+    
+    
+    
     
     
 ######## Gerar input para galileo
