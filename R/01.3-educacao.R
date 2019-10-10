@@ -84,13 +84,13 @@ escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALIS
 
 
 # juntar todos municipios com erro de lat/lon
-munis_problemaA <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
-munis_problemaB <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
-munis_problemaC <- escolas_filt[ is.na(lat), ]
-munis_problemaD <- subset(escolas_filt, latlon %in% latlon_problema$latlon)
-
-munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
-munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates
+  munis_problemaA <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
+  munis_problemaB <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
+  munis_problemaC <- escolas_filt[ is.na(lat), ]
+  munis_problemaD <- subset(escolas_filt, latlon %in% latlon_problema$latlon)
+  
+  munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
+  munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates
 
 
 # ajeitar enderecos para o galileo
