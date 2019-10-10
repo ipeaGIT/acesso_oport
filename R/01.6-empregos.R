@@ -86,8 +86,17 @@ rais <- setDT(rais)[, cnae.setor := substr(clas_cnae20, 1, 2)]
   # 51 transporte aereo OK
   # 82 servicoes prestados principalmente a empresas
   # 38 limpeza urbana, esgoto e atividades relacionadas (COLETA, TRATAMENTO E DISPOSIÇÃO DE RESÍDUOS; RECUPERAÇÃO DE MATERIAIS 2.0)
+  # 78 SELEÇÃO, AGENCIAMENTO E LOCAÇÃO DE MÃO-DE-OBRA
+  # 80 ATIVIDADES DE VIGILÂNCIA, SEGURANÇA E INVESTIGAÇÃO
+  # 41 CONSTRUÇÃO DE EDIFÍCIOS
+  # 42 OBRAS DE INFRA-ESTRUTURA
+  # 43 SERVIÇOS ESPECIALIZADOS PARA CONSTRUÇÃO
+  # 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
+  # 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
 
-  rais.problema <- setDT(rais)[cnae.setor %in% c("35","36","49","51","82","38")]
+  cnaes_problema <- c("35","36","49","51","82","38", "78", "80", "41", "42", "43", "64", "81")
+
+  rais.problema <- setDT(rais)[cnae.setor %in% cnaes_problema]
 
 
 # Funcoes para identificar ouliet
@@ -146,7 +155,7 @@ rais <- merge(rais, geral3,
               all.x = TRUE)
 
 #substituindo valores maiores que o corte pelo valor de corte
-rais$total_corrigido<-ifelse(rais$cnae.setor %in% c("35","36","49","51","82","38") & rais$total_corrigido>rais$corte,rais$corte,rais$total_corrigido)
+rais$total_corrigido<-ifelse(rais$cnae.setor %in% cnaes_problema & rais$total_corrigido>rais$corte,rais$corte,rais$total_corrigido)
 
 
 
