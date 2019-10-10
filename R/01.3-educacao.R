@@ -28,15 +28,18 @@ escolas_filt <- escolas %>%
 escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALISADA")
 
 
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 2. Identificar CENSO ESCOLAR com lat/long problematicos
 
 # A - poucos digitos
 # B - fora dos limites do municipio
 # C - com coordenadas NA
+# D - mais de 5 estabelecimentos com coordenadas iguais
 
 
-# qual o nivel de precisao das coordenadas deve ser aceito?
+# qual o nivel de precisao das coordenadas que deve ser aceito?
 # 0.01 = 1113.2 m
 # 0.001 = 111.32 m
 # 0.0001 = 11.132 m
@@ -44,31 +47,49 @@ escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALIS
 
 
 # A) Numero de digitos de lat/long apos ponto
-setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
-A_estbs_pouco_digito <- escolas_filt[ ndigitos <=2,]
+  setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  A_estbs_pouco_digito <- escolas_filt[ ndigitos <=2,]
 
 
 # B) fora dos limites do municipio
+  
+  # carrega shapes
+  shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% 
+    as_tibble() %>% 
+    st_sf(crs = 4326)
+  
+  # convert para sf
+  censoescolar2019_df_coords_fixed_df <- escolas_filt[!(is.na(lat))] %>% 
+    st_as_sf( coords = c('lon', 'lat'), crs = 4326)
+  
+  temp_intersect <- sf::st_join(censoescolar2019_df_coords_fixed_df, shps)
 
-# carrega shapes
-shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% 
-  as_tibble() %>% 
-  st_sf(crs = 4326)
+  # escolas que cairam fora de algum municipio
+  B_muni_fora <- subset(temp_intersect, is.na(name_muni))
+  
+  
+# C) Lat lon NA
+  
+  
+  
+# D) mais de 5 estabelecimentos com coordenadas iguais
+  
+  # junta lat lon
+  escolas_filt$latlon <- paste0(escolas_filt$lat, '/', escolas_filt$lon)
+  
+  # freq de lat lon repetido
+  tab_latlon <- escolas_filt %>% count(latlon, sort = T)
+  latlon_problema <- subset(tab_latlon, n >3 & latlon != "NA/NA")
+    
 
-# convert para sf
-censoescolar2019_df_coords_fixed_df <- escolas_filt[!(is.na(lat))] %>% 
-  st_as_sf( coords = c('lon', 'lat'), crs = 4326)
-
-temp_intersect <- sf::st_join(censoescolar2019_df_coords_fixed_df, shps)
-
-# escolas que cairam fora de algum municipio
-B_muni_fora <- subset(temp_intersect, is.na(name_muni))
 
 # juntar todos municipios com erro de lat/lon
-munis_problema1 <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
-munis_problema2 <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
-munis_problema3 <- escolas_filt[ is.na(lat), ]
-munis_problema <- rbind(munis_problema1, munis_problema2, munis_problema3)
+munis_problemaA <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
+munis_problemaB <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
+munis_problemaC <- escolas_filt[ is.na(lat), ]
+munis_problemaD <- subset(escolas_filt, latlon %in% latlon_problema$latlon)
+
+munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
 munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates
 
 
@@ -214,7 +235,10 @@ colunas <- c("CO_ENTIDADE", "NO_ENTIDADE",
              "IN_ESP_EXCLUSIVA_MEDIO_MEDIO", "IN_ESP_EXCLUSIVA_MEDIO_INTEGR",
              "IN_ESP_EXCLUSIVA_MEDIO_NORMAL","IN_COMUM_EJA_MEDIO","IN_COMUM_EJA_PROF",
              "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
-             "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND")
+             "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND",
+             "IN_LOCAL_FUNC_UNID_PRISIONAL", "IN_LOCAL_FUNC_PRISIONAL_SOCIO")            # escolas prisionais
+
+
 
 
 
@@ -248,58 +272,40 @@ escolas_censo <- fread("../data-raw/censo_escolar/censo_escolar_escolas_2018.CSV
                               IN_COMUM_PROF ==1 |
                               IN_ESP_EXCLUSIVA_PROF ==1, 1, 0)) %>%
   # Selecionar variaveis
-  select(CO_ENTIDADE, NO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio)
+  select(CO_ENTIDADE, NO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio, IN_LOCAL_FUNC_UNID_PRISIONAL, IN_LOCAL_FUNC_PRISIONAL_SOCIO)
 
 
-# talvez tenham q remover escolas priosionais
-# ?
+# Identifica escolas priosionais
+  escolas_prisionais <- subset(escolas_censo, IN_LOCAL_FUNC_UNID_PRISIONAL ==1 | IN_LOCAL_FUNC_PRISIONAL_SOCIO ==1)$CO_ENTIDADE
 
-# 195 escolas sem informacao alguma
-setDT(escolas_censo)[, test := sum(mat_infantil, mat_fundamental, mat_medio), by=CO_ENTIDADE]
-table(escolas_censo$test)
 
 
 # juntar com a base nova
 escolas_etapa <- escolas_filt %>%
-  left_join(escolas_censo, by = c("CO_ENTIDADE")) # %>%
-  # filter(!is.na(lon)) %>%
-  # filter(!is.na(mat_infantil))
-
-# # Quantas escolas estao com dados missing (lat/long e nivel de ensino) por municipio
-# setDT(escolas_etapa)[, .( total= .N,
-#                           lat_miss = sum(is.na(lat)),
-#                           lat_miss_p = 100*sum(is.na(lat) /.N),
-#                           ensino_miss = sum(is.na(mat_infantil)),
-#                           ensino_miss_p = 100*sum(is.na(mat_infantil))/.N), by=CO_MUNICIPIO ][order(-lat_miss_p)]
+  left_join(escolas_censo, by = c("CO_ENTIDADE"))
 
 
-table(escolas_etapa$mat_infantil, useNA = "always")
-table(escolas_etapa$mat_fundamental, useNA = "always")
-table(escolas_etapa$mat_medio, useNA = "always")
+# remove escolas prisionais
+  escolas_etapa_fim <- subset(escolas_etapa, CO_ENTIDADE %nin% escolas_prisionais)
+  escolas_etapa_fim$IN_LOCAL_FUNC_UNID_PRISIONAL <- NULL
+  escolas_etapa_fim$IN_LOCAL_FUNC_PRISIONAL_SOCIO <- NULL
 
-# # Recupera informacao de etapa de ensino do censo escolar informado no dado enviado pelo INEP geo
-#   escolas_etapa <- left_join(escolas_etapa, select(escolas, CO_ENTIDADE, OFERTA_ETAPA_MODALIDADE), by='CO_ENTIDADE')
 
-  # tests
-  # subset(test,mat_infantil !=1 &  mat_fundamental !=1 & mat_medio ==1 )$OFERTA_ETAPA_MODALIDADE %>% table %>% View()
-  
+
+
 # codifica etapa de ensino pela string
-setDT(escolas_etapa)[, mat_infantil := ifelse(is.na(mat_infantil) & OFERTA_ETAPA_MODALIDADE %like% 'Creche|Pré-escola', 1, 
+setDT(escolas_etapa_fim)[, mat_infantil := ifelse(is.na(mat_infantil) & OFERTA_ETAPA_MODALIDADE %like% 'Creche|Pré-escola', 1, 
                                               mat_infantil)]
-setDT(escolas_etapa)[, mat_fundamental := ifelse(is.na(mat_fundamental) & OFERTA_ETAPA_MODALIDADE %like% 'Ensino Fundamental', 1, 
+setDT(escolas_etapa_fim)[, mat_fundamental := ifelse(is.na(mat_fundamental) & OFERTA_ETAPA_MODALIDADE %like% 'Ensino Fundamental', 1, 
                                                  mat_fundamental)]
-setDT(escolas_etapa)[, mat_medio := ifelse(is.na(mat_medio) & OFERTA_ETAPA_MODALIDADE %like% "Ensino Médio|nível Médio|Curso Profissional|Curso Técnico", 1, 
+setDT(escolas_etapa_fim)[, mat_medio := ifelse(is.na(mat_medio) & OFERTA_ETAPA_MODALIDADE %like% "Ensino Médio|nível Médio|Curso Profissional|Curso Técnico", 1, 
                                            mat_medio)]
   
 
-# restricoes em tipo de esino
-escolas_etapa[ test ==0]$RESTRICAO_ATENDIMENTO  %>% table
-table(escolas_etapa$RESTRICAO_ATENDIMENTO)
 
-
-table(escolas_etapa$mat_infantil, useNA = "always")
-table(escolas_etapa$mat_fundamental, useNA = "always")
-table(escolas_etapa$mat_medio, useNA = "always")
+table(escolas_etapa_fim$mat_infantil, useNA = "always")
+table(escolas_etapa_fim$mat_fundamental, useNA = "always")
+table(escolas_etapa_fim$mat_medio, useNA = "always")
 
 
 
@@ -307,6 +313,6 @@ table(escolas_etapa$mat_medio, useNA = "always")
 # 5. salvar ----------------------------------------------------------------------------------------
 
 # salvar
-  write_rds(escolas_etapa, "../data/censo_escolar/educacao_inep_2019.rds")
+  write_rds(escolas_etapa_fim, "../data/censo_escolar/educacao_inep_2019.rds")
 
 
