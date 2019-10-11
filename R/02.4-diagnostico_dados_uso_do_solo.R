@@ -119,12 +119,12 @@ diagnost_hex_us_prop <- function(sigla_muni, uso_do_solo, corte) {
 }
 
 
-fim <- diagnost_hex_us_prop("spo", "saude", 5)
+fim <- diagnost_hex_us_prop("slz", "saude", 5)
 
 View(fim)
-mapView(fim)
+mapView(fim, zcol='saude_total')
 
-mapView(fim %>% filter(id_hex == "89a8a066acbffff"))
+# mapView(fim %>% filter(id_hex == "89a8a066acbffff"), zcol='saude_total')
 
 
 
