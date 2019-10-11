@@ -17,7 +17,14 @@ source('./R/fun/setup.R')
 escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
 
 
-# filtrar so dos nossos municipios
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### 2.Limpeza dos dados INEP ---------------------------------
+
+# filtrar so dos nossos municipios, escolas publicas
 escolas_filt <- escolas %>%
   filter(CO_MUNICIPIO %in% munis_df$code_muni) %>%
   filter(CATEGORIA_ADMINISTRATIVA == "Pública") %>%
@@ -130,7 +137,7 @@ write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", d
 # abrir output do galileo
 educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_galileo.csv") %>%
   # filtrar somente os maiores que 2 estrelas
-  filter(PrecisionDepth %nin% c("1 Estrela", "2 Estrelas")) %>%
+  filter(PrecisionDepth %in% c("4 Estrelas")) %>%
   # substituir virgula por ponto
   mutate(Latitude = str_replace(Latitude, ",", "\\.")) %>%
   mutate(Longitude = str_replace(Longitude, ",", "\\.")) %>%
@@ -151,28 +158,51 @@ educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 3. Recupera a info lat/long que falta usando google maps -----------------------------------------
 
-# # Escolas com lat/long de baixa precisa (1 ou 2 digitos apos casa decimal)
-# setDT(escolas_etapa)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
-# lat_impreciso <- subset(escolas_etapa, ndigitos <=2)$CO_ENTIDADE
-# escolas_lat_impreciso <- subset(escolas, CO_ENTIDADE %in% lat_impreciso)
+#### GOOGLE 1, endereco completo ------------------------
+  
+  # A) Escolas com lat/long de baixa precisao (1 ou 2 digitos apos casa decimal)
+  setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  lat_impreciso <- subset(escolas_filt, ndigitos <=2)$CO_ENTIDADE
+
+  # continuam imprecisos
+  A_escolas_lat_impreciso <- subset(escolas_filt, CO_ENTIDADE %in% lat_impreciso)
 
 
-# Escolas com lat/long missing  
-CO_ENTIDADE_lat_missing <- subset(escolas_filt, is.na(lat))$CO_ENTIDADE
-escolas_problema <- subset(escolas, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
+  # B) Saude com lat/long missing  
+  CO_ENTIDADE_lat_missing <- subset(escolas_filt, is.na(lat))$CO_ENTIDADE
+  B_escolas_problema <- subset(escolas_filt, CO_ENTIDADE %in% CO_ENTIDADE_lat_missing)
 
-# lista de enderecom com problema
-enderecos <- escolas_problema$ENDERECO
+  # C) Saude com 1, 2 e 3 estrelas do galileo
+  escolas_galileo_baixo <- fread("../data-raw/censo_escolar/escolas_2019_output_galileo.csv") %>%
+    # selecionar so os 1, 2 e 3 estrelas
+    filter(PrecisionDepth %in% c("1 Estrela", "2 Estrelas", "3 Estrelas")) %>%
+    .$CO_ENTIDADE
+  C_escolas_galileo_baixo <- subset(escolas_filt, CO_ENTIDADE %in% escolas_galileo_baixo)
+  
+  
+  # lista de enderecom com problema
+  escolas_problema_gmaps <- rbind(A_escolas_lat_impreciso, B_escolas_problema, C_escolas_galileo_baixo) %>%
+    distinct(CO_ENTIDADE, .keep_all = TRUE)
+  
+  
 
 # registrar Google API Key
 my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
 register_google(key = my_api$V1)
 
+
+# lista de enderecos com problema
+# cnes_problema[, endereco := paste0(CEP,", ", MUNICÍPIO) ]
+enderecos <- escolas_problema_gmaps$ENDERECO # total de 660 escolas
+
+
 # geocode
 coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
 
+
 # Link escolas com lat lon do geocode
-escolas_lat_missing_geocoded <- cbind(escolas_problema, coordenadas_google)
+escolas_lat_missing_geocoded <- cbind(escolas_problema_gmaps %>% select(-lon, -lat), coordenadas_google)
+
 
 summary(escolas_lat_missing_geocoded$lat) # Google nao encontrou 3 casos
 
@@ -186,6 +216,10 @@ summary(escolas_filt$lat)
 subset(escolas_filt, !is.na(lat)) %>%
   to_spatial() %>%
   mapview()
+
+
+
+#### GOOGLE 2, so ceps ------------------------
 
 # ainda ha escolas mal georreferenciadas!
 # identificar essas escolas e separa-las
@@ -201,7 +235,7 @@ escolas_google_mal_geo <- escolas_filt %>%
 mapview(escolas_google_mal_geo)
 
 # Retorna somente os ceps dos que deram errado para jogar no google API
-somente_ceps <- gsub("(^.*)(\\d{5}-\\d{3}.*$)", "\\2", escolas_google_mal_geo$ENDERECO)
+somente_ceps <- gsub("(^.*)(\\d{5}-\\d{3}.*$)", "\\2", escolas_google_mal_geo$ENDERECO) # total de 34 escolas
 
 # consulta google api
 coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode) %>% rbindlist()
@@ -236,7 +270,8 @@ colunas <- c("CO_ENTIDADE", "NO_ENTIDADE",
              "IN_ESP_EXCLUSIVA_MEDIO_NORMAL","IN_COMUM_EJA_MEDIO","IN_COMUM_EJA_PROF",
              "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
              "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND",
-             "IN_LOCAL_FUNC_UNID_PRISIONAL", "IN_LOCAL_FUNC_PRISIONAL_SOCIO")            # escolas prisionais
+             "IN_LOCAL_FUNC_UNID_PRISIONAL", "IN_LOCAL_FUNC_PRISIONAL_SOCIO", # escolas prisionais
+             "QT_FUNCIONARIOS")            
 
 
 
@@ -272,7 +307,7 @@ escolas_censo <- fread("../data-raw/censo_escolar/censo_escolar_escolas_2018.CSV
                               IN_COMUM_PROF ==1 |
                               IN_ESP_EXCLUSIVA_PROF ==1, 1, 0)) %>%
   # Selecionar variaveis
-  select(CO_ENTIDADE, NO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio, IN_LOCAL_FUNC_UNID_PRISIONAL, IN_LOCAL_FUNC_PRISIONAL_SOCIO)
+  select(CO_ENTIDADE, NO_ENTIDADE, mat_infantil, mat_fundamental, mat_medio, IN_LOCAL_FUNC_UNID_PRISIONAL, IN_LOCAL_FUNC_PRISIONAL_SOCIO, QT_FUNCIONARIOS)
 
 
 # Identifica escolas priosionais

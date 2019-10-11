@@ -112,10 +112,10 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### 3.Limpeza dos dados ---------------------------------
+### 3.Limpeza dos dados CNES ---------------------------------
 
 
-# Filter 0: healthcare nao aplica
+# Filter 0: healthcare nao aplica (pq nao tem servicos de alta/baixa complexidade, e.g. academias de saude, secretarias de saude etc)
   cnes_filter0 <- setDT(cnes19)[is.na(complex_nao_aplic_est)] 
   cnes_filter0 <- cnes_filter0[is.na(complex_nao_aplic_mun)]
 
@@ -127,8 +127,10 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
 # Filter 2: Pessoa juridica
   cnes_filter2 <- cnes_filter1[ PESSOA_FÍSICA_OU_PESSOA_JURÍDI== 'PESSOA_JURÍDICA', ]
 
+  
 # filter 3: Only municipalities in the project
   cnes_filter3 <- subset(cnes_filter2, IBGE %in% substr(munis_df$code_muni, 1,6))
+  
   
 # filter 4: Only atendimento hospitalar ou ambulatorial
   cnes_filter4 <- cnes_filter3[ instal_fisica_ambu=="SIM" | instal_fisica_hospt=="SIM", ]
@@ -136,19 +138,19 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
   
 # filter 5. Remove special categories of facilities 
    
-   # 6.1 Delete prison hospitals, research centers, police hospitals etc
-   to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA'
+   # 5.1 Delete prison hospitals, research centers, police hospitals etc
+   to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR'
                   # PADI = Programa de Atenção Domiciliar ao Idoso
                   # DE REGULACAO = gestora de servico
                   # CAPS - CENTRO DE ATENCAO PSICOSSOCIAL - saude mental e drogas
   
    
-
+    
       
-   # 6.2 Delete Home care, tele saude, unidades moveis de saude
+   # 5.2 Delete Home care, tele saude, unidades moveis de saude
    to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DISTRIB DE ORGAOS'
    
- # apply filter 6
+ # apply filter 5
    cnes_filter5 <- cnes_filter4[ ESTABELECIMENTO %nlike% to_remove1 ]
    cnes_filter5 <- cnes_filter5[ TIPO_UNIDADE %nlike% to_remove2 ]
    # test >>> cnes_filter6[ CNES =='6771963']
@@ -179,13 +181,11 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
                                          complex_alta_hosp_mun=='X' , 1, 0)]
                                 
  
-table(cnes_filter5$health_low, useNA = "always")  # 238
-table(cnes_filter5$health_med, useNA = "always")  # 550
-table(cnes_filter5$health_high, useNA = "always") # 274
+table(cnes_filter5$health_low, useNA = "always")  # 3625
+table(cnes_filter5$health_med, useNA = "always")  # 4254
+table(cnes_filter5$health_high, useNA = "always") # 881
 
-cnes_filter5[, teste := sum(health_low, health_med, health_high, na.rm = TRUE), by = CNES]
-  
-table(cnes_filter5$teste, useNA = "always")
+
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +226,7 @@ table(cnes_filter5$teste, useNA = "always")
   
   
   
-###### Usar dados de lat/lon quando eles existirem na PMAQ
+###### Usar dados de lat/lon quando eles existirem na PMAQ (estabelecimentos de baixa complexidade)
   # Read PMAQ data
   pmaq_df_coords_fixed <- fread('../data-raw/hospitais/PMAQ/pmaq_df_coords_fixed.csv', colClasses = 'character')
   pmaq_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
@@ -281,7 +281,7 @@ table(cnes_filter5$teste, useNA = "always")
   
   # freq de lat lon repetido
   tab_latlon <- cnes19_df_coords_fixed %>% count(latlon, sort = T)
-  latlon_problema <- subset(tab_latlon, n >3 & latlon != "NA/NA")
+  C_latlon_problema <- subset(tab_latlon, n >3 & latlon != "NA/NA")
     
     
     
@@ -289,14 +289,14 @@ table(cnes_filter5$teste, useNA = "always")
     munis_problemaA <- subset(cnes19_df_coords_fixed, CNES %in% A_estbs_pouco_digito$CNES ) 
     munis_problemaB <- subset(cnes19_df_coords_fixed, CNES %in% B_muni_fora$CNES )
     munis_problemaC <- cnes19_df_coords_fixed[ is.na(lat), ]
-    munis_problemaD <- subset(cnes19_df_coords_fixed, latlon %in% latlon_problema$latlon)
+    munis_problemaD <- subset(cnes19_df_coords_fixed, latlon %in% C_latlon_problema$latlon)
     
 
     
     munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
     munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
     
-    
+    # 1385 de 5.283 que vao para o Galileo
     
     
     
@@ -316,8 +316,8 @@ write_delim(munis_problema_galileo, "../data-raw/hospitais/saude_2019_input_gali
     
 # abrir output galileo
 saude_output_galileo <- fread("../data-raw/hospitais/saude_2019_output_galileo.csv") %>%
-  # selecionar so os 3 e 4 estrelas
-  filter(PrecisionDepth %in% c("3 Estrelas", "4 Estrelas")) %>%
+  # selecionar so os 4 estrelas
+  filter(PrecisionDepth %in% c("4 Estrelas")) %>%
   # substituir virgula por ponto
   mutate(Latitude = str_replace(Latitude, ",", "\\.")) %>%
   mutate(Longitude = str_replace(Longitude, ",", "\\.")) %>%
@@ -327,22 +327,25 @@ saude_output_galileo <- fread("../data-raw/hospitais/saude_2019_output_galileo.c
   mutate(lat = as.numeric(lat)) %>%
   mutate(lon = as.numeric(lon))
     
-    
-    
 # Update lat lon info a partir de resultados do Galileo
-summary(cnes19_df_coords_fixed$lon) # 124 NA's
+summary(cnes19_df_coords_fixed$lon) # 122 NA's
 setDT(cnes19_df_coords_fixed)[saude_output_galileo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
-summary(cnes19_df_coords_fixed$lon) # 5 NA's
+summary(cnes19_df_coords_fixed$lon) # 40 NA's
     
 
     
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
+# 5. Ainda restam lat/lon problematicas. Indentificar elas e jogar no google maps ------------------------------------------------------------------
     
+
+#### GOOGLE 1, endereco completo ------------------------
+
 # A) Escolas com lat/long de baixa precisao (1 ou 2 digitos apos casa decimal)
 setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
 lat_impreciso <- subset(cnes19_df_coords_fixed, ndigitos <=2)$CNES
+
+# continuam imprecisos
 A_cnes_lat_impreciso <- subset(cnes19_df_coords_fixed, CNES %in% lat_impreciso)
     
     
@@ -350,20 +353,23 @@ A_cnes_lat_impreciso <- subset(cnes19_df_coords_fixed, CNES %in% lat_impreciso)
 cnes_lat_missing <- subset(cnes19_df_coords_fixed, is.na(lat))$CNES
 B_cnes_lat_missing <- subset(cnes19_df_coords_fixed, CNES %in% cnes_lat_missing)
 
-# C) Saude com 1 e 2 estrelas do galileo
+# C) Saude com 1, 2 e 3 estrelas do galileo
 cnes_galileo_baixo <- fread("../data-raw/hospitais/saude_2019_output_galileo.csv") %>%
-  # selecionar so os 1 e 2 estrelas
-  filter(PrecisionDepth %in% c("1 Estrela", "2 Estrelas")) %>%
+  # selecionar so os 1, 2 e 3 estrelas
+  filter(PrecisionDepth %in% c("1 Estrela", "2 Estrelas", "3 Estrelas")) %>%
   .$CNES
 C_cnes_galileo_baixo <- subset(cnes19_df_coords_fixed, CNES %in% cnes_galileo_baixo)
     
-# Saude problema
+
+# Saude que permanecem com problema
 cnes_problema_gmaps <- rbind(A_cnes_lat_impreciso, B_cnes_lat_missing, C_cnes_galileo_baixo) %>%
-  distinct(CNES, .keep_all = TRUE)
+  distinct(CNES, .keep_all = TRUE) # 433 casos
+
 
 # lista de enderecos com problema
 # cnes_problema[, endereco := paste0(CEP,", ", MUNICÍPIO) ]
 enderecos <- cnes_problema_gmaps %>% mutate(fim = paste0(LOGRADOURO, ", ", NUMERO, " - ", MUNICÍPIO, ", ", UF, " - CEP ", CEP)) %>% .$fim
+
 
 # registrar Google API Key
 my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
@@ -371,6 +377,7 @@ register_google(key = my_api$V1)
 
 # geocode
 coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
+
 
 # Link escolas com lat lon do geocode
 cnes_problema_geocoded <- cbind(cnes_problema_gmaps %>% select(-lon, -lat), coordenadas_google)
@@ -381,6 +388,8 @@ cnes19_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
 setDT(cnes19_df_coords_fixed)[cnes_problema_geocoded, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
 
 
+
+#### GOOGLE 2, so ceps ------------------------
 
 # ainda ha hospitais mal georreferenciadas!
 # identificar esses hospitais e separa-los
@@ -396,6 +405,7 @@ saude_google_mal_geo <- cnes19_df_coords_fixed %>%
 
 # Retorna somente os ceps dos que deram errado para jogar no google API
 somente_ceps <- paste0("CEP ", saude_google_mal_geo$CEP, " - ", saude_google_mal_geo$MUNICÍPIO, ", ", saude_google_mal_geo$UF)
+# 12 CEPS
 
 # consulta google api
 coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode) %>% rbindlist()
@@ -405,10 +415,6 @@ coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode) %>% rbindlist()
 saude_google_bom_geo <- cbind(as.data.frame(saude_google_mal_geo), coordenadas_google_cep)
 setDT(cnes19_df_coords_fixed)[saude_google_bom_geo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
 
-
-table(cnes19_df_coords_fixed$health_high, useNA = "always")
-table(cnes19_df_coords_fixed$health_med, useNA = "always")
-table(cnes19_df_coords_fixed$health_low, useNA = "always")
 
 
 # view
