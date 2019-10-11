@@ -239,8 +239,39 @@ rais <- read_rds("../data/rais/rais_2017_corrigido.rds")
 # filtar
 rais2 <- rais[ codemun %in% substr(munis_df$code_muni, 1, 6)]
 
+# trazer informacoes de funcionarios de escolas publicas do censo escolar (a partir do script 01.3-educacao)
+# abrir censo escolar geo
+escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
+  # Deletar escolas q nao foram localizadas
+  dplyr::filter(!is.na(lat)) %>%
+  # Selecionar variaveis
+  dplyr::select(id_estab = CO_ENTIDADE, codemun = CO_MUNICIPIO, lon, lat, total_corrigido = QT_FUNCIONARIOS)
+
+
+# pegar distribuicao de nivel des escolaridade da cidade
+rais_prop_escol <- rais2 %>%
+  group_by(codemun) %>%
+  summarise(prop_alto = sum(alto)/sum(total_corrigido),
+            prop_medio = sum(medio)/sum(total_corrigido),
+            prop_baixo = sum(baixo)/sum(total_corrigido))
+
+# trazer proporcoes para as escolas
+escolas_prop <- escolas %>%
+  # ajeitar codemun
+  mutate(codemun = substr(codemun, 1, 6) %>% as.numeric()) %>%
+  left_join(rais_prop_escol, by = "codemun") %>%
+  # multiplicar totais por composicao
+  mutate(alto = round(prop_alto * total_corrigido),
+         medio = round(prop_medio * total_corrigido),
+         baixo = round(prop_baixo * total_corrigido)) %>%
+  select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido)
+
+# juntar rais com escolas proporcionais
+rais3 <- rbind(rais2, escolas_prop, fill = T)
+
+
 # Salvar
-write_rds(rais2, "../data/rais/rais_2017_corrigido_cidades_selecionadas2019.rds")
+write_rds(rais3, "../data/rais/rais_2017_corrigido_cidades_selecionadas2019.rds")
 
 
 
