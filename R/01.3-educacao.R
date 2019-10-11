@@ -68,7 +68,7 @@ escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALIS
   B_muni_fora <- subset(temp_intersect, is.na(name_muni))
   
   
-# C) Lat lon NA
+# C) Lat lon NA (feito mais a frente)
   
   
   

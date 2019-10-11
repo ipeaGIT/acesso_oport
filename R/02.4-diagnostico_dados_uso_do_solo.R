@@ -14,7 +14,7 @@
 
 
 
-# carregar bibliotecas
+# carregar bibliotecas -----------------------------------------------------------------------------
 source('./R/fun/setup.R')
 
 
@@ -61,7 +61,7 @@ empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_cidades_selecionad
 diagnost_hex_us_prop <- function(sigla_muni, uso_do_solo, corte) {
   
   # sigla_muni <- "bsb"
-  # uso_do_solo <- "educacao"
+  # uso_do_solo <- "saude"
   # corte <- 5
   
   # Qual o codigo do municipio em questao?
@@ -84,7 +84,7 @@ diagnost_hex_us_prop <- function(sigla_muni, uso_do_solo, corte) {
   } else if (uso_do_solo == "saude") {
     
     base <- cnes %>% filter(code_muni == substr(cod_mun_ok, 1, 6)) %>%
-      select(code_muni, CNES, ESTABELECIMENTO, TIPO_UNIDADE, LOGRADOURO) %>%
+      select(code_muni, CNES, ESTABELECIMENTO, TIPO_UNIDADE, LOGRADOURO, NUMERO) %>%
       sfc_as_cols()
   }
       
@@ -119,7 +119,7 @@ diagnost_hex_us_prop <- function(sigla_muni, uso_do_solo, corte) {
 }
 
 
-fim <- diagnost_hex_us_prop("spo", "educacao", 4)
+fim <- diagnost_hex_us_prop("spo", "saude", 5)
 
 View(fim)
 mapView(fim)

@@ -1,7 +1,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.2.2 Agrega informacoes demograficas e uso do solo nos hexagonos
 
-# carregar bibliotecas
+# carregar bibliotecas -----------------------------------------------------------------------------
 source('./R/fun/setup.R')
 
 
@@ -210,7 +210,7 @@ future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_variaveis, futur
 
 
 
-# Checagem de resultados -------------------------------------
+# Checagem de resultados ---------------------------------------------------------------------------
 
 # Fun para criar mapas interativos (html) de distribuicao espacial de uso do solo
 salva_mapas <- function(sigla_muni) {

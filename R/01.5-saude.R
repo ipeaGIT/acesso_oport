@@ -200,7 +200,7 @@ table(cnes_filter5$teste, useNA = "always")
     # selecionar so os municipios do projeto
     filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
     mutate(code_muni = as.character(code_muni)) %>%
-    left_join(munis, by = "code_muni")
+    left_join(munis %>% st_set_geometry(NULL), by = "code_muni")
   
   # criar dataframe com as coordenadas ajeitadas
   cnes19_df_coords_fixed <- cnes19_df_digitos %>%
@@ -239,15 +239,18 @@ table(cnes_filter5$teste, useNA = "always")
 
       
 ###### Identificar CNES com lat/long problematicos
-  # A poucos digitos
-  # B fora dos limites do municipio
+
+# A - poucos digitos
+# B - fora dos limites do municipio
+# C - com coordenadas NA
+# D - mais de 5 estabelecimentos com coordenadas iguais
   
   
-  # qual o nivel de precisao das coordenadas deve ser aceito?
-  # 0.01 = 1113.2 m
-  # 0.001 = 111.32 m
-  # 0.0001 = 11.132 m
-  # 0.00001 = 1.1132 m
+# qual o nivel de precisao das coordenadas deve ser aceito?
+# 0.01 = 1113.2 m
+# 0.001 = 111.32 m
+# 0.0001 = 11.132 m
+# 0.00001 = 1.1132 m
   
 
 # A) Numero de digitos de lat/long apos ponto
@@ -268,7 +271,7 @@ table(cnes_filter5$teste, useNA = "always")
     B_muni_fora <- subset(temp_intersect, is.na(name_muni))
   
     
-# C) Lat lon NA
+# C) Lat lon NA (feito mais a frente)
     
     
 # D) mais de 5 estabelecimentos com coordenadas iguais
@@ -299,35 +302,37 @@ table(cnes_filter5$teste, useNA = "always")
     
 ######## Gerar input para galileo
     
-    munis_problema_galileo <- munis_problema %>%
-      select(CNES, log = LOGRADOURO, numero = NUMERO, bairro = BAIRRO, cep = CEP, cidade = MUNICÍPIO, uf = UF) %>%
-      # juntar logradouro com numero
-      mutate(rua = paste0(log, ", ", numero)) %>%
-      select(-log, -numero)
+munis_problema_galileo <- munis_problema %>%
+  select(CNES, log = LOGRADOURO, numero = NUMERO, bairro = BAIRRO, cep = CEP, cidade = MUNICÍPIO, uf = UF) %>%
+  # juntar logradouro com numero
+  mutate(rua = paste0(log, ", ", numero)) %>%
+  select(-log, -numero)
     
-    write_delim(munis_problema_galileo, "../data-raw/hospitais/saude_2019_input_galileo.csv", delim = ";")
+write_delim(munis_problema_galileo, "../data-raw/hospitais/saude_2019_input_galileo.csv", delim = ";")
     
+
+### RODAR GALILEO--------------
 # depois de rodar o galileo.............
     
-    # abrir output galileo
-    saude_output_galileo <- fread("../data-raw/hospitais/saude_2019_output_galileo.csv") %>%
-      # selecionar so os 3 e 4 estrelas
-      filter(PrecisionDepth %in% c("3 Estrelas", "4 Estrelas")) %>%
-      # substituir virgula por ponto
-      mutate(Latitude = str_replace(Latitude, ",", "\\.")) %>%
-      mutate(Longitude = str_replace(Longitude, ",", "\\.")) %>%
-      # selecionar colunas
-      select(CNES, lat = Latitude, lon = Longitude) %>%
-      mutate(CNES = as.character(CNES)) %>%
-      mutate(lat = as.numeric(lat)) %>%
-      mutate(lon = as.numeric(lon))
+# abrir output galileo
+saude_output_galileo <- fread("../data-raw/hospitais/saude_2019_output_galileo.csv") %>%
+  # selecionar so os 3 e 4 estrelas
+  filter(PrecisionDepth %in% c("3 Estrelas", "4 Estrelas")) %>%
+  # substituir virgula por ponto
+  mutate(Latitude = str_replace(Latitude, ",", "\\.")) %>%
+  mutate(Longitude = str_replace(Longitude, ",", "\\.")) %>%
+  # selecionar colunas
+  select(CNES, lat = Latitude, lon = Longitude) %>%
+  mutate(CNES = as.character(CNES)) %>%
+  mutate(lat = as.numeric(lat)) %>%
+  mutate(lon = as.numeric(lon))
     
     
     
-  # Update lat lon info a partir de resultados do Galileo
-    summary(cnes19_df_coords_fixed$lon) # 124 NA's
-    setDT(cnes19_df_coords_fixed)[saude_output_galileo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
-    summary(cnes19_df_coords_fixed$lon) # 5 NA's
+# Update lat lon info a partir de resultados do Galileo
+summary(cnes19_df_coords_fixed$lon) # 124 NA's
+setDT(cnes19_df_coords_fixed)[saude_output_galileo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
+summary(cnes19_df_coords_fixed$lon) # 5 NA's
     
 
     
@@ -335,54 +340,89 @@ table(cnes_filter5$teste, useNA = "always")
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 4. Recupera a info lat/long que falta usando google maps ------------------------------------------------------------------
     
-    # A) Escolas com lat/long de baixa precisao (1 ou 2 digitos apos casa decimal)
-    setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
-    lat_impreciso <- subset(cnes19_df_coords_fixed, ndigitos <=2)$CNES
-    A_cnes_lat_impreciso <- subset(cnes19_df_coords_fixed, CNES %in% lat_impreciso)
+# A) Escolas com lat/long de baixa precisao (1 ou 2 digitos apos casa decimal)
+setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+lat_impreciso <- subset(cnes19_df_coords_fixed, ndigitos <=2)$CNES
+A_cnes_lat_impreciso <- subset(cnes19_df_coords_fixed, CNES %in% lat_impreciso)
     
     
-    # Escolas com lat/long missing  
-    cnes_lat_missing <- subset(cnes19_df_coords_fixed, is.na(lat))$CNES
-    B_cnes_lat_missing <- subset(cnes19_df_coords_fixed, CNES %in% cnes_lat_missing)
-    
-    # escolas problema
-    cnes_problema <- rbind(A_cnes_lat_impreciso, B_cnes_lat_missing)
-    
-    # lista de enderecos com problema
-    cnes_problema[, endereco := paste0(CEP,", ", MUNICÍPIO) ]
-    enderecos <- cnes_problema$endereco
-    
-    # registrar Google API Key
-    my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
-    register_google(key = my_api$V1)
-    
-    # geocode
-    coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
+# B) Saude com lat/long missing  
+cnes_lat_missing <- subset(cnes19_df_coords_fixed, is.na(lat))$CNES
+B_cnes_lat_missing <- subset(cnes19_df_coords_fixed, CNES %in% cnes_lat_missing)
 
-    # Link escolas com lat lon do geocode
-    cnes_problema_geocoded <- cbind(cnes_problema, coordenadas_google)
+# C) Saude com 1 e 2 estrelas do galileo
+cnes_galileo_baixo <- fread("../data-raw/hospitais/saude_2019_output_galileo.csv") %>%
+  # selecionar so os 1 e 2 estrelas
+  filter(PrecisionDepth %in% c("1 Estrela", "2 Estrelas")) %>%
+  .$CNES
+C_cnes_galileo_baixo <- subset(cnes19_df_coords_fixed, CNES %in% cnes_galileo_baixo)
     
-    
-    # atualiza lat lon a partir de google geocode
-    cnes19_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
-    setDT(cnes19_df_coords_fixed)[cnes_problema_geocoded, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
-    
-    
-    table(cnes19_df_coords_fixed$health_high, useNA = "always")
-    table(cnes19_df_coords_fixed$health_med, useNA = "always")
-    table(cnes19_df_coords_fixed$health_low, useNA = "always")
-    
-    
-    # view
-    subset(cnes19_df_coords_fixed, !is.na(lat)) %>%
-      to_spatial() %>%
-      mapview()
+# Saude problema
+cnes_problema_gmaps <- rbind(A_cnes_lat_impreciso, B_cnes_lat_missing, C_cnes_galileo_baixo) %>%
+  distinct(CNES, .keep_all = TRUE)
+
+# lista de enderecos com problema
+# cnes_problema[, endereco := paste0(CEP,", ", MUNICÍPIO) ]
+enderecos <- cnes_problema_gmaps %>% mutate(fim = paste0(LOGRADOURO, ", ", NUMERO, " - ", MUNICÍPIO, ", ", UF, " - CEP ", CEP)) %>% .$fim
+
+# registrar Google API Key
+my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
+register_google(key = my_api$V1)
+
+# geocode
+coordenadas_google <- lapply(X=enderecos, ggmap::geocode) %>% rbindlist()
+
+# Link escolas com lat lon do geocode
+cnes_problema_geocoded <- cbind(cnes_problema_gmaps %>% select(-lon, -lat), coordenadas_google)
+
+
+# atualiza lat lon a partir de google geocode
+cnes19_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
+setDT(cnes19_df_coords_fixed)[cnes_problema_geocoded, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
+
+
+
+# ainda ha hospitais mal georreferenciadas!
+# identificar esses hospitais e separa-los
+# convert para sf
+saude_google_mal_geo <- cnes19_df_coords_fixed %>%
+  filter(!is.na(lat)) %>% 
+  st_as_sf(coords = c('lon', 'lat'), crs = 4326) %>%
+  sf::st_join(shps %>% st_set_crs(4326)) %>%
+  # escolas que cairam fora de algum municipio, a serem georreferenciadas na unha
+  filter(is.na(name_muni)) %>%
+  # pegar so o cep
+  select(CNES, CEP, MUNICÍPIO, UF)
+
+# Retorna somente os ceps dos que deram errado para jogar no google API
+somente_ceps <- paste0("CEP ", saude_google_mal_geo$CEP, " - ", saude_google_mal_geo$MUNICÍPIO, ", ", saude_google_mal_geo$UF)
+
+# consulta google api
+coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode) %>% rbindlist()
+
+
+# atualiza lat lon a partir de google geocode
+saude_google_bom_geo <- cbind(as.data.frame(saude_google_mal_geo), coordenadas_google_cep)
+setDT(cnes19_df_coords_fixed)[saude_google_bom_geo, on='CNES', c('lat', 'lon') := list(i.lat, i.lon) ]
+
+
+table(cnes19_df_coords_fixed$health_high, useNA = "always")
+table(cnes19_df_coords_fixed$health_med, useNA = "always")
+table(cnes19_df_coords_fixed$health_low, useNA = "always")
+
+
+# view
+subset(cnes19_df_coords_fixed, !is.na(lat)) %>%
+  to_spatial() %>%
+  mapview()
     
     
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 6. Save data of health facilities ------------------------------------------------------------------
     
-  readr::write_rds(cnes19_df_coords_fixed, "../data/hospitais/health_facilities2019_filtered.rds")
+cnes19_df_coords_fixed %>%
+  # select(CNES, code_muni, health_low, health_med, health_high)
+  readr::write_rds("../data/hospitais/health_facilities2019_filtered.rds")
   
   
   
