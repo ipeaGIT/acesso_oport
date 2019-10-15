@@ -35,7 +35,10 @@ escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
-empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_cidades_selecionadas2019.rds") # para 2017
+empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
+
+# remove lat lon missing
+empregos <- empregos[!is.na(lat), ]
 
 
 # FUNCAO PARA REALIZAR EM CADA MUNICIPIO ----------------------------------

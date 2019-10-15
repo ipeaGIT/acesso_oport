@@ -51,7 +51,10 @@ escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
-empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_cidades_selecionadas2019.rds") # para 2017
+empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds") # para 2017
+
+# remove lat lon missing
+empregos <- empregos[!is.na(lat), ]
 
 
 
@@ -119,7 +122,7 @@ diagnost_hex_us_prop <- function(sigla_muni, uso_do_solo, corte) {
 }
 
 
-fim <- diagnost_hex_us_prop("slz", "saude", 5)
+fim <- diagnost_hex_us_prop("cur", "trabalho", 5000)
 
 View(fim)
 mapView(fim, zcol='saude_total')
@@ -127,10 +130,23 @@ mapView(fim, zcol='saude_total')
 # mapView(fim %>% filter(id_hex == "89a8a066acbffff"), zcol='saude_total')
 
 
+rais_geo <- fread("../data-raw/rais/rais_2017_georef.csv"
+                  , select = c("id_estab", "codemun", "latitude", 'longitude', 
+                               'precisiondepth', 'logradouro', 'razao_social', 'cep', 'uf', 'BA_Nome_do_municipio')
+                  , colClasses='character'
+                  # , nrows = 10
+)
+
+# hexagono de curitiba, Galileo joga varias empresas ao longo da rodovia no mesmo hexagono (precisao de 3 estrelas)
+a <- subset(rais_geo, id_estab %in% subset(fim, id_hex=='89a831a537bffff')$id_estab)
 
 
 
+aaaa <- read_rds("../data/rais/rais_2017_corrigido_latlon.rds")
 
+
+aaaa[ precisiondepth %in% c('3 Estrelas'), ] %>% nrow
+# 111.422
 
 
 munis_df$abrev_muni
