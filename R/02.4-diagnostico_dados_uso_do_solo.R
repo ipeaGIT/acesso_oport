@@ -148,6 +148,11 @@ aaaa <- read_rds("../data/rais/rais_2017_corrigido_latlon.rds")
 aaaa[ precisiondepth %in% c('3 Estrelas'), ] %>% nrow
 # 111.422
 
+aaaa[ precisiondepth %in% c('3 Estrelas') & logradouro %like% "RODOVIA", ] %>% nrow
+aaaa[ precisiondepth %in% c('3 Estrelas') & logradouro %like% "ROD ", ] %>% nrow
+
+aaaa[ precisiondepth %in% c('3 Estrelas') & logradouro %like% "RJ ", ] 
+
 
 munis_df$abrev_muni
 
