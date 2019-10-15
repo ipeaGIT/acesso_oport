@@ -258,6 +258,10 @@ write_rds(rais, "../data/rais/rais_2017_corrigido.rds")
 ##### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ##### 4) Adicionar dados de lat long-------------------------------------------------------
 
+# Abrir Rais de estabelecimentos com numero de vinculos corrigos e quant de pessoas por escolaridade
+rais <- read_rds("../data/rais/rais_2017_corrigido.rds")
+
+
 # leitura da RAIS geocodificada ( output do galileo )
 rais_geo <- fread("../data-raw/rais/rais_2017_georef.csv"
                   , select = c("id_estab", "codemun", "latitude", 'longitude', 'precisiondepth', 'logradouro', 'cep', 'uf', 'BA_Nome_do_municipio')
@@ -305,17 +309,19 @@ rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), sum(total_corrigido)] / 
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##### Estabelecimentos q Galileo nao encontrou vao para o google api -------------------
+##### 5) Google api: Estabelecimentos q Galileo encontrou com baixa precisao  -------------------
+# Os estabelecimentos que o Galileo encontrou com 1, 2 ou 3 estrelas serao jogados para o google api
 
-# Estabs com baixa precisao do Galileo ( 36.300 estabs, 4% do total)
+
+
+######################### GOOGLE 1 , somente 1 e 2 estrelas, todos, endereco completo 
+
+# Estabs com baixa precisao do Galileo 1 e 2 estrelas ( 36.300 estabs, 4% do total)
 estabs_problema <- rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), ]
 
 
 # lista de enderecos com problema
 enderecos <- estabs_problema %>% mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% .$fim
-
-
-######################### GOOGLE 1 , endereco completo ------------------
 
 # registrar Google API Key
 my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
@@ -334,16 +340,72 @@ register_google(key = my_api$V1)
     mapview()
   
 
-
+######################### GOOGLE 2 , somente 3 estrelas, rodovias, endereco completo 
+  # Estabelecimentos com 3 estrelas que estao localizados em rodovias tendem a ter uma qualidade ruim
+  # de georreferenciamento!
+  # Essa etapa busca identificar todos os 3 estrelas que sejam em rodovias, e separa-os para aplicar
+  # o geocoding do google!
   
   
-############ GOOGLE 2, so ceps -------------------
+  # abrir base de rodovias rodovias
+  rodovias <- st_read("../data-raw/rodovias/2014/2014/rodovia_2014.shp") %>%
+    # Excluir geometria (desnecessario)
+    st_set_geometry(NULL) %>%
+    mutate(nome = as.character(DescSeg)) %>%
+    # Extrair o nome da rodovia na forma BR-116
+    mutate(nome = str_extract(nome, "[[:upper:]]{2}-\\d{3}")) %>%
+    # Pegar rodovias unicas
+    distinct(nome) %>%
+    # Tirar NAs
+    filter(!is.na(nome)) %>%
+    # Separar por uf da rodovia e numero da rodovia
+    separate(nome, c("uf", "numero"), sep = "-", remove = FALSE) %>%
+    # Tipo 1 possivel: BR-116;   # Tipo 2 possivel: BR 116
+    mutate(tipo1 = nome, tipo2 = paste0(uf, " ", numero))
   
-  # carrega shape dos munis
-  shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% as_tibble() %>% st_sf()
+  
+  # pegar so tres estrelas da rais
+  estabs_problema_3estrelas <- rais[precisiondepth == "3 Estrelas"]
+  
+  # extrair as rodovias de cada tipo possivel, e depois juntar
+  # criar coluna com rodovias
+  estabs_problema_3estrelas[, rodovia := str_extract(logradouro, "( |^|,)[[:upper:]]{2}(-| )\\d{3}( |$|,)")]
+  # tirar enderecos que nao tem rodovias
+  estabs_problema_3estrelas <- estabs_problema_3estrelas[!is.na(rodovia)]
+  # tirar virgulas
+  estabs_problema_3estrelas[, rodovia := str_replace(rodovia, ",", "")]
+  # tirar espacos em branco
+  estabs_problema_3estrelas[, rodovia := trimws(rodovia, "both")]
+  
+  # extrair somente os que sao rodovia
+  rais_rodovias_tipo1 <- estabs_problema_3estrelas[rodovia %in% rodovias$tipo1]
+  rais_rodovias_tipo2 <- estabs_problema_3estrelas[rodovia %in% rodovias$tipo2]
+  rais_rodovias <- rbind(rais_rodovias_tipo1, rais_rodovias_tipo2)
+  
+  
+  # lista de enderecos com problema
+  enderecos_rodovias <- rais_rodovias %>% mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% .$fim
+  
+  # registrar Google API Key
+  my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
+  register_google(key = my_api$V1)
+  
+  # geocode
+  coordenadas_google_rodovias <- lapply(X=enderecos_rodovias, ggmap::geocode) %>% rbindlist()
+  
+  # save google API output 
+  output_google_api2_rais <- cbind(rais_rodovias[,'id_estab'], coordenadas_google_rodovias)
+  
+  
+  ######################### GOOGLE 3, so ceps
   
   # ainda ha empresas mal georreferenciadas!
   # identificar esses empresas e separa-los
+  # muitas empresas foram georreferenciadas fora dos municipios
+  # identifica-las atraves do shape dos municipios e refazer geocode do google considerando so CEP
+  
+  # carrega shape dos munis
+  shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% as_tibble() %>% st_sf()
 
 rais_google_mal_geo <- output_google_api1_rais %>%
     filter(!is.na(lat)) %>% 
@@ -357,9 +419,6 @@ rais_google_mal_geo <- output_google_api1_rais %>%
     filter(cep != ".")
   
   
-
-
-
   # Retorna somente os ceps dos que deram errado para jogar no google API
   somente_ceps <- paste0("CEP ", rais_google_mal_geo$cep, " - ", rais_google_mal_geo$BA_Nome_do_municipio, ", ", rais_google_mal_geo$uf)
   # 4.420  
@@ -368,10 +427,10 @@ rais_google_mal_geo <- output_google_api1_rais %>%
   coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode) %>% rbindlist()
   
   # save google API output 
-  output_google_api2_rais <- cbind(as.data.frame(rais_google_mal_geo[,'id_estab']), coordenadas_google_cep)
+  output_google_api3_rais <- cbind(as.data.frame(rais_google_mal_geo[,'id_estab']), coordenadas_google_cep)
   
   # view
-  subset(output_google_api2_rais, !is.na(lat)) %>%
+  subset(output_google_api3_rais, !is.na(lat)) %>%
     to_spatial() %>%
     mapview()
   
@@ -380,13 +439,16 @@ rais_google_mal_geo <- output_google_api1_rais %>%
   # subset(rais_google_mal_geo, id_estab       == 18145772001744  )
   
   
-### Junta outputs 1 e 2 de google API
-  output_google_api1_rais[output_google_api2_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
+### Junta outputs 1, 2 e 3 de google API
+  output_google_api1_rais <- rbind(output_google_api2_rais)
+  output_google_api1_rais[output_google_api3_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
   
   # save google API output 
   fwrite(output_google_api1_rais, "../data/rais/output_google_api_rais.csv")
   
   
+  # open google API output
+  output_google_api1_rais <- fread("../data/rais/output_google_api_rais.csv", colClasses = 'character')
   
   
 # atualiza lat lon a partir de google geocode
@@ -398,15 +460,14 @@ write_rds(rais, "../data/rais/rais_2017_corrigido_latlon.rds")
 
 
 
+# 6) trazer informacoes de funcionarios de escolas publicas do censo escolar --------------------------
+# (a partir do script 01.3-educacao)
 
-# Salvar base somente com municipios do projeto ----------------------------------------------------
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # abri rais corrigida
 rais <- read_rds("../data/rais/rais_2017_corrigido_latlon.rds")
 
 
-# trazer informacoes de funcionarios de escolas publicas do censo escolar (a partir do script 01.3-educacao)
 # abrir censo escolar geo
 escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
   # Deletar escolas q nao foram localizadas
@@ -442,17 +503,23 @@ rais2 <- rbind(rais, escolas_prop, fill = T)
 write_rds(rais2, "../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
 
 
-##### Eliminar manualmente estabelecimentos indentificados como problematicos
-# identificacao desses estabs no script 2.4 com funcao 'diagnost_hex_us_prop'
-
-rais2 <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
 
 
-
-
+# ##### Eliminar manualmente estabelecimentos indentificados como problematicos
+# # identificacao desses estabs no script 2.4 com funcao 'diagnost_hex_us_prop'
+# 
+# rais <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
 
 
 
+
+
+
+
+# view
+subset(output_google_api1_rais, !is.na(lat)) %>%
+  to_spatial() %>%
+  mapview()
 
 
 
