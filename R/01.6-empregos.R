@@ -407,7 +407,8 @@ register_google(key = my_api$V1)
   output_google_api2_rais <- cbind(rais_rodovias[,'id_estab'], coordenadas_google_rodovias)
   
   
-  ######################### GOOGLE 3, so ceps
+  
+######################### GOOGLE 3, so ceps
   
   # ainda ha empresas mal georreferenciadas!
   # identificar esses empresas e separa-los
@@ -537,17 +538,5 @@ subset(output_google_api1_rais, !is.na(lat)) %>%
 
 
 # 7) Correcao a posteriori de falhas no geocode do Galileo --------------------------
-
-# lista dos hexagonos problematicos
-
-89a8c0cea23ffff # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
-8980088739bffff # slz - Avenida dos Holandeses (erro Galileo - mesmo afirmando que encontrou 4 estrelas)
-8980088739bffff # slz - varios erros de geocode Galileo
-
-
-
-# 89804696927ffff # brl - enderecos em Rodovia AUGUSTO MONTENEGRO 
-# 89a81070ad3ffff # gua - enderecos em Rodovia
-
 
 

@@ -1,16 +1,3 @@
-# spo
-# saude - 89a8100c397ffff
-# emprego - 89a8100eccfffff
-#
-# for
-#
-#
-#
-# ter
-# saude -89800554cc3ffff
-# edu - '898005563abffff', '89800554c8fffff' 
-# emprego - 898005548b3ffff
-#
 
 
 
@@ -64,8 +51,8 @@ empregos <- empregos[!is.na(lat), ]
 # carrega funcao
 source('./R/fun/diagnost_hex_uso_solo.R')
 
-# aplicar
-fim <- diagnost_hex_uso_solo("slz", "trabalho", 3000)
+# 1/2 Identificar quantidade de empregos por hexagono ( identifica hexagonos problema)
+fim <- diagnost_hex_uso_solo("ter", "trabalho", 2000)
 
 View(fim)
 mapView(fim, zcol='total_corrigido')
@@ -82,10 +69,12 @@ mapView(fim, zcol='empregos_total')
 03873484000171 # goi - EMPREZA SERVICE CENTER - Locação de mão-de-obra temporária (EM RECUPERACAO JUDICIAL)
 67945071000138 # cam - Sapore S/A , 56.2 Serviços de catering, bufê e outros serviços de comida preparada
 03254082000512 # slz - INSTITUTO ACQUA, com varias unidades em outras cidades
+00801512000157 # duq - AGILE CORP 56.2 Serviços de catering, bufê e outros serviços de comida preparada
 
+SERVFAZ
 
-# teste salvador
-oi <- fim %>% filter(id_hex == "89800880d5bffff") %>% .$id_estab
+# 2/2 Identifica quais empressas e enderecos estao em cada Hexagno ( identifica empresas/enderecos problema)
+oi <- fim %>% filter(id_hex == "89800556a2bffff") %>% .$id_estab
 
 rais_geo %>% 
   filter(id_estab %in% oi) %>% 
@@ -93,6 +82,30 @@ rais_geo %>%
 
 
 
+# 7) Correcao a posteriori de falhas no geocode do Galileo --------------------------
+
+# lista dos hexagonos problematicos
+
+89a8c0cea23ffff # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+8980088739bffff # slz - Avenida dos Holandeses (erro Galileo - mesmo afirmando que encontrou 4 estrelas)
+898008829a7ffff # slz - AVENIDA JOAO PESSOA, 363, São Luís - State of Maranhão
+898008829afffff # slz - AV ENG EMILIANO MACIEIRA
+898008829abffff # slz - AV ENG EMILIANO MACIEIRA de novo
+89800880d5bffff # slz - Av. São Luís Rei de França
+89800882a3bffff # slz AV JERONIMO DE ALBUQUERQUE
+89800882a0fffff # slz AV JERONIMO DE ALBUQUERQUE de novo
+89800882a53ffff # slz - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+
+89a8a2a6413ffff # sgo - Avenida Eugênio Borges (rodovia?)
+8980055454bffff # ter - AV DEPUTADO PAULO FERRAZ
+
+
+
+
+# 89804696927ffff # brl - enderecos em Rodovia AUGUSTO MONTENEGRO 
+# 89a81070ad3ffff # gua - enderecos em Rodovia
+
+# 89a8a06f1a7ffff # duq- Rodovia Washington Luisa
 
 
 
