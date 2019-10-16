@@ -378,8 +378,6 @@ register_google(key = my_api$V1)
   # extrair as rodovias de cada tipo possivel, e depois juntar
   # criar coluna com rodovias
   estabs_problema_3estrelas[, rodovia := str_extract(logradouro, "( |^|,)[[:upper:]]{2}(-| )\\d{3}( |$|,)")]
-  # tirar enderecos que nao tem rodovias
-  estabs_problema_3estrelas <- estabs_problema_3estrelas[!is.na(rodovia)]
   # tirar virgulas
   estabs_problema_3estrelas[, rodovia := str_replace(rodovia, ",", "")]
   # tirar espacos em branco
@@ -388,7 +386,11 @@ register_google(key = my_api$V1)
   # extrair somente os que sao rodovia
   rais_rodovias_tipo1 <- estabs_problema_3estrelas[rodovia %in% rodovias$tipo1]
   rais_rodovias_tipo2 <- estabs_problema_3estrelas[rodovia %in% rodovias$tipo2]
-  rais_rodovias <- rbind(rais_rodovias_tipo1, rais_rodovias_tipo2)
+  rais_rodovias_tipo3 <- estabs_problema_3estrelas[logradouro %like% "(RODOVIA )|(ROD )|(ROD. )(RODOVIARIO )"]
+  # deletar os duplicados do tipo 1 e 2 no tipo 3
+  rais_rodovias_tipo3 <- rais_rodovias_tipo3[id_estab %nin% c(rais_rodovias_tipo1$id_estab, rais_rodovias_tipo2$id_estab)]
+  # juntar todas as rodovias
+  rais_rodovias <- rbind(rais_rodovias_tipo1, rais_rodovias_tipo2, rais_rodovias_tipo3)
   
   
   # lista de enderecos com problema
