@@ -59,105 +59,73 @@ empregos <- empregos[!is.na(lat), ]
 
 
 
-# FUNCAO --------------------------------------------------------------------------------------
+# Aplica funcao de diagnostico --------------------------------------------------------------------------------------
 
-diagnost_hex_us_prop <- function(sigla_muni, uso_do_solo, corte) {
-  
-  # sigla_muni <- "bsb"
-  # uso_do_solo <- "saude"
-  # corte <- 5
-  
-  # Qual o codigo do municipio em questao?
-  cod_mun_ok <- munis_df[abrev_muni == sigla_muni]$code_muni
+# carrega funcao
+source('./R/fun/diagnost_hex_uso_solo.R')
 
-  if (uso_do_solo == "trabalho") {
-    
-    base <- empregos %>% 
-      filter(codemun == substr(cod_mun_ok, 1, 6)) %>%
-      st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-      select(codemun, cnae.setor, id_estab, clas_cnae20, total_corrigido)
-    
-  } else if (uso_do_solo == "educacao") {
-    
-    base <- escolas %>%
-      filter(cod_mun == cod_mun_ok) %>% 
-      st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-      sfc_as_cols()
-  
-  } else if (uso_do_solo == "saude") {
-    
-    base <- cnes %>% filter(code_muni == substr(cod_mun_ok, 1, 6)) %>%
-      select(code_muni, CNES, ESTABELECIMENTO, TIPO_UNIDADE, LOGRADOURO, NUMERO) %>%
-      sfc_as_cols()
-  }
-      
-  
-  df_apoio <- data.frame(
-    us = c("trabalho", "educacao", "saude"),
-    var = c("empregos_total", "edu_total", "saude_total"),
-    stringsAsFactors = FALSE
-  )
-  
-  # pegar nome da variavel
-  var_go <- subset(df_apoio, us == uso_do_solo)$var
-      
-  # ler hex agregados
-  hex <- read_rds(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)) %>%
-    select(id_hex, UQ(as.symbol(var_go)))
-
-  # filtra hex ids acima do corte
-  hex_corte <- hex %>%
-    filter(UQ(as.symbol(var_go)) > corte)
-  
-  # Intersecao do hex ids problema com base de uso do solo
-  fim <- st_join(hex_corte, base)
-  
-  # mapview(hex_join)
-  # 
-  # # estabelecimentos com mais de 3000 vinculos? (SO PARA TRABALHO!)
-  # hex_join %>%
-  #   filter(total_corrigido > 3000) %>%
-  #   View()
-
-}
-
-
-fim <- diagnost_hex_us_prop("cur", "trabalho", 5000)
+# aplicar
+fim <- diagnost_hex_uso_solo("slz", "trabalho", 3000)
 
 View(fim)
-mapView(fim, zcol='saude_total')
+mapView(fim, zcol='total_corrigido')
+mapView(fim, zcol='empregos_total')
 
-# mapView(fim %>% filter(id_hex == "89a8a066acbffff"), zcol='saude_total')
 
 
+
+# Lista de CNPJS problematicos
+
+01437408000198 # for - Nordeste Cidadania
+02137309000153 # spo - Icomon Tecnologia
+17178195000167 # bho - Sociedade Mineira de Cultura
+03873484000171 # goi - EMPREZA SERVICE CENTER - Locação de mão-de-obra temporária (EM RECUPERACAO JUDICIAL)
+67945071000138 # cam - Sapore S/A , 56.2 Serviços de catering, bufê e outros serviços de comida preparada
+03254082000512 # slz - INSTITUTO ACQUA, com varias unidades em outras cidades
+
+
+# teste salvador
+oi <- fim %>% filter(id_hex == "89800880d5bffff") %>% .$id_estab
+
+rais_geo %>% 
+  filter(id_estab %in% oi) %>% 
+  View()
+
+
+
+
+
+
+# checar resultados na rais geo
 rais_geo <- fread("../data-raw/rais/rais_2017_georef.csv"
                   , select = c("id_estab", "codemun", "latitude", 'longitude', 
                                'precisiondepth', 'logradouro', 'razao_social', 'cep', 'uf', 'BA_Nome_do_municipio')
                   , colClasses='character'
                   # , nrows = 10
-)
+                  )
 
-# hexagono de curitiba, Galileo joga varias empresas ao longo da rodovia no mesmo hexagono (precisao de 3 estrelas)
-a <- subset(rais_geo, id_estab %in% subset(fim, id_hex=='89a831a537bffff')$id_estab)
+rais_geo <- rais_geo[codemun %in% substr(munis_df$code_muni, 1, 6) ]
 
-
-
-aaaa <- read_rds("../data/rais/rais_2017_corrigido_latlon.rds")
-
-
-aaaa[ precisiondepth %in% c('3 Estrelas'), ] %>% nrow
-# 111.422
-
-aaaa[ precisiondepth %in% c('3 Estrelas') & logradouro %like% "RODOVIA", ] %>% nrow
-aaaa[ precisiondepth %in% c('3 Estrelas') & logradouro %like% "ROD ", ] %>% nrow
-
-aaaa[ precisiondepth %in% c('3 Estrelas') & logradouro %like% "RJ ", ] 
+# rais_geo[ logradouro %like% "RODOVIA|ROD ", ][10:30] %>% nrow
+# rais_geo[ logradouro %like% "RODOVIA PRESIDENTE", ] [10:30] %>% nrow
+# 
+# a <- rais_geo[ codemun == '150140' & logradouro %like% "AUGUSTO MONTENEGRO", ]
 
 
-munis_df$abrev_muni
 
-# SPO:
-# - Educacao - OK (mesmo estabelecimento duplicado para diferentes níveis) - 7 hexagonos com mais de 5 escolas
 
-# - Saude - Hexagono com 397 estabelecimentos - CNES com o mesmo lat lon
-# - Trabalho
+
+
+
+
+
+
+# Problemas gerais encontrados:
+  # - Educacao mesmo estabelecimento duplicado para diferentes níveis
+  # - Saude mesmo estabelecimento duplicado para diferentes níveis
+  # - Trabalho - geocode em rodovias
+  
+
+
+
+

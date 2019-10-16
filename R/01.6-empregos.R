@@ -160,6 +160,9 @@ rais <- setDT(rais)[, cnae.setor := substr(clas_cnae20, 1, 2)]
 # 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
 # 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
 
+# ? 65 seguradoras
+# ? 56.2 Serviços de catering, bufê e outros serviços de comida preparada
+
 cnaes_problema <- c("35","36","49","51","82","38", "78", "80", "41", "42", "43", "64", "81")
 
 rais.problema <- setDT(rais)[cnae.setor %in% cnaes_problema]
@@ -347,6 +350,11 @@ register_google(key = my_api$V1)
   # o geocoding do google!
   
   
+  
+  6666666666666666666666666666666666666666666666666666666666666666666666666 as
+   TO DO: adicionar rodovias com string "RODOVIA" ou "ROD " ou "ROD."
+  
+  
   # abrir base de rodovias rodovias
   rodovias <- st_read("../data-raw/rodovias/2014/2014/rodovia_2014.shp") %>%
     # Excluir geometria (desnecessario)
@@ -515,11 +523,29 @@ write_rds(rais2, "../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
 
 
 
-
 # view
 subset(output_google_api1_rais, !is.na(lat)) %>%
   to_spatial() %>%
   mapview()
+
+
+
+
+
+
+
+# 7) Correcao a posteriori de falhas no geocode do Galileo --------------------------
+
+# lista dos hexagonos problematicos
+
+89a8c0cea23ffff # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+8980088739bffff # slz - Avenida dos Holandeses (erro Galileo - mesmo afirmando que encontrou 4 estrelas)
+8980088739bffff # slz - varios erros de geocode Galileo
+
+
+
+# 89804696927ffff # brl - enderecos em Rodovia AUGUSTO MONTENEGRO 
+# 89a81070ad3ffff # gua - enderecos em Rodovia
 
 
 

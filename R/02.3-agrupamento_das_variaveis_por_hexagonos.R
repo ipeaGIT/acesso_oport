@@ -246,7 +246,7 @@ salva_mapas <- function(sigla_muni) {
   
   
   # save
-  mapview::mapshot(single_map, remove_controls=NULL, url = sprintf("figures/teste_distribuicao_us/us_%s_all.html", sigla_muni))
+  mapview::mapshot(single_map, debug=T, remove_controls=NULL, url = sprintf("figures/teste_distribuicao_us/us_%s_all.html", sigla_muni))
 }  
 
 # Aplica funcao para cada municipio
