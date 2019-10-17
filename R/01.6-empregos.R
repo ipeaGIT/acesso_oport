@@ -633,4 +633,6 @@ cnpjs_prob <- c("01437408000198", # for - Nordeste Cidadania
 
 # Excluir esses CNPJs da rais
 rais_etapa8 <- rais[id_estab %nin% cnpjs_prob]
-  
+
+# Salvar RAIS etapa 8 
+write_rds(rais_etapa8, "../data/rais/rais_2017_etapa8.rds")
