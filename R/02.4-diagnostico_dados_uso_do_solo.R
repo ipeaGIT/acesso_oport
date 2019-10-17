@@ -74,7 +74,7 @@ mapView(fim, zcol='empregos_total')
 SERVFAZ
 
 # 2/2 Identifica quais empressas e enderecos estao em cada Hexagno ( identifica empresas/enderecos problema)
-oi <- fim %>% filter(id_hex == "89800556a2bffff") %>% .$id_estab
+oi <- fim %>% filter(id_hex == "89800554e17ffff") %>% .$id_estab
 
 rais_geo %>% 
   filter(id_estab %in% oi) %>% 
@@ -86,25 +86,26 @@ rais_geo %>%
 
 # lista dos hexagonos problematicos
 
-89a8c0cea23ffff # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
-8980088739bffff # slz - Avenida dos Holandeses (erro Galileo - mesmo afirmando que encontrou 4 estrelas)
-898008829a7ffff # slz - AVENIDA JOAO PESSOA, 363, São Luís - State of Maranhão
-898008829afffff # slz - AV ENG EMILIANO MACIEIRA
-898008829abffff # slz - AV ENG EMILIANO MACIEIRA de novo
-89800880d5bffff # slz - Av. São Luís Rei de França
-89800882a3bffff # slz AV JERONIMO DE ALBUQUERQUE
-89800882a0fffff # slz AV JERONIMO DE ALBUQUERQUE de novo
-89800882a53ffff # slz - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+hex_prob <- 
+c("89a8c0cea23ffff", # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+  "8980088739bffff", # slz - Avenida dos Holandeses (erro Galileo - mesmo afirmando que encontrou 4 estrelas)
+  "898008829a7ffff", # slz - AVENIDA JOAO PESSOA, 363, São Luís - State of Maranhão
+  "898008829afffff", # slz - AV ENG EMILIANO MACIEIRA
+  "898008829abffff", # slz - AV ENG EMILIANO MACIEIRA de novo
+  "89800880d5bffff", # slz - Av. São Luís Rei de França
+  "89800882a3bffff", # slz AV JERONIMO DE ALBUQUERQUE
+  "89800882a0fffff", # slz AV JERONIMO DE ALBUQUERQUE de novo
+  "89800882a53ffff", # slz - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+  "89a8a2a6413ffff", # sgo - Avenida Eugênio Borges (rodovia?)
+  "8980055454bffff", # ter - AV DEPUTADO PAULO FERRAZ
+  "89800556a2bffff", # ter - muitas ruas
+  "89800554ccfffff", # ter - muitas ruas
+  "89800554e17ffff") # ter - muitas ruas
 
-89a8a2a6413ffff # sgo - Avenida Eugênio Borges (rodovia?)
-8980055454bffff # ter - AV DEPUTADO PAULO FERRAZ
 
-
-
-
+# Hexagonos que serao corrigidos pelo tratamento das rodovias:
 # 89804696927ffff # brl - enderecos em Rodovia AUGUSTO MONTENEGRO 
 # 89a81070ad3ffff # gua - enderecos em Rodovia
-
 # 89a8a06f1a7ffff # duq- Rodovia Washington Luisa
 
 

@@ -350,11 +350,6 @@ register_google(key = my_api$V1)
   # o geocoding do google!
   
   
-  
-  6666666666666666666666666666666666666666666666666666666666666666666666666 as
-   TO DO: adicionar rodovias com string "RODOVIA" ou "ROD " ou "ROD."
-  
-  
   # abrir base de rodovias rodovias
   rodovias <- st_read("../data-raw/rodovias/2014/2014/rodovia_2014.shp") %>%
     # Excluir geometria (desnecessario)
@@ -537,6 +532,105 @@ subset(output_google_api1_rais, !is.na(lat)) %>%
 
 
 
-# 7) Correcao a posteriori de falhas no geocode do Galileo --------------------------
+# 7) Corrigir a posteriori falhas no geocode do Galileo --------------------------
+
+# abrir rais
+rais <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
+
+# lista dos hexagonos problematicos
+
+hex_probs <- data.frame(
+  hexs = c("89a8c0cea23ffff", # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+    "8980088739bffff", # slz, - Avenida dos Holandeses (erro Galileo - mesmo afirmando que encontrou 4 estrelas)
+    "898008829a7ffff", # slz, - AVENIDA JOAO PESSOA, 363, São Luís - State of Maranhão
+    "898008829afffff", # slz, - AV ENG EMILIANO MACIEIRA
+    "898008829abffff", # slz, - AV ENG EMILIANO MACIEIRA de novo
+    "89800880d5bffff", # slz, - Av. São Luís Rei de França
+    "89800882a3bffff", # slz, AV JERONIMO DE ALBUQUERQUE
+    "89800882a0fffff", # slz, AV JERONIMO DE ALBUQUERQUE de novo
+    "89800882a53ffff", # slz, - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
+    "89a8a2a6413ffff", # sgo, - Avenida Eugênio Borges (rodovia?)
+    "8980055454bffff", # ter, - AV DEPUTADO PAULO FERRAZ
+    "89800556a2bffff", # ter, - muitas ruas
+    "89800554ccfffff", # ter, - muitas ruas
+    "89800554e17ffff"),# ter - muitas ruas
+  
+  sigla_muni = c("goi", "slz","slz", "slz", "slz", "slz", "slz", "slz", "slz", "sgo", "ter", "ter", "ter", "ter")
+  
+)
+
+  
+# ler hex agregados e juntar
+hex <- lapply(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", unique(hex_probs$sigla_muni)), read_rds) %>%
+  rbindlist() %>%
+  st_sf() %>%
+  select(id_hex) %>%
+  # filtra hex ids problematicos
+  filter(id_hex %in% hex_probs$hexs)
+
+# Qual o codigo dos municipio em questao?
+cod_mun_ok <- munis_df[abrev_muni %in% unique(hex_probs$sigla_muni)]$code_muni
+
+base <- rais %>%
+  filter(!is.na(lon)) %>%
+  filter(codemun %in% substr(cod_mun_ok, 1, 6)) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  select(codemun, id_estab)
+
+# Intersecao do hex ids problema com base de uso do solo
+fim <- st_join(hex, base) %>%
+  filter(!is.na(id_estab))
+
+# Extrair os estabs
+oi <- fim %>% st_set_geometry(NULL) %>% distinct(id_estab) %>% .$id_estab
+
+# Filtrar estabs
+rais_etapa7 <- rais %>%
+  filter(id_estab %in% oi)
+
+# lista de enderecos com problema
+enderecos_etapa7 <- rais_etapa7 %>% 
+  mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% 
+  .$fim
+
+# registrar Google API Key
+my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
+register_google(key = my_api$V1)
+
+# geocode
+coordenadas_google_etapa7 <- lapply(X=enderecos_etapa7, ggmap::geocode) %>% rbindlist()
+
+# save google API output 
+output_google_etapa7_rais <- cbind(setDT(rais_etapa7)[,'id_estab'], coordenadas_google_etapa7)
+
+# atualiza lat lon a partir de google geocode
+setDT(rais)[output_google_etapa7_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
+
+# Salvar
+write_rds(rais, "../data/rais/rais_2017_etapa7.rds")
 
 
+
+
+
+# 8) Excluir CNPJ's problematicos --------------------------
+
+# Esse CPNJ foram identificados a partir da inspecao de hexagonos em cada cidade com uma quantidade
+# maior que 3000 empregos
+
+# Abrir rais da etapa 7
+rais <- read_rds("../data/rais/rais_2017_etapa7.rds")
+
+# Trazer CNPJs problematicos
+# Lista de CNPJS problematicos
+cnpjs_prob <- c("01437408000198", # for - Nordeste Cidadania
+                "02137309000153", # spo - Icomon Tecnologia
+                "17178195000167", # bho - Sociedade Mineira de Cultura
+                "03873484000171", # goi - EMPREZA SERVICE CENTER - Locação de mão-de-obra temporária (EM RECUPERACAO JUDICIAL)
+                "67945071000138", # cam - Sapore S/A , 56.2 Serviços de catering, bufê e outros serviços de comida preparada
+                "03254082000512", # slz - INSTITUTO ACQUA, com varias unidades em outras cidades
+                "00801512000157") # duq - AGILE CORP 56.2 Serviços de catering, bufê e outros serviços de comida preparada
+
+# Excluir esses CNPJs da rais
+rais_etapa8 <- rais[id_estab %nin% cnpjs_prob]
+  
