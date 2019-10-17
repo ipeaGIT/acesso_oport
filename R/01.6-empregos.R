@@ -553,9 +553,12 @@ hex_probs <- data.frame(
     "8980055454bffff", # ter, - AV DEPUTADO PAULO FERRAZ
     "89800556a2bffff", # ter, - muitas ruas
     "89800554ccfffff", # ter, - muitas ruas
+    "89800554eabffff", # ter, - muitas ruas
+    "89800554d8bffff", # ter, - muitas ruas
     "89800554e17ffff"),# ter - muitas ruas
   
-  sigla_muni = c("goi", "slz","slz", "slz", "slz", "slz", "slz", "slz", "slz", "sgo", "ter", "ter", "ter", "ter")
+
+  sigla_muni = c("goi", "slz","slz", "slz", "slz", "slz", "slz", "slz", "slz", "sgo", "ter", "ter", "ter", "ter", "ter", "ter")
   
 )
 
@@ -571,6 +574,7 @@ hex <- lapply(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", unique(hex
 # Qual o codigo dos municipio em questao?
 cod_mun_ok <- munis_df[abrev_muni %in% unique(hex_probs$sigla_muni)]$code_muni
 
+# Carrega somente os dados da rais estabes nestes municipios
 base <- rais %>%
   filter(!is.na(lon)) %>%
   filter(codemun %in% substr(cod_mun_ok, 1, 6)) %>%
@@ -578,18 +582,18 @@ base <- rais %>%
   select(codemun, id_estab)
 
 # Intersecao do hex ids problema com base de uso do solo
-fim <- st_join(hex, base) %>%
-  filter(!is.na(id_estab))
+fim <- st_join(base, hex) %>%
+  filter(!is.na(id_hex))
 
-# Extrair os estabs
+# Extrair os estabs 'problematicos' concentrados em hexagonos
 oi <- fim %>% st_set_geometry(NULL) %>% distinct(id_estab) %>% .$id_estab
 
 # Filtrar estabs
-rais_etapa7 <- rais %>%
+rais_prob <- rais %>%
   filter(id_estab %in% oi)
 
 # lista de enderecos com problema
-enderecos_etapa7 <- rais_etapa7 %>% 
+enderecos_etapa7 <- rais_prob %>% 
   mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% 
   .$fim
 
@@ -600,8 +604,20 @@ register_google(key = my_api$V1)
 # geocode
 coordenadas_google_etapa7 <- lapply(X=enderecos_etapa7, ggmap::geocode) %>% rbindlist()
 
-# save google API output 
-output_google_etapa7_rais <- cbind(setDT(rais_etapa7)[,'id_estab'], coordenadas_google_etapa7)
+output_google_etapa7_rais <- cbind(setDT(rais_prob)[,'id_estab'], coordenadas_google_etapa7)
+
+# abrir output teste
+output_google_etapa7_rais <- read_rds("../data/output_gmaps_temp_etapa7.rds")
+output_google_etapa7_rais <- output_google_etapa7_rais[, .(id_estab = V1, lon, lat)]
+
+# qual a distancia entre a localizacao do galileo e do gmaps?
+rais_dif <- rais %>% 
+  select(id_estab, lon, lat, BA_Nome_do_municipio) %>%
+  right_join(output_google_etapa7_rais, by = "id_estab") %>%
+  mutate(dist = geosphere::distHaversine(matrix(c(rais_dif$lon.x, rais_dif$lat.x), ncol = 2), matrix(c(.$lon.y, .$lat.y), ncol = 2)))
+
+hist(rais_dif$dist[rais_dif$dist < 5000])
+
 
 # atualiza lat lon a partir de google geocode
 setDT(rais)[output_google_etapa7_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
@@ -610,8 +626,10 @@ setDT(rais)[output_google_etapa7_rais, on='id_estab', c('lat', 'lon') := list(i.
 write_rds(rais, "../data/rais/rais_2017_etapa7.rds")
 
 
+a <- geocode('AV ENGENHEIRO EMILIANO MACIEIRA, 1030 - SÃO LUÍS, Maranhão, CEP 65095603', output='more', force=T, data=T) 
+b <- geocode('AV ENGENHEIRO EMILIANO MACIEIRA, 2300 - SÃO LUÍS, Maranhão, CEP 65095971', output='more', force=T, data=T) 
 
-
+a$lon == b$lon
 
 # 8) Excluir CNPJ's problematicos --------------------------
 

@@ -39,9 +39,11 @@ escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
 empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds") # para 2017
+empregos_etapa8 <- readr::read_rds("../data/rais/rais_2017_etapa8.rds") # para 2017
 
 # remove lat lon missing
 empregos <- empregos[!is.na(lat), ]
+empregos_etapa8 <- empregos_etapa8[!is.na(lat), ]
 
 
 
@@ -52,11 +54,20 @@ empregos <- empregos[!is.na(lat), ]
 source('./R/fun/diagnost_hex_uso_solo.R')
 
 # 1/2 Identificar quantidade de empregos por hexagono ( identifica hexagonos problema)
-fim <- diagnost_hex_uso_solo("ter", "trabalho", 2000)
+fim <- diagnost_hex_uso_solo("goi", "trabalho", 2000)
+
+fim8 <- diagnost_hex_uso_solo8("goi", "trabalho", 2000)
+
 
 View(fim)
 mapView(fim, zcol='total_corrigido')
 mapView(fim, zcol='empregos_total')
+
+fim8 %>% st_set_geometry(NULL) %>% group_by(id_hex) %>% summarise(n(), tot = sum(total_corrigido)) %>% arrange(desc(tot))
+fim %>% st_set_geometry(NULL) %>% group_by(id_hex) %>% summarise(n(), tot = sum(total_corrigido)) %>% arrange(desc(tot))
+sum(fim$total_corrigido)
+sum(fim8$total_corrigido)
+
 
 
 
@@ -74,7 +85,7 @@ mapView(fim, zcol='empregos_total')
 SERVFAZ
 
 # 2/2 Identifica quais empressas e enderecos estao em cada Hexagno ( identifica empresas/enderecos problema)
-oi <- fim %>% filter(id_hex == "89800554e17ffff") %>% .$id_estab
+oi <- fim %>% filter(id_hex == "89800554eabffff") %>% .$id_estab
 
 rais_geo %>% 
   filter(id_estab %in% oi) %>% 
