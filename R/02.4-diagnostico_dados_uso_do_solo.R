@@ -39,11 +39,13 @@ escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
 empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds") # para 2017
-empregos_etapa8 <- readr::read_rds("../data/rais/rais_2017_etapa8.rds") # para 2017
+# empregos_etapa8 <- readr::read_rds("../data/rais/rais_2017_etapa8.rds") # para 2017
 
 # remove lat lon missing
 empregos <- empregos[!is.na(lat), ]
-empregos_etapa8 <- empregos_etapa8[!is.na(lat), ]
+# empregos_etapa8 <- empregos_etapa8[!is.na(lat), ]
+
+
 
 
 
@@ -54,20 +56,21 @@ empregos_etapa8 <- empregos_etapa8[!is.na(lat), ]
 source('./R/fun/diagnost_hex_uso_solo.R')
 
 # 1/2 Identificar quantidade de empregos por hexagono ( identifica hexagonos problema)
-fim <- diagnost_hex_uso_solo("goi", "trabalho", 2000)
-
-fim8 <- diagnost_hex_uso_solo8("goi", "trabalho", 2000)
+fim <- diagnost_hex_uso_solo("ter", "trabalho", 2000)
+# fim8 <- diagnost_hex_uso_solo8("ter", "trabalho", 2000)
 
 
 View(fim)
-mapView(fim, zcol='total_corrigido')
-mapView(fim, zcol='empregos_total')
+mapView(fim, zcol='empregos_total') + mapView(fim8, zcol='empregos_total')
 
-fim8 %>% st_set_geometry(NULL) %>% group_by(id_hex) %>% summarise(n(), tot = sum(total_corrigido)) %>% arrange(desc(tot))
-fim %>% st_set_geometry(NULL) %>% group_by(id_hex) %>% summarise(n(), tot = sum(total_corrigido)) %>% arrange(desc(tot))
-sum(fim$total_corrigido)
-sum(fim8$total_corrigido)
 
+
+# 2/2 Identifica quais empressas e enderecos estao em cada Hexagno ( identifica empresas/enderecos problema)
+oi <- fim %>% filter(id_hex == "89a8c0cea23ffff") %>% .$id_estab
+
+empregos %>% 
+  filter(id_estab %in% oi) %>% 
+  View()
 
 
 
@@ -84,18 +87,8 @@ sum(fim8$total_corrigido)
 
 SERVFAZ
 
-# 2/2 Identifica quais empressas e enderecos estao em cada Hexagno ( identifica empresas/enderecos problema)
-oi <- fim %>% filter(id_hex == "89800554eabffff") %>% .$id_estab
 
-rais_geo %>% 
-  filter(id_estab %in% oi) %>% 
-  View()
-
-
-
-# 7) Correcao a posteriori de falhas no geocode do Galileo --------------------------
-
-# lista dos hexagonos problematicos
+# Lista dos hexagonos problematicos
 
 hex_prob <- 
 c("89a8c0cea23ffff", # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
@@ -121,20 +114,26 @@ c("89a8c0cea23ffff", # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RU
 
 
 
-# checar resultados na rais geo
-rais_geo <- fread("../data-raw/rais/rais_2017_georef.csv"
-                  , select = c("id_estab", "codemun", "latitude", 'longitude', 
-                               'precisiondepth', 'logradouro', 'razao_social', 'cep', 'uf', 'BA_Nome_do_municipio')
-                  , colClasses='character'
-                  # , nrows = 10
-                  )
+# SEÇÃO DE TESTE PARA COMPARACAO ENTRE ANTES DE DEPOIS ----------------------------------------
 
-rais_geo <- rais_geo[codemun %in% substr(munis_df$code_muni, 1, 6) ]
 
-# rais_geo[ logradouro %like% "RODOVIA|ROD ", ][10:30] %>% nrow
-# rais_geo[ logradouro %like% "RODOVIA PRESIDENTE", ] [10:30] %>% nrow
+# fim %>% st_set_geometry(NULL) %>% group_by(id_hex) %>% summarise(n(), tot = sum(total_corrigido)) %>% arrange(desc(tot))
+# fim8 %>% st_set_geometry(NULL) %>% group_by(id_hex) %>% summarise(n(), tot = sum(total_corrigido)) %>% arrange(desc(tot))
+# sum(fim$total_corrigido)
+# sum(fim8$total_corrigido)
+
+# # antes e depois para cada hex problematico
+# fim_prob <- fim %>% filter(id_hex %in% hex_prob) %>% 
+#   st_set_geometry(NULL) %>%
+#   select(id_hex, empregos_total) %>% 
+#   count(id_hex, empregos_total)
 # 
-# a <- rais_geo[ codemun == '150140' & logradouro %like% "AUGUSTO MONTENEGRO", ]
+# fim_prob8 <- fim8 %>% filter(id_hex %in% hex_prob) %>% 
+#   st_set_geometry(NULL) %>%
+#   select(id_hex, empregos_total) %>% 
+#   count(id_hex, empregos_total)
+# 
+# fim_comp <- left_join(fim_prob, fim_prob8, by = "id_hex", suffix = c(".antes", ".depois"))
 
 
 
