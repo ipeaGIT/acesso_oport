@@ -109,8 +109,6 @@ juntar_output_OTP <- function(sigla_muni, ano){
 
 # Aplicar funcao
 pbapply::pblapply(munis_df$abrev_muni, FUN=juntar_output_OTP, ano=2019)
-juntar_output_OTP("sao", 2019)
-juntar_output_OTP("for", 2019)
 
 # plan(multiprocess)
 # invisible(furrr::future_map(horarios, abrir_e_juntar))
