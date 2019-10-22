@@ -20,7 +20,7 @@ construir_graph <- function(sigla_muni) {
   message(paste0("Criando Graph da cidade ",sigla_muni,"\n"))
   
   # Os arquivos de gtfs e .obj devem estar na pasta de cada cidade
-  opentripplanner::otp_build_graph(otp = "../otp/programs/otp-1.4.0-shaded.jar", memory = 2,
+  opentripplanner::otp_build_graph(otp = "../otp/programs/otp-1.4.0-shaded.jar", memory = 3,
                                    dir = "../otp", router = sigla_muni) 
   
 }
