@@ -22,7 +22,7 @@ source('./R/fun/setup.R')
 
 
 
-#### 1. Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem -----------------------
+#### 1) Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem -----------------------
 
 gerar_tt_matrix <- function(sigla_muni) {
   
@@ -57,7 +57,7 @@ lapply(X=munis_ativo, gerar_tt_matrix)
 
 
 
-#### 2. Agrega matriz do OTP num arquivo por cidade -----------------------
+#### 2) Agrega matriz do OTP num arquivo por cidade -----------------------
 
 
 # funcao para juntar arquivos por sigla_muni

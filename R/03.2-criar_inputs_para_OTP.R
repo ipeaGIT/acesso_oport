@@ -8,7 +8,7 @@ source('./R/fun/setup.R')
 
 
 
-### 1. Funcao para gerar pontos de origem e destino -----------------------------------
+### 1) Funcao para gerar pontos de origem e destino -----------------------------------
 
 gerar_pontos_OTP <- function(sigla_muni) {
 
@@ -72,18 +72,18 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=gerar_pontos_OTP)
 
 
 
-### 2. Criar scripts em Python -----------------------------------
+### 2) Criar scripts em Python -----------------------------------
 
 # Carregar Funcao para criar o script em python
 source("./R/fun/criar_script_python_parallel_multiple.R")
 
 # pico
 pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes, 
-         from = 6, until = 7, every = 30, modo = "todos")
+         from = 6, until = 8, every = 15, modo = "todos")
 
 # fora pico, # apenas modo transporte publico
 pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes, 
-         from = 14, until = 15, every = 30, modo = 'tp') 
+         from = 14, until = 16, every = 15, modo = 'tp') 
 
 # para as cidades sem gtfs, sera somente transporte ativo
 # cidades: bsb, sal, man, rec, goi, bel, gua, cam, slz, sgo, mac, duq, cgr, nat
