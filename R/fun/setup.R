@@ -53,7 +53,7 @@ munis_df <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902
                         name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte',
                                     'Brasilia', 'Salvador', 'Manaus', 'Recife', 'Goiania', 'Belem',
                                     'Guarulhos', 'Campinas', 'Sao Luis', 'Sao Goncalo', 'Maceio', 'Duque de Caxias',
-                                    'Campo Grande', 'Natal', 'Teresina'),
+                                    'Campo Grande', 'Natal'),
                         abrev_estado=c('CE', 'SP', 'RJ', 'PR', 'RS', 'MG',
                                       'DF', 'BA', 'AM', 'PE', 'GO', 'PA',
                                       'SP', 'SP', 'MA', 'RJ', 'AL', 'RJ',
@@ -140,6 +140,6 @@ sfc_as_cols <- function(x, names = c("lon","lat")) {
   x <- x[ , !names(x) %in% names]
   ret <- setNames(ret,names)
   ui <- dplyr::bind_cols(x,ret)
-  # st_set_geometry(ui, NULL)
+  st_set_geometry(ui, NULL)
 }
 
