@@ -20,41 +20,41 @@ calcular_acess <- function(sigla_muni, ano) {
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
-  
-  
-  # Listar arquivos de matriz em formato .csv
-  tt_files <- dir(path= sprintf("E:/data/output_ttmatrix/%s/", sigla_muni), pattern = '.csv', full.names = T)
-  
-  # Ler e empilhar ttmatrix
-  future::plan(future::multiprocess)
-  ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=fread, future.packages=c('data.table')) %>% 
-    data.table::rbindlist(fill = T)
-  # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
-  
-  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
-  # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
-  # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
-  ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
-  ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
-  ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
-  
-  # convert depart_time para formato itime
-  ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
-  
-  # Classificar informacao de horario de partida como pico ou fora pico
-  ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
-                                     ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
-  
-  
-  
-  # Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
-  
-  # Calcular a mediana agrupando por sigla_muni, modo, origin, destination, pico
-  ttmatrix_median <- ttmatrix_allmodes[, .(tt_median = median(travel_time, na.rm = TRUE)), 
-                                       by = .(city, mode, origin, destination, pico)]
-  
-  # clean RAM memory
-  rm(ttmatrix_allmodes); gc(reset = T)
+  # 
+  # 
+  # # Listar arquivos de matriz em formato .csv
+  # tt_files <- dir(path= sprintf("E:/data/output_ttmatrix/%s/", sigla_muni), pattern = '.csv', full.names = T)
+  # 
+  # # Ler e empilhar ttmatrix
+  # future::plan(future::multiprocess)
+  # ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=fread, future.packages=c('data.table')) %>% 
+  #   data.table::rbindlist(fill = T)
+  # # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
+  # 
+  # # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
+  # # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
+  # # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
+  # ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
+  # ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
+  # ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
+  # 
+  # # convert depart_time para formato itime
+  # ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
+  # 
+  # # Classificar informacao de horario de partida como pico ou fora pico
+  # ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
+  #                                    ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
+  # 
+  # 
+  # 
+  # # Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
+  # 
+  # # Calcular a mediana agrupando por sigla_muni, modo, origin, destination, pico
+  # ttmatrix_median <- ttmatrix_allmodes[, .(tt_median = median(travel_time, na.rm = TRUE)), 
+  #                                      by = .(city, mode, origin, destination, pico)]
+  # 
+  # # clean RAM memory
+  # rm(ttmatrix_allmodes); gc(reset = T)
   
   ### Agrega dados de uso do solo
   
