@@ -12,7 +12,7 @@ source('./R/fun/setup.R')
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ### 1.1 Download geocoded PMAQ data ------------------------------------
+# ### 1) Download geocoded PMAQ data ------------------------------------
 #   # better geocoded info for basic services
 #   # source: http://aps.saude.gov.br/ape/pmaq
 #   # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
@@ -91,7 +91,7 @@ gc(reset = T)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### 2. Leitura dos dados CNES ---------------------------------
+### 2) Ler os dados do CNES ---------------------------------
   
 ## 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
 
@@ -112,7 +112,7 @@ names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### 3.Limpeza dos dados CNES ---------------------------------
+### 3) Limpar os dados do CNES ---------------------------------
 
 
 # Filter 0: healthcare nao aplica (pq nao tem servicos de alta/baixa complexidade, e.g. academias de saude, secretarias de saude etc)
@@ -189,7 +189,7 @@ table(cnes_filter5$health_high, useNA = "always") # 881
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### 4. Corrigir Lat Long  ---------------------------------
+### 4) Corrigir latitude e  longitude  ---------------------------------
 
   ### Fix lat long info
   
@@ -200,7 +200,7 @@ table(cnes_filter5$health_high, useNA = "always") # 881
     # selecionar so os municipios do projeto
     filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
     mutate(code_muni = as.character(code_muni)) %>%
-    left_join(munis %>% st_set_geometry(NULL), by = "code_muni")
+    left_join(munis, by = "code_muni")
   
   # criar dataframe com as coordenadas ajeitadas
   cnes19_df_coords_fixed <- cnes19_df_digitos %>%
@@ -232,7 +232,7 @@ table(cnes_filter5$health_high, useNA = "always") # 881
   pmaq_df_coords_fixed[, lat := as.numeric(lat)][, lon := as.numeric(lon)]
 
   # update lat lon info from PMAQ
-  summary(cnes19_df_coords_fixed$lat) # 125 NAs
+  summary(cnes19_df_coords_fixed$lat) # 114 NAs
   setDT(cnes19_df_coords_fixed)[pmaq_df_coords_fixed, on=c('CNES'='CNES_FINAL'), c('lat', 'lon') := list(i.lat, i.lon) ] 
   summary(cnes19_df_coords_fixed$lat) # 124 NAs
 
@@ -311,7 +311,7 @@ munis_problema_galileo <- munis_problema %>%
 write_delim(munis_problema_galileo, "../data-raw/hospitais/saude_2019_input_galileo.csv", delim = ";")
     
 
-### RODAR GALILEO--------------
+### RODAR GALILEO ~~~~~~~~~~~~~~
 # depois de rodar o galileo.............
     
 # abrir output galileo
@@ -336,10 +336,10 @@ summary(cnes19_df_coords_fixed$lon) # 40 NA's
     
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 5. Ainda restam lat/lon problematicas. Indentificar elas e jogar no google maps ------------------------------------------------------------------
+# 5) Indentificar coordenadas problematicas e joga-las no Google API -----------------------------
     
 
-#### GOOGLE 1, endereco completo ------------------------
+#### GOOGLE 1, endereco completo ~~~~~~~~~~~~~~~~~~~~~~~~
 
 # A) Escolas com lat/long de baixa precisao (1 ou 2 digitos apos casa decimal)
 setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
@@ -389,7 +389,7 @@ setDT(cnes19_df_coords_fixed)[cnes_problema_geocoded, on='CNES', c('lat', 'lon')
 
 
 
-#### GOOGLE 2, so ceps ------------------------
+#### GOOGLE 2, so ceps ~~~~~~~~~~~~~~~~~~~~~~~~
 
 # ainda ha hospitais mal georreferenciadas!
 # identificar esses hospitais e separa-los
@@ -424,7 +424,7 @@ subset(cnes19_df_coords_fixed, !is.na(lat)) %>%
     
     
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 6. Save data of health facilities ------------------------------------------------------------------
+# 6) Salvar dados de saude ------------------------------------------------------------------
     
 cnes19_df_coords_fixed %>%
   # select(CNES, code_muni, health_low, health_med, health_high)

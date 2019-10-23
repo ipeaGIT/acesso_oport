@@ -134,7 +134,7 @@ write_rds(rais_fim_wide, "../data/rais/rais_2017_vin_instrucao.rds")
 
 
 
-### 3) Limpeza de outliers (empresas que ainda declara muitos trabalhadores na mesma sede) -----------------------------------------------------
+### 3) Limpar outliers (empresas que ainda declara muitos trabalhadores na mesma sede) -----------------------------------------------------
 
 # Abrir
 rais <- read_rds("../data/rais/rais_2017_vin_instrucao.rds")
@@ -312,7 +312,7 @@ rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), sum(total_corrigido)] / 
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##### 5) Google api: Estabelecimentos q Galileo encontrou com baixa precisao  -------------------
+##### 5) Rodar Google API p/ estabelecimentos q Galileo encontrou com baixa precisao  -------------------
 # Os estabelecimentos que o Galileo encontrou com 1, 2 ou 3 estrelas serao jogados para o google api
 
 
@@ -466,7 +466,7 @@ write_rds(rais, "../data/rais/rais_2017_corrigido_latlon.rds")
 
 
 
-# 6) trazer informacoes de funcionarios de escolas publicas do censo escolar --------------------------
+# 6) Trazer informacoes de funcionarios de escolas publicas do censo escolar --------------------------
 # (a partir do script 01.3-educacao)
 
 

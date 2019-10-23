@@ -11,8 +11,8 @@ source('./R/fun/setup.R')
 
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 1. Ler dados do INEP novos ------------------------------------------------------------------
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 1) Ler dados do INEP -----------------------------------------------------------------------------
 
 escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
 
@@ -22,7 +22,7 @@ escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### 2.Limpeza dos dados INEP ---------------------------------
+### 2) Limpar dados do INEP ---------------------------------
 
 # filtrar so dos nossos municipios, escolas publicas
 escolas_filt <- escolas %>%
@@ -148,7 +148,7 @@ educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_
 
 # juntar com a base anterior completa para atualizar lat e lon q veio do Galileo
   setDT(escolas_filt)[educacao_output_galileo, on='CO_ENTIDADE', c('lat', 'lon') := list(i.lat, i.lon)]
-  summary(escolas_filt$lon) # 149 NA's, mais nos valores de menos que 2 estrelas do galileo
+  summary(escolas_filt$lon) # 505 NA's, mais nos valores de menos que 2 estrelas do galileo
 
 # para esses, sera utilizado o geocode do google maps 
 
