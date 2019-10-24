@@ -52,6 +52,9 @@ tictoc::tic()
 lapply(X=munis_df$abrev_muni, gerar_tt_matrix)
 b <- tictoc::toc()
 
+# tempo para as 20 cidades, 17 horarios de partida
+# 97635.94 sec elapsed
+
 
 
 

@@ -19,7 +19,7 @@ source('./R/fun/setup.R')
 # As matrizes sao tratadas, agregadas nos periodos pico e fora-pico fazendo a mediana do tempo de viagme
 # Em seguida sao juntos todos os modos
 
-agrupar_ttmatrix <- function(sigla_muni, ano = 2019) {
+gerar_ttmatrix_mediana <- function(sigla_muni, ano = 2019) {
   
   # sigla_muni <- "bho"; ano=2019
   # sigla_muni <- "spo"; ano=2019
@@ -77,7 +77,7 @@ agrupar_ttmatrix <- function(sigla_muni, ano = 2019) {
 # Parallel processing using future.apply
 future::plan(future::multiprocess)
 #options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
-future.apply::future_lapply(X =munis_df$abrev_muni, FUN=agrupar_ttmatrix, future.packages=c('sf', 'dplyr', 'data.table'))
+future.apply::future_lapply(X =munis_df$abrev_muni, FUN=gerar_ttmatrix_mediana, future.packages=c('sf', 'dplyr', 'data.table'))
 
 
 
@@ -258,8 +258,15 @@ identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
                             ttmatrix_hex_prob_corrigidos)
     
   # salvar output corrigido
-  write_rds(sprintf("E:/data/ttmatrix_agregada_cor/ttmatrix_agregada_cor_%s.rds", sigla_muni))
+  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_agregada_cor/ttmatrix_agregada_cor_%s.rds", sigla_muni))
   
 
 }
 
+
+# Aplicar funcao ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Parallel processing using future.apply
+future::plan(future::multiprocess)
+#options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
+future.apply::future_lapply(X =munis_df$abrev_muni, FUN=identificar_e_corrigir_extremos_acess, future.packages=c('sf', 'dplyr', 'data.table'))

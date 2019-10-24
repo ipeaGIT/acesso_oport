@@ -6,81 +6,47 @@ source('./R/fun/setup.R')
 
 
 
-
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#### 1. FUNCAO PARA CALCULAR ACESSIBILIDADE --------------------------------------------------------------
+#### 1. CALCULAR ACESSIBILIDADE --------------------------------------------------------------
 
 
 calcular_acess <- function(sigla_muni, ano) {
   
   # sigla_muni <- "bho"; ano=2019
   # sigla_muni <- "spo"; ano=2019
+  # sigla_muni <- "for"; ano=2019
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
-  # 
-  # 
-  # # Listar arquivos de matriz em formato .csv
-  # tt_files <- dir(path= sprintf("E:/data/output_ttmatrix/%s/", sigla_muni), pattern = '.csv', full.names = T)
-  # 
-  # # Ler e empilhar ttmatrix
-  # future::plan(future::multiprocess)
-  # ttmatrix_allmodes <- future.apply::future_lapply(X =tt_files, FUN=fread, future.packages=c('data.table')) %>% 
-  #   data.table::rbindlist(fill = T)
-  # # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
-  # 
-  # # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
-  # # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
-  # # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
-  # ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
-  # ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
-  # ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
-  # 
-  # # convert depart_time para formato itime
-  # ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
-  # 
-  # # Classificar informacao de horario de partida como pico ou fora pico
-  # ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
-  #                                    ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
-  # 
-  # 
-  # 
-  # # Calcular a mediana do tempo de viagem entre cada par OD para pico e fora pico ------------------
-  # 
-  # # Calcular a mediana agrupando por sigla_muni, modo, origin, destination, pico
-  # ttmatrix_median <- ttmatrix_allmodes[, .(tt_median = median(travel_time, na.rm = TRUE)), 
-  #                                      by = .(city, mode, origin, destination, pico)]
-  # 
-  # # clean RAM memory
-  # rm(ttmatrix_allmodes); gc(reset = T)
   
-  ### Agrega dados de uso do solo
+  # 1) Abrir tttmatrix ---------------------------------------------------
+  
+  ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_agregada_cor/ttmatrix_agregada_cor_%s.rds", sigla_muni))
+  # ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_agregada/ttmatrix_agregada_%s.rds", sigla_muni))
+  
+  
+  # 2) Agregar dados de uso do solo à ttmatrix --------------------------
   
   # Pegar arquivo com os hexagonos com as atividades
   dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)
   
-  # abrir oportunidades com hexagonos
+  # Abrir oportunidades com hexagonos
   hexagonos_sf <- readr::read_rds(dir_hex) 
   
-  
-  # filtra apenas colunas com info demograficas na origem
+  # Filtrar apenas colunas com info demograficas na origem
   hex_orig <- setDT(hexagonos_sf)[, .(id_hex, pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, renda_total, renda_capta, quintil, decil)]
   
-  # filtra apenas colunas com info de uso do solo no destino
+  # Filtrar apenas colunas com info de uso do solo no destino
   hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_total, empregos_baixa, empregos_media, empregos_alta,  
                                       saude_total, saude_baixa, saude_media, saude_alta,
                                       edu_total, edu_infantil, edu_fundamental, edu_medio)]
   
   
-  
-  # Merge de dados de origem na matrix de tempo de viagem
+  # Merge dados de origem na matrix de tempo de viagem
   ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
                               c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capta','quintil','decil') :=
                                 list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, i.renda_total, i.renda_capta, i.quintil, i.decil)]
   
-  # Merge de dados de destino na matrix de tempo de viagem
+  # Merge dados de destino na matrix de tempo de viagem
   ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
                        c("empregos_total", "empregos_baixa","empregos_media","empregos_alta",
                          "saude_total", "saude_baixa", "saude_media", "saude_alta",
@@ -88,11 +54,6 @@ calcular_acess <- function(sigla_muni, ano) {
                          list(i.empregos_total, i.empregos_baixa,i.empregos_media,i.empregos_alta,
                               i.saude_total, i.saude_baixa, i.saude_media, i.saude_alta,
                               i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio)]    
-  
-  
-  # Transformar o traveltime para minutos
-  ttmatrix[, tt_median := tt_median/60]
-  
   
   # Calcular emprego com match qualitativo de renda e nivel de escolaridade do emprego 
   # high income people = jobs with high and med education
@@ -106,7 +67,7 @@ calcular_acess <- function(sigla_muni, ano) {
                                               empregos_baixa + empregos_media)]
   
   
-### formato final para disponibilizar dados publicamente
+  ### formato final para disponibilizar dados publicamente
   # # Construir base dos dados de populacao, renda e uso do solo
   # vars_df <- hexagonos_sf %>%
   #   select(id_hex, 
@@ -122,8 +83,8 @@ calcular_acess <- function(sigla_muni, ano) {
   #          S001 = saude_total)
     
   
-  # calcular totais para cidades
-  # pop
+  # Calcular totais para cidades
+  # populacao
   ttmatrix[, total_pop := sum(hexagonos_sf$pop_total, na.rm=T)]
   ttmatrix[, total_branca := sum(hexagonos_sf$cor_branca, na.rm=T)]
   ttmatrix[, total_amarela := sum(hexagonos_sf$cor_amarela, na.rm=T)]
@@ -180,8 +141,8 @@ calcular_acess <- function(sigla_muni, ano) {
   # - EI ~ "edu_infantil"
   
   
-  # calcular acessibilidade cumulativa ativa -------------------------------------------------------------
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+  # 3) Calcular acessibilidade cumulativa ativa ----------------------------------------------------
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cma <- "CMA"
   atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
@@ -287,7 +248,7 @@ calcular_acess <- function(sigla_muni, ano) {
   
   
   
-  # calcular acessibilidade cumulativa passiva ---------------------------------------------------------
+  # 4) Calcular acessibilidade cumulativa passiva --------------------------------------------------
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cmp <- "CMP"
@@ -377,7 +338,8 @@ calcular_acess <- function(sigla_muni, ano) {
   }
   
   
-  # calcular acessibilidade tempo minimo (aqui eh feito junto para os dois modos) ------------------
+  # 5) Calcular acessibilidade tempo minimo ---------------
+  # (aqui eh feito junto para os dois modos)
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   
   
@@ -422,7 +384,7 @@ calcular_acess <- function(sigla_muni, ano) {
   # 
   # 
   
-# juntar os arquivos de acess ------------------------------------------------
+  # 6) Juntar os arquivos de acess ------------------------------------------------
 
 
   # Juntar os tres (left_join)
@@ -445,7 +407,8 @@ calcular_acess <- function(sigla_muni, ano) {
     # Transformar para sf
     st_sf()
   
-  # Salvar
+  # 7) Salvar output --------------------------------------
+  
   path_out <- sprintf("../data/output_access/acess_%s_%s.rds", sigla_muni, ano)
   write_rds(acess_sf, path_out)
   
@@ -455,7 +418,9 @@ calcular_acess <- function(sigla_muni, ano) {
   
 }
 
-# Aplicar para todas as cidades --------------------------------------------------------------------
+
+
+# 2. APLICAR PARA TODOS AS CIDADADES --------------------------------------------------------------
 future::plan(future::multiprocess)
 future.apply::future_lapply(X= munis_df$abrev_muni, FUN=calcular_acess, ano = 2019)
 
@@ -467,8 +432,7 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=calcular_acess, ano = 20
 
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-# FUNCAO PARA CRIAR OS MAPAS DE ACESSIBILIDADE ------------------------------------------------
+# 3. CRIAR OS MAPAS DE ACESSIBILIDADE ------------------------------------------------
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
 sigla_muni <- "for"
@@ -640,7 +604,7 @@ fazer_mapa_acess_sigla_muni <- function(acess, indicador, modo, atividade, salva
   
 }
 
-# CRIAR TEMAS PARA CADA UMA DAS sigla_muniS ------------------------------------------------------------
+# CRIAR TEMAS PARA CADA UMA DAS CIDADES 
 theme_for_CMA <- function(base_size) {
   
   theme_void(base_family="Roboto Condensed") %+replace%
@@ -677,7 +641,7 @@ theme_for_TMI <- function(base_size) {
 
 
 
-# CALCULAR INDICADORES PARA FORTALEZA ---------------------------------------------------------
+# CALCULAR INDICADORES PARA FORTALEZA
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
@@ -688,7 +652,6 @@ acess_for <- read_rds("../data/output_access/acess_for.rds")
 
 
 # for_tile <- annotation_map_tile(data = acess_for$transit)
-# Fazer mapa para fortaleza ------------------------------------------------------------------------
 # Para indicador TMI
 fazer_mapa_acess_sigla_muni(acess_for, indicador = "TMI", modo = "transit", atividade = "ST",
                             salvar = TRUE)
@@ -752,7 +715,7 @@ fazer_mapa_acess_sigla_muni(acess_for, indicador = "CMA", modo = "bike", ativida
 
 
 
-# CALCULAR INDICADORES PARA BELO HORIZONTE ---------------------------------------------------------
+# CALCULAR INDICADORES PARA BELO HORIZONTE
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
@@ -761,7 +724,7 @@ fazer_mapa_acess_sigla_muni(acess_for, indicador = "CMA", modo = "bike", ativida
 # Abrir
 acess_bel <- read_rds("../data/output_access/acess_bel.rds")
 
-# Fazer mapa para bel ------------------------------------------------------------------------
+# Fazer mapa para bel
 # Para indicador TMI
 fazer_mapa_acess_sigla_muni(acess_bel, indicador = "TMI", modo = "transit", atividade = "ST",
                             salvar = TRUE)
@@ -790,7 +753,7 @@ fazer_mapa_acess_sigla_muni(acess_bel, indicador = "CMA", modo = "transit", ativ
 
 
 
-# CALCULAR INDICADORES PARA RIO DE JANEIRO ---------------------------------------------------------
+# CALCULAR INDICADORES PARA RIO DE JANEIRO
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
@@ -799,7 +762,7 @@ fazer_mapa_acess_sigla_muni(acess_bel, indicador = "CMA", modo = "transit", ativ
 # Abrir
 acess_rio <- read_rds("../data/output_access/acess_rio.rds")
 
-# Fazer mapa para rio ------------------------------------------------------------------------
+# Fazer mapa para rio
 # Para indicador TMI
 fazer_mapa_acess_sigla_muni(acess_rio, indicador = "TMI", modo = "transit", atividade = "ST",
                             salvar = TRUE, nrow = 2)
@@ -829,7 +792,7 @@ fazer_mapa_acess_sigla_muni(acess_rio, indicador = "CMA", modo = "transit", ativ
 
 
 
-# CALCULAR INDICADORES PARA CURITIBA ---------------------------------------------------------
+# CALCULAR INDICADORES PARA CURITIBA
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Aplicar
@@ -838,7 +801,7 @@ fazer_mapa_acess_sigla_muni(acess_rio, indicador = "CMA", modo = "transit", ativ
 # Abrir
 acess_cur <- read_rds("../data/output_access/acess_cur.rds")
 
-# Fazer mapa para cur ------------------------------------------------------------------------
+# Fazer mapa para cur
 # Para indicador TMI
 fazer_mapa_acess_sigla_muni(acess_cur, indicador = "TMI", modo = "transit", atividade = "ST",
                             salvar = TRUE, nrow = 2)
