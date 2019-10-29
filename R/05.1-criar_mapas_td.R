@@ -142,7 +142,7 @@ beepr::beep()
 
 
 
-### 1) TMI saude de media e alta - PT - rio  ---------------------------------------
+### 1) Mapa TMI saude de media e alta - PT - rio  ---------------------------------------
 
 
 # linhas capacidade
@@ -303,34 +303,38 @@ acess_cmp_todas_edu %>%
 
 
 
-# 4) Um gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média  --------------------------------
+# 4) Gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média  --------------------------------
 
 # abrir o acess de todas as cidades e juntar
 
-# selciona so Walking
-acess_walk <- setDT(hex_dt)[ mode == "bike" ]
+# seleciona so bike
+acess_bike <- setDT(hex_dt)[ mode == "bike" ]
 
+# Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 90 min.
+acess_bike[, TMIEM := fifelse(TMIEM==Inf, 90, TMIEM)]
 
-# Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 120 min.
-acess_walk[, TMIEM := ifelse(TMIEM==Inf, 90, TMIEM)]
-
-acess_walk$TMIEM
-df4 <- acess_walk[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+# tempo medio ponderapo pela populacao de cada hexagono
+df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
                       Negra = weighted.mean(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
                       Branca = weighted.mean(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
                       Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
                       Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
+# # mediana ponderada
+# df4 <- acess_bike[, .(Total = matrixStats::weightedMedian(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
+#                       Negra = matrixStats::weightedMedian(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
+#                       Branca = matrixStats::weightedMedian(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
+#                       Q1 = matrixStats::weightedMedian(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
+#                       Q5 = matrixStats::weightedMedian(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
-unique(acess_walk$muni)
-unique(df4$city)
+
+
 
 
 
 # ajeitar nome das cidade
 df4 <- df4 %>%
-  mutate(city = ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city))) %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
+    mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
 
 
 
@@ -342,7 +346,7 @@ temp_fig4 <-
   
   df4 %>%
   ggplot() + 
-  geom_dumbbell(aes(x = Q5    , xend = Q1        , y = forcats::fct_reorder(city, Q1)), 
+  geom_dumbbell(aes(x = Q5, xend = Q1, y = forcats::fct_reorder(city, Q1)), 
                 size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
   geom_point(aes(x = Total, y = city), color = "black", size = 2)+
   scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
@@ -351,17 +355,17 @@ temp_fig4 <-
   scale_x_continuous(name="", limits = c(0, 24),
                      breaks = c(0, 5, 10, 15, 20),
                      labels = c(0, 5,  10, 15,"20 minutos")) +
-  geom_text(data = filter(df4, city == "Sao Luis"),
+  geom_text(data = filter(df4, city == "Goiania"),
             aes(x = Q1, y = city),
             label = "Pobres Q1", fontface = "bold",
             color = "springgreen4",
             hjust = -0.5) +
-  geom_text(data = filter(df4, city == "Sao Luis"),
+  geom_text(data = filter(df4, city == "Goiania"),
             aes(x = Q5, y = city),
             label = "Ricos Q5", fontface = "bold",
             color = "steelblue4",
             hjust = 1.5) +
-  geom_text(data = filter(df4, city == "Sao Luis"),
+  geom_text(data = filter(df4, city == "Goiania"),
             aes(x = Total, y = city),
             label = "Total", fontface = "bold",
             color = "black",
@@ -374,7 +378,8 @@ temp_fig4 <-
 # tme walk
 
 
-ggsave(temp_fig4, file="./figures/td/fig4_TMIEM_bike_renda90.png", dpi = 300, width = 16, height = 16, units = "cm")
+
+ggsave(temp_fig4, file="../figures/td/fig4_TMIEM_bike_renda90median.png", dpi = 300, width = 16, height = 16, units = "cm")
 beep()
 
 
@@ -525,3 +530,27 @@ teste %>%
 
 
 ggsave(file="./figures/fig6-teste_pop.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+
+
+
+
+
+
+
+
+
+# 6) Ridgeline test  --------------------------------
+
+https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+
+https://cran.r-project.org/web/packages/ggridges/vignettes/gallery.html
+
+library(ggridges)
+
+xxx <- subset(acess_bike, quintil %in% c(1,5))
+
+ggplot() + 
+  geom_density_ridges(data=xxx, aes(x = TMIEM, y = city, fill=factor(quintil)),
+                      alpha=.8, color='white',
+                      from=0, to =50,
+                      scale=5, size=.1, rel_min_height = 0.01)
