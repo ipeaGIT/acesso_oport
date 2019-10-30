@@ -107,33 +107,29 @@ worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf()
 # load map of Brazil and municipalities
 states_sf <- geobr::read_state(code_state = "all", year = 2018)
 munis_sf <- lapply(munis_df$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
-st_crs(munis_sf) <- st_crs(brasil_sf)
+st_crs(munis_sf) <- st_crs(states_sf)
 
 # get centroids of municipalities
 munis_centroids <- st_centroid(munis_sf)
 munis_tp_centroids <- subset(munis_centroids, code_muni %in% munis_df$code_muni[which(munis_df$modo=='todos')])
 
 
-
-
 # create map
+
 temp_map1 <- 
   ggplot() + 
   geom_sf(data=worldMap, fill="white", color="gray90") +
-  #    geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
-  #    geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
-  geom_sf(data=st_buffer(munis_tp_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
+  geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
+  geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
+  geom_sf(data=st_buffer(munis_tp_centroids, dist =.5), fill="#469c77", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
   theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
-  theme_map() +
-  theme(axis.text = element_blank(), axis.ticks = element_blank()) +
-  coord_sf(xlim = c(st_bbox(brasil_sf)[[1]], st_bbox(brasil_sf)[[3]]),ylim = c(st_bbox(brasil_sf)[[2]], st_bbox(brasil_sf)[[4]])) # coord_cartesian Coordinates Zoom
-# spherical mal?>>> coord_sf(crs = "+proj=laea +lat_0=-24 +lon_0=300 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +no_defs") 
-
-
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), 
+        panel.grid = element_blank(), panel.background=element_rect(fill = "gray98")) +
+  coord_sf(expand = F, xlim = c(st_bbox(states_sf)[[1]], st_bbox(states_sf)[[3]]),ylim = c(st_bbox(states_sf)[[2]], st_bbox(states_sf)[[4]])) # coord_cartesian Coordinates Zoom
 
 
 # save map
-ggsave(temp_map1, file="./figures/fig1_munis1.png", dpi = 200, width = 16.5, height = 15, units = "cm")
+ggsave(temp_map1, file="../figures/td/fig1_munis_all.png", dpi = 300, width = 16.5, height = 16.5, units = "cm")
 beepr::beep()
 
 
@@ -245,8 +241,16 @@ temp <- cowplot::plot_grid(plot1, plot2 + theme(legend.position = "none"))
 cowplot::plot_grid(temp, legenda,  ncol = 1, rel_heights = c(1, .2))
 
 
-ggsave(file="./figures/td/fig3-CMA_for_bho.png", dpi = 200, width = 14, height = 10, units = "cm")
+ggsave(file="../figures/td/fig3-CMA_for_bho.png", dpi = 200, width = 14, height = 10, units = "cm")
 beep()
+
+
+
+
+
+
+
+
 
 
 # 3) CMP - Gráfico de pontos do acesso a pé educação infantil - população negra e bra --------
@@ -281,7 +285,7 @@ acess_cmp_todas_edu <- acess_cmp_todas_walk %>%
 
 
 
-acess_cmp_todas_walk$TMIEI
+
 
 
 # grafico!
@@ -539,7 +543,79 @@ ggsave(file="./figures/fig6-teste_pop.png", dpi = 300, width = 16.5, height = 15
 
 
 
-# 6) Ridgeline test  --------------------------------
+
+
+
+
+# 6) Compare transport modes  --------------------------------
+
+
+# subset da base
+df6 <- subset(hex_dt, city %in% munis_df$abrev_muni[which(munis_df$modo=='todos')]) %>% 
+  select(city, id_hex, pop_total, TMISA, quintil, mode) %>% na.omit()
+
+# Se nenhuma atividade acessivel (TMISA==Inf), entao imputar TMISA de 90 min.
+setDT(df6)[, var := fifelse(TMISA==Inf, 90, TMISA)]
+
+df6 <- df6[ pop_total > 0, ]
+
+# calcula tempo medio por modo
+df6 <- df6[, .(bike = weighted.mean(x = var[which(mode=='bike')], w = pop_total[which(mode=='bike')], na.rm=T),
+               walk = weighted.mean(x = var[which(mode=='walk')], w = pop_total[which(mode=='walk')], na.rm=T),
+               transit = weighted.mean(x = var[which(mode=='transit')], w = pop_total[which(mode=='transit')], na.rm=T))
+           , by=city]
+
+
+
+### Plot
+
+ggplot(data=df6) + 
+  geom_point( aes(x=tempo_medio , y= forcats::fct_reorder(city, tempo_medio), color= mode)) 
+ # geom_segment(aes(color= mode, x = tempo_medio[which(mode=='transit')],  xend=tempo_medio[which(mode=='walk')]))
+
+
+
+df6 %>%
+  ggplot() + 
+  geom_dumbbell(aes(x = transit, xend = bike, y = forcats::fct_reorder(city, bike)), 
+                size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
+  geom_point(aes(x = walk, y = city), color = "black", size = 2) +
+  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
+                     name="", 
+                     labels=c('Pobres Q1', 'Média', 'Ricos Q5'))
+
+# 
+# +
+#   scale_x_continuous(name="", limits = c(0, 24),
+#                      breaks = c(0, 5, 10, 15, 20),
+#                      labels = c(0, 5,  10, 15,"20 minutos")) +
+#   geom_text(data = filter(df4, city == "Goiania"),
+#             aes(x = Q1, y = city),
+#             label = "Pobres Q1", fontface = "bold",
+#             color = "springgreen4",
+#             hjust = -0.5) +
+#   geom_text(data = filter(df4, city == "Goiania"),
+#             aes(x = Q5, y = city),
+#             label = "Ricos Q5", fontface = "bold",
+#             color = "steelblue4",
+#             hjust = 1.5) +
+#   geom_text(data = filter(df4, city == "Goiania"),
+#             aes(x = Total, y = city),
+#             label = "Total", fontface = "bold",
+#             color = "black",
+#             vjust = -1) +
+#   expand_limits(y = 21)+
+#   theme_ipsum_rc(grid= "X") +
+#   labs(x = "", y = "", title = "")
+
+
+
+
+
+
+
+
+# 7) Ridgeline test  --------------------------------
 
 https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
 
@@ -547,10 +623,12 @@ https://cran.r-project.org/web/packages/ggridges/vignettes/gallery.html
 
 library(ggridges)
 
-xxx <- subset(acess_bike, quintil %in% c(1,5))
+df6 <- subset(hex_dt, mode="bike") %>% select(city, id_hex, pop_total, TMIEM, quintil) %>% na.omit()
+
+# & quintil %in% c(1,5))
 
 ggplot() + 
-  geom_density_ridges(data=xxx, aes(x = TMIEM, y = city, fill=factor(quintil)),
+  geom_density_ridges(data=df6, aes(x = TMIEM, y = city, fill=factor(quintil)),
                       alpha=.8, color='white',
                       from=0, to =50,
                       scale=5, size=.1, rel_min_height = 0.01)
