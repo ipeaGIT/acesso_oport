@@ -617,18 +617,68 @@ df6 %>%
 
 # 7) Ridgeline test  --------------------------------
 
-https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+# https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
 
-https://cran.r-project.org/web/packages/ggridges/vignettes/gallery.html
+# https://cran.r-project.org/web/packages/ggridges/vignettes/gallery.html
 
 library(ggridges)
 
-df6 <- subset(hex_dt, mode="bike") %>% select(city, id_hex, pop_total, TMIEM, quintil) %>% na.omit()
+df7 <- subset(hex_dt, mode="bike") %>% select(city, id_hex, pop_total, TMIEM, quintil) %>% na.omit()
+
+# Se nenhuma atividade acessivel (TMISA==Inf), entao imputar TMISA de 90 min.
+setDT(df7)[, var := fifelse(TMIEM==Inf, 90, TMIEM)]
 
 # & quintil %in% c(1,5))
 
-ggplot() + 
-  geom_density_ridges(data=df6, aes(x = TMIEM, y = city, fill=factor(quintil)),
-                      alpha=.8, color='white',
-                      from=0, to =50,
-                      scale=5, size=.1, rel_min_height = 0.01)
+df7 %>%
+  # pegar quintis 1 e 5
+  filter(quintil %in% c(1,5)) %>%
+  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  ggplot() + 
+  geom_density_ridges(aes(x = var, y = city, fill=factor(quintil)),
+                      alpha=.7, color='black',
+                      from=0, to =20,
+                      scale=3, size=.1, rel_min_height = 0.01)+
+  scale_fill_brewer(palette = "Set1")+
+  scale_x_continuous(breaks = c(0, 5, 10, 15, 20), labels = c(0, 5, 10, 15, "20 minutos"))+
+  labs(y = "Cidade", x = "", fill = "Quintil de renda")+
+  theme_ipsum_rc(grid = "X")+
+  theme(legend.position = "bottom")
+
+
+ggsave(file="../figures/td/fig7-ridgeline.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+
+
+# 8) Palma ratio  --------------------------------
+
+# calcular acessibilidade media do 90 percentil e 40 percentil de renda
+# usar caminhada pico CMATQ30
+
+acess_palma <- hex_dt %>%
+  filter(mode == "bike" & pico == 1) %>%
+  select(city, decil, pop_total, CMATQ30) %>%
+  # pegar so decis 4 e 9
+  filter(decil %in% c(1, 2, 3, 4, 9, 10)) %>%
+  # definir ricos e pobres
+  mutate(classe = ifelse(decil %in% c(1, 2, 3, 4), "pobre", "rico")) %>%
+  group_by(city, classe) %>%
+  summarise(acess_media = weighted.mean(CMATQ30, pop_total)) %>%
+  ungroup() %>%
+  spread(classe, acess_media) %>%
+  # calcular palma ratio
+  group_by(city) %>%
+  mutate(palma_ratio = rico/pobre) %>%
+  ungroup()
+
+# visualizar
+acess_palma %>%
+  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  mutate(city = fct_reorder(city, palma_ratio)) %>%
+  ggplot()+
+  geom_col(aes(y = palma_ratio, x = city))+
+  coord_flip()+
+  theme_ipsum_rc(grid = "X")+
+  labs(x = "Cidade", y = "Palma Ratio")
+  
+
+ggsave(file="../figures/td/fig8-palma_ratio.png", dpi = 300, width = 16.5, height = 15, units = "cm")
