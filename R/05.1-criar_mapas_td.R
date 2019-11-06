@@ -1,8 +1,11 @@
-# carregar bibliotecas
+# carregar bibliotecas ----------------
 source('./R/fun/setup.R')
+source("R/fun/crop_ggmap.R")
 
 library(ggalt)
 library(hrbrthemes)
+library(ggnewscale) # install.packages("ggnewscale")
+
 
 
 # FIGURAS A FAZER
@@ -147,10 +150,8 @@ linhas_hm_rio <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 # abrir acess rio
 acess_rio <- read_rds("../data/output_access/acess_rio_2019.rds")
 
-# abrir muni
-muni_rio <- read_rds("../data-raw/municipios/rio/municipio_rio.rds")
-
-muni_rio <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_df$abrev_muni=="rio")])
+# abrir tiles
+map_tiles <- read_rds("../data/map_tiles_crop/map_tile_crop_rio.rds")
 
 
 # tirar so pt e pico e colocar em format long
@@ -160,19 +161,21 @@ acess_rio_pt_pico <- acess_rio %>%
   select(TMISM, TMISA) %>%
   gather(ind, valor, TMISM:TMISA)
 
-acess_rio$saude
-
 # fazer grafico
-
-acess_rio_pt_pico %>%
+acess_rio_pt_pico <- acess_rio_pt_pico %>%
   mutate(valor = ifelse(valor > 40, 40, valor)) %>%
   mutate(ind = factor(ind, 
                       levels = c("TMISM", "TMISA"), 
-                      labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade"))) %>%
-  ggplot()+
-  geom_sf(data = muni_rio, fill = NA) +
-  geom_sf(aes(fill = valor), color = NA, alpha=.9)  +
-  geom_sf(data = linhas_hm_rio, size=0.3, color="gray40")+
+                      labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade")))
+
+ggplot() + 
+  geom_raster(data = map_tiles, aes(x, y, fill = hex)) + 
+  coord_equal() +
+  scale_fill_identity()+
+  # nova escala
+  new_scale_fill() +
+  geom_sf(dat = st_transform(acess_rio_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.9)  +
+  geom_sf(data = st_transform(linhas_hm_rio, 3857), size=0.3, color="gray40")+
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 10, 20, 30, 40),
                                labels = c(0, 10, 20, 30, "+40 min")) +
@@ -190,31 +193,38 @@ beep()
 
 # 2) TMI Bel Ed Infantil Walk -------------------------
 
-# abrir acess rio
+# abrir acess bel
 acess_bel <- read_rds("../data/output_access/acess_bel_2019.rds")
 
-# abrir muni
-muni_bel <- read_rds("../data-raw/municipios/bel/municipio_bel.rds")
-
-muni_bel <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_df$abrev_muni=="bel")])
-
+# abrir tiles
+map_bel <- read_rds("../data/map_tiles_crop/map_tile_crop_bel.rds")
 
 # tirar so pt e pico e colocar em format long
 acess_bel_pt_pico <- acess_bel %>%
   filter(mode == "walk" & pico == 1) %>%
-  # tirar so saude medio e alta
-  select(TMIEI)
+  # tirar so educacao
+  select(TMIEI, TMIEF) %>%
+  gather(ind, valor, TMIEI:TMIEF)
 
 # fazer grafico
-acess_bel_pt_pico %>%
-  mutate(valor = ifelse(TMIEI > 30, 30, TMIEI)) %>%
-  ggplot()+
-  # geom_sf(data = muni_bel, fill = NA) +
-  geom_sf(aes(fill = valor), color = NA, alpha=.9)  +
+acess_bel_pt_pico <- acess_bel_pt_pico %>%
+  mutate(valor = ifelse(valor > 30, 30, valor)) %>%
+  mutate(ind = factor(ind, 
+                      levels = c("TMIEI", "TMIEF"), 
+                      labels = c("Educação Infantil", "Educação Fundamental")))
+
+ggplot()+
+  geom_raster(data = map_bel, aes(x, y, fill = hex)) + 
+  coord_equal() +
+  scale_fill_identity()+
+  # nova escala
+  new_scale_fill() +
+  geom_sf(data = st_transform(acess_bel_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.9)  +
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 15, 30),
                                labels = c(0, 15,"+30 min")) +
   labs(fill = "Tempo até a oportunidade\n mais próxima")+
+  facet_wrap(~ind, ncol = 2)+
   theme_for_TMI()
 
 
@@ -232,12 +242,20 @@ acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>%
   select(city, CMATQ15, CMATQ45) %>%
   gather(ind, valor, CMATQ15:CMATQ45)
 
+# abrir tiles
+map_for <- read_rds("../data/map_tiles_crop/map_tile_crop_for.rds")
+
+
 # fazer plots
-acess_for %>%
-  ggplot()+
-  geom_sf(aes(fill = valor), color = NA, alpha=.9)+
+ggplot()+
+  geom_raster(data = map_for, aes(x, y, fill = hex)) + 
+  coord_equal() +
+  scale_fill_identity()+
+  # nova escala
+  new_scale_fill() +
+  geom_sf(data = st_transform(acess_for, 3857), aes(fill = valor), color = NA, alpha=.9)+
   viridis::scale_fill_viridis(option = "B"
-                              , limits = c(0, 0.72),
+                              , limits = c(0, 0.72)
                               , breaks = c(0.001, 0.35, 0.7)
                               , labels = c(0, "35", "70%")
   ) +
@@ -249,7 +267,7 @@ acess_for %>%
 
 
 
-ggsave(file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 200, width = 14, height = 10, units = "cm")
+ggsave(file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 300, width = 14, height = 10, units = "cm")
 beep()
 
 
@@ -260,15 +278,22 @@ beep()
 
 acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>% 
   filter(mode == "transit") %>%
-  select(city, CMATQ60, CMAEM60) %>%
-  gather(ind, valor, CMATQ60:CMAEM60)
+  select(city, CMATQ60, CMAEF60) %>%
+  gather(ind, valor, CMATQ60:CMAEF60)
+
+# abrir tiles
+map_cur <- read_rds("../data/map_tiles_crop/map_tile_crop_cur.rds")
 
 # fazer plots
-acess_cur %>%
-  ggplot()+
-  geom_sf(aes(fill = valor), color = NA, alpha=.9)+
+ggplot()+
+  geom_raster(data = map_cur, aes(x, y, fill = hex)) + 
+  coord_equal() +
+  scale_fill_identity()+
+  # nova escala
+  new_scale_fill() +
+  geom_sf(data = st_transform(acess_cur, 3857), aes(fill = valor), color = NA, alpha=.9)+
   viridis::scale_fill_viridis(option = "B"
-                              , limits = c(0, 0.9),
+                              , limits = c(0, 0.9)
                               , breaks = c(0.001, 0.45, 0.9)
                               , labels = c(0, "45", "90%")
   )+
@@ -280,7 +305,7 @@ acess_cur %>%
 
 
 
-ggsave(file="../figures/td/fig4-CMA_TQEM_cur_60.png", dpi = 300, width = 14, height = 10, units = "cm")
+ggsave(file="../figures/td/fig4-CMA_TQEF_cur_60.png", dpi = 300, width = 14, height = 10, units = "cm")
 beep()
 
 
@@ -472,7 +497,7 @@ acess_palma_2 %>%
   mutate(city = fct_reorder(city, palma_ratio)) %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = city))+
-  scale_y_continuous(breaks = c(0, 0.75, 1.5))+
+  scale_y_continuous(breaks = c(0, 1, 1.5))+
   coord_flip()+
   theme_ipsum_rc(grid = "X")+
   labs(x = "", y = "Palma Ratio")
