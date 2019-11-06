@@ -75,7 +75,8 @@ theme_for_TMI <- function(base_size) {
       legend.key.height = unit(0.2,"cm"),
       legend.text=element_text(size=rel(0.5)),
       legend.title=element_text(size=rel(0.5)),
-      plot.title = element_text(hjust = 0, vjust = 4)
+      plot.title = element_text(hjust = 0, vjust = 4),
+      strip.text = element_text(size = 6)
       # legend.key.width=unit(0.5,"cm")
       
     )
@@ -168,14 +169,14 @@ acess_rio_pt_pico <- acess_rio_pt_pico %>%
                       levels = c("TMISM", "TMISA"), 
                       labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade")))
 
-ggplot() + 
-  geom_raster(data = map_tiles, aes(x, y, fill = hex)) + 
+plot1 <- ggplot() + 
+  geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 0.5) + 
   coord_equal() +
   scale_fill_identity()+
   # nova escala
   new_scale_fill() +
-  geom_sf(dat = st_transform(acess_rio_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.9)  +
-  geom_sf(data = st_transform(linhas_hm_rio, 3857), size=0.3, color="gray40")+
+  geom_sf(dat = st_transform(acess_rio_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
+  geom_sf(data = st_transform(linhas_hm_rio, 3857), size=0.3, color="gray70")+
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 10, 20, 30, 40),
                                labels = c(0, 10, 20, 30, "+40 min")) +
@@ -184,7 +185,7 @@ ggplot() +
   theme_for_TMI()
 
 # save map
-ggsave(file="../figures/td/fig1-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
+ggsave(plot1, file="../figures/td/fig1-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
 beep()
 
 
@@ -213,13 +214,13 @@ acess_bel_pt_pico <- acess_bel_pt_pico %>%
                       levels = c("TMIEI", "TMIEF"), 
                       labels = c("Educação Infantil", "Educação Fundamental")))
 
-ggplot()+
-  geom_raster(data = map_bel, aes(x, y, fill = hex)) + 
+plot2 <- ggplot()+
+  geom_raster(data = map_bel, aes(x, y, fill = hex), alpha = .5) + 
   coord_equal() +
   scale_fill_identity()+
   # nova escala
   new_scale_fill() +
-  geom_sf(data = st_transform(acess_bel_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.9)  +
+  geom_sf(data = st_transform(acess_bel_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
   viridis::scale_fill_viridis( direction = -1,
                                breaks = c(0, 15, 30),
                                labels = c(0, 15,"+30 min")) +
@@ -230,7 +231,7 @@ ggplot()+
 
 
 # save map
-ggsave(file="../figures/td/fig2-TMI_EI_bel_walk.png", dpi = 300, width = 8, height = 10, units = "cm")
+ggsave(plot2, file="../figures/td/fig2-TMI_EI_bel_walk.png", dpi = 300, width = 8, height = 10, units = "cm")
 beep()
 
 
@@ -245,15 +246,21 @@ acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>%
 # abrir tiles
 map_for <- read_rds("../data/map_tiles_crop/map_tile_crop_for.rds")
 
+# ajustar levels
+acess_for <- acess_for %>%
+  mutate(ind = factor(ind, 
+                      levels = c("CMATQ15", "CMATQ45"), 
+                      labels = c("15 Minutos", "45 Minutos")))
+
 
 # fazer plots
 ggplot()+
-  geom_raster(data = map_for, aes(x, y, fill = hex)) + 
+  geom_raster(data = map_for, aes(x, y, fill = hex), alpha = .5) + 
   coord_equal() +
   scale_fill_identity()+
   # nova escala
   new_scale_fill() +
-  geom_sf(data = st_transform(acess_for, 3857), aes(fill = valor), color = NA, alpha=.9)+
+  geom_sf(data = st_transform(acess_for, 3857), aes(fill = valor), color = NA, alpha=.7)+
   viridis::scale_fill_viridis(option = "B"
                               , limits = c(0, 0.72)
                               , breaks = c(0.001, 0.35, 0.7)
@@ -261,7 +268,7 @@ ggplot()+
   ) +
   facet_wrap(~ind, nrow = 1)+
   theme_for_CMA()+
-  labs(fill = "",
+  labs(fill = "Porcentagem de oportunidades\n acessíveis",
        title = "Fortaleza") +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -284,14 +291,20 @@ acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>%
 # abrir tiles
 map_cur <- read_rds("../data/map_tiles_crop/map_tile_crop_cur.rds")
 
+# fazer grafico
+acess_cur <- acess_cur %>%
+  mutate(ind = factor(ind, 
+                      levels = c("CMATQ60", "CMAEF60"), 
+                      labels = c("Trabalho", "Educação Fundamental")))
+
 # fazer plots
 ggplot()+
-  geom_raster(data = map_cur, aes(x, y, fill = hex)) + 
+  geom_raster(data = map_cur, aes(x, y, fill = hex), alpha = .5) + 
   coord_equal() +
   scale_fill_identity()+
   # nova escala
   new_scale_fill() +
-  geom_sf(data = st_transform(acess_cur, 3857), aes(fill = valor), color = NA, alpha=.9)+
+  geom_sf(data = st_transform(acess_cur, 3857), aes(fill = valor), color = NA, alpha=.7)+
   viridis::scale_fill_viridis(option = "B"
                               , limits = c(0, 0.9)
                               , breaks = c(0.001, 0.45, 0.9)
@@ -299,7 +312,7 @@ ggplot()+
   )+
   facet_wrap(~ind, nrow = 1)+
   theme_for_CMA()+
-  labs(fill = "",
+  labs(fill = "Porcentagem de oportunidades\n acessíveis",
        title = "Curitiba") +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -465,7 +478,8 @@ acess_palma %>%
   mutate(city = fct_reorder(city, palma_ratio)) %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = city))+
-  scale_y_continuous(breaks = c(0, 3, 6, 9))+
+  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
+  scale_y_continuous(breaks = c(0, 1, 3, 6, 9))+
   coord_flip()+
   theme_ipsum_rc(grid = "X")+
   labs(x = "", y = "Palma Ratio")
@@ -497,7 +511,8 @@ acess_palma_2 %>%
   mutate(city = fct_reorder(city, palma_ratio)) %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = city))+
-  scale_y_continuous(breaks = c(0, 1, 1.5))+
+  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
+  scale_y_continuous(breaks = c(0, 0.5, 1, 1.5))+
   coord_flip()+
   theme_ipsum_rc(grid = "X")+
   labs(x = "", y = "Palma Ratio")
