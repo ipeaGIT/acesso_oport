@@ -7,23 +7,22 @@ library(hrbrthemes)
 
 # FIGURAS A FAZER
 
-# 0) Ok - Mapa com municipios no Projeto
+# MAPAS:
+
+# 1) TMI Rio SaudeMedia/Alta TP
+# 2) TMI Bel Ed Infantil Walk
+# 3) CMA For Trabalho Bike 15/45
+# 4) CMA Cur Trabalho/Escola TP 60
 
 
-# 1) TMI saude de media e alta - PT  (uma cidade)- rio 
-# - so firula
 
+# GRAFICOS:
 
-# 2) CMA empregos 60 min - PT (duas cidades) - BHe Fortaleza
-# - so firula
+# 5) TMI Ponto Decil Todos EdMedia Bike
+# 6) CMA Boxplot Decil cam/poa/goi Trabalho TP 30
+# 7) CMA Palma Renda Todos Trabalho  Walk 30
+# 8) CMA Palma Cor SaudeAlta TP 60
 
-# 3) CMP - Gráfico de pontos do acesso a pé  educação infantil - população negra e branca (TODAS CIDADES)
-
-# 4) Um gráfico de pontos do CMA de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média
-# rafa
-
-# 5) Box plot por renda - acesso a emprego de PT - 60 min
-- firula
 
 
 ###### A. Carrega dados ---------------------------
@@ -164,8 +163,8 @@ acess_rio_pt_pico <- acess_rio %>%
 acess_rio$saude
 
 # fazer grafico
-fig2 <- 
-  acess_rio_pt_pico %>%
+
+acess_rio_pt_pico %>%
   mutate(valor = ifelse(valor > 40, 40, valor)) %>%
   mutate(ind = factor(ind, 
                       levels = c("TMISM", "TMISA"), 
@@ -182,66 +181,106 @@ fig2 <-
   theme_for_TMI()
 
 # save map
-ggsave(fig2, file="./figures/td/fig2-TMI_SM_TP.png", dpi = 200, width = 8, height = 10, units = "cm")
+ggsave(file="../figures/td/fig1-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
 beep()
 
 
 
-# 2) CMA empregos 60 min - PT (duas cidades) - BHe Fortaleza ----------------------------------
 
-# abrir acess for e bho e for e tirar so empregos 60 min pico pt
+
+# 2) TMI Bel Ed Infantil Walk -------------------------
+
+# abrir acess rio
+acess_bel <- read_rds("../data/output_access/acess_bel_2019.rds")
+
+# abrir muni
+muni_bel <- read_rds("../data-raw/municipios/bel/municipio_bel.rds")
+
+muni_bel <- geobr::read_municipality(code_muni = munis_df$code_muni[which(munis_df$abrev_muni=="bel")])
+
+
+# tirar so pt e pico e colocar em format long
+acess_bel_pt_pico <- acess_bel %>%
+  filter(mode == "walk" & pico == 1) %>%
+  # tirar so saude medio e alta
+  select(TMIEI)
+
+# fazer grafico
+acess_bel_pt_pico %>%
+  mutate(valor = ifelse(TMIEI > 30, 30, TMIEI)) %>%
+  ggplot()+
+  # geom_sf(data = muni_bel, fill = NA) +
+  geom_sf(aes(fill = valor), color = NA, alpha=.9)  +
+  viridis::scale_fill_viridis( direction = -1,
+                               breaks = c(0, 15, 30),
+                               labels = c(0, 15,"+30 min")) +
+  labs(fill = "Tempo até a oportunidade\n mais próxima")+
+  theme_for_TMI()
+
+
+
+# save map
+ggsave(file="../figures/td/fig2-TMI_EI_bel_walk.png", dpi = 300, width = 8, height = 10, units = "cm")
+beep()
+
+
+
+# # 3) CMA For Trabalho Bike 15/45 ----------------------------------
+
 acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>% 
-  filter(mode == "transit" & pico == 1)
-
-acess_bho <- read_rds("../data/output_access/acess_bho_2019.rds") %>%
-  filter(mode == "transit" & pico == 1)
-
-# linhas capacidade
-linhas_hm_bho <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%
-  filter(Cidade == "Belo Horizonte")
-
-library(patchwork)
-library(cowplot)
+  filter(mode == "bike") %>%
+  select(city, CMATQ15, CMATQ45) %>%
+  gather(ind, valor, CMATQ15:CMATQ45)
 
 # fazer plots
-plot1 <- acess_for %>%
+acess_for %>%
   ggplot()+
-  geom_sf(aes(fill = CMATT60), color = NA, alpha=.9)+
-  viridis::scale_fill_viridis(option = "B",
-                              limits = c(0, 1.01),
-                              breaks = c(0.001, 0.5, 1.01),
-                              labels = scales::percent) +
+  geom_sf(aes(fill = valor), color = NA, alpha=.9)+
+  viridis::scale_fill_viridis(option = "B"
+                              , limits = c(0, 0.72),
+                              , breaks = c(0.001, 0.35, 0.7)
+                              , labels = c(0, "35", "70%")
+  ) +
+  facet_wrap(~ind, nrow = 1)+
   theme_for_CMA()+
   labs(fill = "",
        title = "Fortaleza") +
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5))
 
 
 
-plot2 <- acess_bho %>%
+ggsave(file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 200, width = 14, height = 10, units = "cm")
+beep()
+
+
+
+
+
+# 4) CMA Cur Trabalho/Escola TP 60 ---------------------
+
+acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>% 
+  filter(mode == "transit") %>%
+  select(city, CMATQ60, CMAEM60) %>%
+  gather(ind, valor, CMATQ60:CMAEM60)
+
+# fazer plots
+acess_cur %>%
   ggplot()+
-  geom_sf(aes(fill = CMATT60), color = NA, alpha=.9)+
-  geom_sf(data = linhas_hm_bho, size=0.5, color="gray50")+
-  viridis::scale_fill_viridis(option = "B",
-                              limits = c(0, 1.01),
-                              breaks = c(0.001, 0.5, 1.01),
-                              labels = c(0, 50, "100%")) +
-  theme_for_CMA(plot.title = element_text(hjust = 0.5))+
-  labs(fill = "Porcentagem de\n oportunidades acessíveis",
-       title = "Belo Horizonte")
+  geom_sf(aes(fill = valor), color = NA, alpha=.9)+
+  viridis::scale_fill_viridis(option = "B"
+                              , limits = c(0, 0.9),
+                              , breaks = c(0.001, 0.45, 0.9)
+                              , labels = c(0, "45", "90%")
+  )+
+  facet_wrap(~ind, nrow = 1)+
+  theme_for_CMA()+
+  labs(fill = "",
+       title = "Curitiba") +
+  theme(plot.title = element_text(hjust = 0.5))
 
 
-legenda <- cowplot::get_legend(plot2 + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
 
-
-temp <- cowplot::plot_grid(plot1, plot2 + theme(legend.position = "none"))
-
-
-cowplot::plot_grid(temp, legenda,  ncol = 1, rel_heights = c(1, .2))
-
-
-ggsave(file="../figures/td/fig3-CMA_for_bho.png", dpi = 200, width = 14, height = 10, units = "cm")
+ggsave(file="../figures/td/fig4-CMA_TQEM_cur_60.png", dpi = 300, width = 14, height = 10, units = "cm")
 beep()
 
 
@@ -250,64 +289,7 @@ beep()
 
 
 
-
-
-
-# 3) CMP - Gráfico de pontos do acesso a pé educação infantil - população negra e bra --------
-
-# abrir o acess de todas as cidades e juntar
-
-acess_cmp_todas_walk <- lapply(dir("../data/output_access/", full.names = TRUE), read_rds) %>%
-  rbindlist(fill = TRUE) %>%
-  # tirar so caminhada
-  filter(mode == "walk")
-
-
-# cor e renda
-pop_totais <- hex_agreg[, .(pop_negra_total = sum(cor_negra, na.rm=T),
-                            pop_branca_total = sum(cor_branca, na.rm=T),
-                            pop_total_total = sum(pop_total, na.rm=T),
-                            quintil1  = sum(pop_total[which(quintil==1)], na.rm=T),
-                            quintil5  = sum(pop_total[which(quintil==5)], na.rm=T)
-), by= muni]
-
-
-
-
-
-# tem que filtrar zonas que tenha alguma escola de edu infantil!
-hex_escolas <- hex_agreg %>% filter(edu_infantil > 0)
-
-acess_cmp_todas_edu <- acess_cmp_todas_walk %>%
-  filter(origin %in% hex_escolas$id_hex) %>%
-  # selecionar so acess passiva negros e brancos 15 min
-  select(city, CMPPB30, CMPPN30)
-
-
-
-
-
-
-# grafico!
-
-
-# grafico!
-acess_cmp_todas_edu %>%
-  # testar algumas cidades
-  # filter(city %in% c("for", "bho", "rio")) %>%
-  gather(indicador, valor, CMPPB30:CMPPN30) %>%
-  ggplot()+
-  geom_boxplot(aes(y = valor, x = indicador)) +
-  coord_flip()+
-  facet_wrap(~city, scales = "free_x")
-
-
-
-
-
-
-
-# 4) Gráfico de pontos do acesso de bicicleta de educação média (TODAS CIDADES) - decil, 1, 10  e média  --------------------------------
+# 5) TMI Ponto Decil Todos EdMedia Bike  --------------------------------
 
 # abrir o acess de todas as cidades e juntar
 
@@ -324,31 +306,15 @@ df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = p
                       Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
                       Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
 
-# # mediana ponderada
-# df4 <- acess_bike[, .(Total = matrixStats::weightedMedian(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
-#                       Negra = matrixStats::weightedMedian(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
-#                       Branca = matrixStats::weightedMedian(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
-#                       Q1 = matrixStats::weightedMedian(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
-#                       Q5 = matrixStats::weightedMedian(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
-
-
-
-
 
 
 # ajeitar nome das cidade
 df4 <- df4 %>%
-    mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
+  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
 
 
 
-
-
-
-
-temp_fig4 <- 
-  
-  df4 %>%
+df4 %>%
   ggplot() + 
   geom_dumbbell(aes(x = Q5, xend = Q1, y = forcats::fct_reorder(city, Q1)), 
                 size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
@@ -383,31 +349,16 @@ temp_fig4 <-
 
 
 
-ggsave(temp_fig4, file="../figures/td/fig4_TMIEM_bike_renda90median.png", dpi = 300, width = 16, height = 16, units = "cm")
+ggsave(file="../figures/td/fig5_TMIEM_bike_renda90median.png", dpi = 300, width = 16, height = 16, units = "cm")
 beep()
 
 
 
 
-# grafico!
-
-
-# grafico!
-library(ggalt)
-library(hrbrthemes)
 
 
 
-
-
-
-# 5) Box plot por renda - acesso a emprego de PT - 60 min --------------------------------
-
-
-# abrir acessibilidade
-path_acess <- dir("../data/output_access/", 
-                  full.names = TRUE, 
-                  pattern = paste0(munis_df[modo == "todos"]$abrev_muni, collapse = "|"))
+# 6) CMA Boxplot Decil cam/poa/goi Trabalho TP 30 ------------------------------
 
 acess_walk <- hex_dt %>%
   # pegar so TP
@@ -415,24 +366,6 @@ acess_walk <- hex_dt %>%
 
 
 
-# title <- bquote("Distribuição da acessibilidade por"~bold(.("transporte público"))~"à"~bold(.("oportunidades de trabalho")))
-
-# baseplot2 <- theme_minimal(base_family = "Roboto Condensed") +
-#   theme( 
-#     # plot.background = element_rect(fill = "grey85"),
-#     axis.text.y  = element_text(face="bold")
-#     # ,axis.text.x  = element_text(face="bold")
-#     ,panel.grid.minor = element_blank()
-#     ,strip.text = element_text(size = 8, face ="bold")
-#     ,legend.text = element_text(size = 8)
-#     , legend.position = "top"
-#     , axis.title = element_text(size = 8)
-#     , title = element_text(size = 9)
-#     , plot.margin=unit(c(2,0,0,0),"mm")
-#     , axis.ticks.x = element_blank()
-#     , axis.line.x = element_blank()
-#     , panel.background = element_rect(fill="gray90")
-#   )
 baseplot2 <- theme_minimal() +
   theme( 
     axis.text.y  = element_text(face="bold")
@@ -446,9 +379,8 @@ baseplot2 <- theme_minimal() +
 
 acess_walk %>% 
   filter(decil >0) %>%
-  mutate(city = ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city))) %>%
   # filtrar so as cidades de tamanho semelhante
-  filter(city %in% c("man", "rec", "cur")) %>%
+  filter(city %in% c("cam", "poa", "goi")) %>%
   mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
   ggplot()+
   geom_boxplot(aes(x = factor(decil), y = CMATQ30, weight=pop_total, color = factor(decil)),
@@ -456,200 +388,32 @@ acess_walk %>%
                outlier.colour=rgb(.5,.5,.5, alpha=0.05)) +
   # facet_grid(threshold_name ~ ., scales = "free_y") +
   facet_wrap(~city) +
-  scale_colour_brewer(palette = "RdBu", labels=c('D1 Pobres', paste0('D', c(2:9)), 'D10 ricos'), name='Decil') +
+  scale_colour_brewer(palette = "RdBu", labels=c('D1 Pobres', paste0('D', c(2:9)), 'D10 ricos'), name='Decil de renda') +
   scale_y_percent() +
-  # hrbrthemes::theme_ipsum_rc() +
-  labs(fill = "Quintil de renda",
-       x = "",
+  hrbrthemes::theme_ipsum_rc(grid = "Y") +
+  labs(x = "",
        y = "Porcentagem de oportunidades acessíveis") + 
   guides(color=guide_legend(nrow=1)) +
-  baseplot2
+  theme( 
+    axis.text.y  = element_text(face="bold")
+    ,panel.grid.minor = element_blank()
+    ,strip.text = element_text(size = 11, face ="bold")
+    ,legend.text = element_text(size = 11)
+    , legend.position = "top"
+    , axis.text.x = element_blank()
+    
+  )
 
 
-ggsave(file="./figures/fig5-boxplot_renda_walk_CMATQ30.png", dpi = 300, width = 25, height = 15, units = "cm")
+ggsave(file="../figures/td/fig6-boxplot_CMA_rendadecil_walk_TQ_30.png", dpi = 300, width = 25, height = 15, units = "cm")
 beep()
 
 
 
 
-# PLOT TESTE
-
-teste <- setDT(acess_walk)[, .(Negra=sum(cor_negra[which(TMIEM>30)] ,na.rm=T) /sum(cor_negra, na.rm=T),
-                               Branca=sum(cor_branca[which(TMIEM>30)] ,na.rm=T) /sum(cor_branca, na.rm=T)), 
-                           by=city]
 
 
-
-
-
-teste %>%
-  ggplot() + 
-  geom_dumbbell(aes(x = Branca    , xend = Negra         , y = forcats::fct_reorder(city, Negra )), 
-                size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
-  # geom_point(aes(x = Total, y = city), color = "black", size = 2)+
-  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
-                     name="", 
-                     labels=c('Pobres Q1',  'Ricos Q5')) +
-  scale_x_continuous(name="", limits = c(0, 24),
-                     breaks = c(0, 5, 10, 15, 20),
-                     labels = c(0, 5,  10, 15,"20 minutos")) +
-  geom_text(data = filter(df4, city == "Sao Luis"),
-            aes(x = Q1, y = city),
-            label = "Pobres Q1", fontface = "bold",
-            color = "springgreen4",
-            hjust = -0.5) +
-  geom_text(data = filter(df4, city == "Sao Luis"),
-            aes(x = Q5, y = city),
-            label = "Ricos Q5", fontface = "bold",
-            color = "steelblue4",
-            hjust = 1.5) +
-  geom_text(data = filter(df4, city == "Sao Luis"),
-            aes(x = Total, y = city),
-            label = "Total", fontface = "bold",
-            color = "black",
-            vjust = -1) +
-  expand_limits(y = 21)+
-  theme_ipsum_rc(grid= "X") +
-  labs(x = "", y = "", title = "")
-
-
-
-
-teste %>%
-  mutate(city = ifelse(city == "bel", "bho", ifelse(city == "sao", "spo", ifelse(city == "por", "poa", city)))) %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
-  gather(tipo, valor, Negra:Branca) %>%
-  ggplot()+
-  geom_bar(aes(x = forcats::fct_reorder(factor(city), valor), y = valor, fill = tipo), 
-           stat = "identity", position=position_dodge())+
-  coord_flip()+
-  scale_y_percent()+
-  theme_ipsum_rc(grid = "X")+
-  labs(title = "Proporção da população que leva mais que 30 min\npara acessar escola pública de ensino fundamental",
-       y = "", x = "",
-       fill = "")+
-  theme(legend.position = "bottom",
-        plot.title = element_text(size = 12))
-
-
-
-ggsave(file="./figures/fig6-teste_pop.png", dpi = 300, width = 16.5, height = 15, units = "cm")
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 6) Compare transport modes  --------------------------------
-
-
-# subset da base
-df6 <- subset(hex_dt, city %in% munis_df$abrev_muni[which(munis_df$modo=='todos')]) %>% 
-  select(city, id_hex, pop_total, TMISA, quintil, mode) %>% na.omit()
-
-# Se nenhuma atividade acessivel (TMISA==Inf), entao imputar TMISA de 90 min.
-setDT(df6)[, var := fifelse(TMISA==Inf, 90, TMISA)]
-
-df6 <- df6[ pop_total > 0, ]
-
-# calcula tempo medio por modo
-df6 <- df6[, .(bike = weighted.mean(x = var[which(mode=='bike')], w = pop_total[which(mode=='bike')], na.rm=T),
-               walk = weighted.mean(x = var[which(mode=='walk')], w = pop_total[which(mode=='walk')], na.rm=T),
-               transit = weighted.mean(x = var[which(mode=='transit')], w = pop_total[which(mode=='transit')], na.rm=T))
-           , by=city]
-
-
-
-### Plot
-
-ggplot(data=df6) + 
-  geom_point( aes(x=tempo_medio , y= forcats::fct_reorder(city, tempo_medio), color= mode)) 
- # geom_segment(aes(color= mode, x = tempo_medio[which(mode=='transit')],  xend=tempo_medio[which(mode=='walk')]))
-
-
-
-df6 %>%
-  ggplot() + 
-  geom_dumbbell(aes(x = transit, xend = bike, y = forcats::fct_reorder(city, bike)), 
-                size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
-  geom_point(aes(x = walk, y = city), color = "black", size = 2) +
-  scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
-                     name="", 
-                     labels=c('Pobres Q1', 'Média', 'Ricos Q5'))
-
-# 
-# +
-#   scale_x_continuous(name="", limits = c(0, 24),
-#                      breaks = c(0, 5, 10, 15, 20),
-#                      labels = c(0, 5,  10, 15,"20 minutos")) +
-#   geom_text(data = filter(df4, city == "Goiania"),
-#             aes(x = Q1, y = city),
-#             label = "Pobres Q1", fontface = "bold",
-#             color = "springgreen4",
-#             hjust = -0.5) +
-#   geom_text(data = filter(df4, city == "Goiania"),
-#             aes(x = Q5, y = city),
-#             label = "Ricos Q5", fontface = "bold",
-#             color = "steelblue4",
-#             hjust = 1.5) +
-#   geom_text(data = filter(df4, city == "Goiania"),
-#             aes(x = Total, y = city),
-#             label = "Total", fontface = "bold",
-#             color = "black",
-#             vjust = -1) +
-#   expand_limits(y = 21)+
-#   theme_ipsum_rc(grid= "X") +
-#   labs(x = "", y = "", title = "")
-
-
-
-
-
-
-
-
-# 7) Ridgeline test  --------------------------------
-
-# https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
-
-# https://cran.r-project.org/web/packages/ggridges/vignettes/gallery.html
-
-library(ggridges)
-
-df7 <- subset(hex_dt, mode="bike") %>% select(city, id_hex, pop_total, TMIEM, quintil) %>% na.omit()
-
-# Se nenhuma atividade acessivel (TMISA==Inf), entao imputar TMISA de 90 min.
-setDT(df7)[, var := fifelse(TMIEM==Inf, 90, TMIEM)]
-
-# & quintil %in% c(1,5))
-
-df7 %>%
-  # pegar quintis 1 e 5
-  filter(quintil %in% c(1,5)) %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
-  ggplot() + 
-  geom_density_ridges(aes(x = var, y = city, fill=factor(quintil)),
-                      alpha=.7, color='black',
-                      from=0, to =20,
-                      scale=3, size=.1, rel_min_height = 0.01)+
-  scale_fill_brewer(palette = "Set1")+
-  scale_x_continuous(breaks = c(0, 5, 10, 15, 20), labels = c(0, 5, 10, 15, "20 minutos"))+
-  labs(y = "Cidade", x = "", fill = "Quintil de renda")+
-  theme_ipsum_rc(grid = "X")+
-  theme(legend.position = "bottom")
-
-
-ggsave(file="../figures/td/fig7-ridgeline.png", dpi = 300, width = 16.5, height = 15, units = "cm")
-
-
-# 8) Palma ratio  --------------------------------
+# 7) CMA Palma Renda Todos Trabalho  Walk 30  --------------------------------
 
 # calcular acessibilidade media do 90 percentil e 40 percentil de renda
 # usar caminhada pico CMATQ30
@@ -658,7 +422,7 @@ acess_palma <- hex_dt %>%
   filter(mode == "bike" & pico == 1) %>%
   select(city, decil, pop_total, CMATQ30) %>%
   # pegar so decis 4 e 9
-  filter(decil %in% c(1, 2, 3, 4, 9, 10)) %>%
+  filter(decil %in% c(1, 2, 3, 4, 10)) %>%
   # definir ricos e pobres
   mutate(classe = ifelse(decil %in% c(1, 2, 3, 4), "pobre", "rico")) %>%
   group_by(city, classe) %>%
@@ -676,9 +440,42 @@ acess_palma %>%
   mutate(city = fct_reorder(city, palma_ratio)) %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = city))+
+  scale_y_continuous(breaks = c(0, 3, 6, 9))+
   coord_flip()+
   theme_ipsum_rc(grid = "X")+
-  labs(x = "Cidade", y = "Palma Ratio")
-  
+  labs(x = "", y = "Palma Ratio")
 
-ggsave(file="../figures/td/fig8-palma_ratio.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+
+ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+
+
+
+
+# 8) CMA Palma Cor SaudeAlta TP 60  --------------------------------
+
+# calcular acessibilidade media do 90 percentil e 40 percentil de renda
+# usar TP pico CMASA60
+
+acess_palma_2 <- hex_dt %>%
+  filter(mode == "transit" & pico == 1) %>%
+  select(city, decil, pop_total, cor_negra, cor_branca, CMASA60) %>%
+  group_by(city) %>%
+  summarise(acess_brancos = weighted.mean(CMASA60, cor_branca),
+            acess_negros = weighted.mean(CMASA60, cor_negra)) %>%
+  # calcular palma ratio
+  mutate(palma_ratio = acess_brancos/acess_negros) %>%
+  ungroup()
+
+# visualizar
+acess_palma_2 %>%
+  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  mutate(city = fct_reorder(city, palma_ratio)) %>%
+  ggplot()+
+  geom_col(aes(y = palma_ratio, x = city))+
+  scale_y_continuous(breaks = c(0, 0.75, 1.5))+
+  coord_flip()+
+  theme_ipsum_rc(grid = "X")+
+  labs(x = "", y = "Palma Ratio")
+
+
+ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60.png", dpi = 300, width = 16.5, height = 15, units = "cm")

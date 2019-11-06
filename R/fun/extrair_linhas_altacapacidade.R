@@ -91,29 +91,31 @@ shapes_high %>%
 
 # FUNCAO ------------------------------------------------------------------
 
+gtfs_file <- "../otp/graphs/for/gtfs_for_metrofor_2018-11_mod.zip"
+
 extrair_HMcorredores <- function(gtfs_file) {
   
-  gtfs.rio <- read_gtfs(gtfs_file, local = TRUE)
+  gtfs.rio <- tidytransit::read_gtfs(gtfs_file, local = TRUE)
   
   
   # gtfs.bel[["routes"]] %>% View()
   
   routes_high <- gtfs.rio[["routes"]] %>%
-    filter(route_type %in% c(0, 1, 2))
+    dplyr::filter(route_type %in% c(0, 1, 2))
   
   # tem BRT?
   gtfs.rio[["routes"]] %>%
-    filter(grepl("BRT", route_long_name))
+    dplyr::filter(grepl("BRT", route_long_name))
   
   # ir atras no trips
   trips_high <- gtfs.rio[["trips"]] %>%
-    filter(route_id %in% routes_high$route_id) %>%
+    dplyr::filter(route_id %in% routes_high$route_id) %>%
     distinct(shape_id)
   
   
   # ir atras no shapes
   shapes_high <- gtfs.rio[["shapes"]] %>%
-    filter(shape_id %in% trips_high$shape_id)
+    dplyr::filter(shape_id %in% trips_high$shape_id)
   
   # aplicar funcao
   
