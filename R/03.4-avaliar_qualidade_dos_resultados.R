@@ -118,7 +118,7 @@ identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
     
   } else {
     
-    ttmatrix_teste <- ttmatrix_teste[mode == "transit"]
+    ttmatrix_teste <- ttmatrix_teste[mode == "bike"]
     
   }
   
