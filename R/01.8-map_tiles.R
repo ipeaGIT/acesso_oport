@@ -15,7 +15,7 @@ register_google(key = my_api$V1)
 
 baixar_map_tile <- function(muni_sigla) {
   
-  # muni_sigla <- "bel"
+  # muni_sigla <- "rio"
   
   # read shape
   temp_sf <- geobr::read_municipality(code_muni = munis_df[abrev_muni == muni_sigla]$code_muni)
@@ -36,6 +36,7 @@ baixar_map_tile <- function(muni_sigla) {
   
   # get ggmap tile
   map <- get_googlemap(center = c(lon = centroid$lon, lat = centroid$lat), zoom = my_zoom,  scale = 2,
+                       color = "bw",
                        style = c('feature:administrative.locality|element:labels|visibility:off',
                                  'feature:administrative.neighborhood|element:labels|visibility:off'))
   
