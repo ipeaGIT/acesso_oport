@@ -19,37 +19,21 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
-# sigla_muni <- "slz"
-
   
 # Funcao para gerar arquivo raster com a topografia do municipio  ------------------------------------------------------------------
 crop_save_raster <- function(sigla_muni) {
   
-  
-  my_merge <- function(...) {
-    
-    x <- raster::merge(..., tolerance = 10)
-  }
-  
   # listar arquivos .tiff na pasta
-  dir <- sprintf("../data-raw/topografia2/Topografia/%s", sigla_muni)
-  files <- dir(dir, full.names = T, pattern = ".tif$")
+  dir <- sprintf("../data-raw/topografia/%s", sigla_muni)
+  files <- dir(dir, full.names = T)
   
   # leitura de arquivo raster
   if (length(files) == 1) {
     elev_img_bind <- raster::raster(files)
     
   } else {
-    elev_img <- purrr::map(files, raster::raster)
-    
-    # atencao: tem que reprojetar os raster para um origin comum com o uso da funcao raster::resample
-    # onde o segundo raster da funcao eh o raster de referencia
-    # nesse caso sempre pegar o primeiro raster como referencia para o resample
-    
-    # elev_img_corrigido <- c(elev_img[[1]], map(elev_img[c(-1)], raster::resample, elev_img[[1]]))
-    
-    # elev_img_bind <- do.call(raster::merge, elev_img_corrigido)
-    elev_img_bind <- do.call(my_merge, elev_img)
+    elev_img <- purrr::map(files, raster)
+    elev_img_bind <- do.call(raster::merge, elev_img)
     }
   
   # carrega shape do municipio
@@ -62,13 +46,12 @@ crop_save_raster <- function(sigla_muni) {
   # Converte para spatial polygon para fazer o crop
   e <- as(extent(bb1), 'SpatialPolygons')
   crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
-  e <- spTransform(e, CRS(proj4string(elev_img_bind)))
   
   # crop do municipio com raster de topografia
   elev_img_fim <- raster::crop(elev_img_bind, e)
   
   # salvar
-  output <- sprintf("../data/topografia2/topografia2_%s.tif", sigla_muni)
+  output <- sprintf("../data/topografia/topografia_%s.tif", sigla_muni)
   raster::writeRaster(elev_img_fim, output, format="GTiff", overwrite=TRUE)
 }
 
