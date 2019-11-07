@@ -5,27 +5,7 @@ library(ceramic)
 Sys.setenv(MAPBOX_API_KEY = "pk.eyJ1Ijoia2F1ZWJyYWdhIiwiYSI6ImNqa2JoN3VodDMxa2YzcHFxMzM2YWw1bmYifQ.XAhHAgbe0LcDqKYyqKYIIQ")
 
 # read shape
-temp_sf <- geobr::read_municipality(code_muni = munis_df[abrev_muni == "for"]$code_muni)
-
-# get centroid
-centroid <- st_centroid(temp_sf) %>%
-  # st_transform(3857) %>%
-  sfc_as_cols()
-
-zoom <- 11
-
-
-# Cria bounding box do municipio para fazer crop do raster
-bb1 <- st_bbox(temp_sf, crs = 4326)
-bb1 <- c(bb1[1], bb1[3], bb1[2], bb1[4])
-
-# Converte para spatial polygon para fazer o crop
-e <- extent(bb1)
-
-
-# get tile
-tile_for <- get_tiles_zoom(e, type = "v4/mapbox.light", zoom = 10)
-
+temp_sf <- geobr::read_municipality(code_muni = munis_df[abrev_muni == "rio"]$code_muni)
 
 # ou
 tile_for <- cc_location(temp_sf, 
@@ -35,11 +15,32 @@ tile_for <- cc_location(temp_sf,
 
 tile_for <- cc_location(temp_sf, 
                         type = "styles/v1/kauebraga/cjykmhzgo12421cpjk9qos202/tiles" 
-                        , verbose = TRUE
                         # , debug = TRUE
                         )
 
 plotRGB(tile_for)
+
+# teste plot
+tab <- as.data.frame(tile_for, xy = TRUE)
+names(tab) <- c("x", "y", "red", "green", "blue")
+tab$hex <- rgb(tab$red, tab$green, tab$blue, maxColorValue = 255)
+
+ggplot() + 
+  geom_raster(data = tab, aes(x, y, fill = hex)) + 
+  coord_equal()  +   
+  scale_fill_identity() +
+  new_scale_fill() +
+  geom_sf(data = st_transform(acess_rio_pt_pico, "+proj=merc +a=6378137 +b=6378137"), aes(fill = valor), color = NA, alpha=.7)  +
+  geom_sf(data = st_transform(linhas_hm_rio, "+proj=merc +a=6378137 +b=6378137"), size=0.3, color="gray70")+
+  viridis::scale_fill_viridis( direction = -1,
+                               breaks = c(0, 10, 20, 30, 40),
+                               labels = c(0, 10, 20, 30, "+40 min")) +
+  labs(fill = "Tempo até a oportunidade\n mais próxima")+
+  facet_wrap(~ind, ncol = 1)+
+  theme_for_TMI()
+
+ggsave(file="../figures/td/fig1-TMI_SM_TP_mapbox.png", dpi = 300, width = 8, height = 10, units = "cm")
+
 
 # teste com baseurl
 # as coordenadas tem que estar em 3857

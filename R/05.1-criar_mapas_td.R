@@ -238,9 +238,6 @@ beep()
 
 # # 3) CMA For Trabalho Bike 15/45 ----------------------------------
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# GOIANIA com problema
-
 acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>% 
   filter(mode == "bike") %>%
   select(city, CMATQ15, CMATQ45) %>%
@@ -285,12 +282,6 @@ beep()
 
 
 # 4) CMA Cur Trabalho/Escola TP 60 ---------------------
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-  FOR esta com problema
-BHO
-
-
 
 acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>% 
   filter(mode == "transit") %>%
