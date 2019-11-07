@@ -238,6 +238,9 @@ beep()
 
 # # 3) CMA For Trabalho Bike 15/45 ----------------------------------
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# GOIANIA com problema
+
 acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>% 
   filter(mode == "bike") %>%
   select(city, CMATQ15, CMATQ45) %>%
@@ -282,6 +285,12 @@ beep()
 
 
 # 4) CMA Cur Trabalho/Escola TP 60 ---------------------
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+  FOR esta com problema
+BHO
+
+
 
 acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>% 
   filter(mode == "transit") %>%
@@ -410,7 +419,7 @@ baseplot2 <- theme_minimal() +
     ,panel.grid.minor = element_blank()
     ,strip.text = element_text(size = 11, face ="bold")
     ,legend.text = element_text(size = 11)
-    , legend.position = "top"
+    , legend.position = "bottom"
     , axis.text.x = element_blank()
     
   )
@@ -437,7 +446,7 @@ acess_walk %>%
     ,panel.grid.minor = element_blank()
     ,strip.text = element_text(size = 11, face ="bold")
     ,legend.text = element_text(size = 11)
-    , legend.position = "top"
+    , legend.position = "bottom"
     , axis.text.x = element_blank()
     
   )
