@@ -257,7 +257,7 @@ acess_for <- acess_for %>%
 
 
 # fazer plots
-ggplot()+
+plot3 <- ggplot()+
   geom_raster(data = map_for, aes(x, y, fill = hex), alpha = .5) + 
   coord_equal() +
   scale_fill_identity()+
@@ -277,7 +277,7 @@ ggplot()+
 
 
 
-ggsave(file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 300, width = 14, height = 10, units = "cm")
+ggsave(plot3, file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 300, width = 14, height = 10, units = "cm")
 beep()
 
 
@@ -307,13 +307,13 @@ acess_cur <- acess_cur %>%
                       labels = c("Trabalho", "Educação Fundamental")))
 
 # fazer plots
-ggplot()+
+plot4 <- ggplot()+
   geom_raster(data = map_cur, aes(x, y, fill = hex), alpha = .5) + 
   coord_equal() +
   scale_fill_identity()+
   # nova escala
   new_scale_fill() +
-  geom_sf(data = st_transform(acess_cur, 3857), aes(fill = valor), color = NA, alpha=.7)+
+  geom_sf(data = st_transform(acess_cur, 3857), aes(fill = valor), color = NA, alpha=.5)+
   viridis::scale_fill_viridis(option = "B"
                               , limits = c(0, 0.9)
                               , breaks = c(0.001, 0.45, 0.9)
@@ -327,7 +327,7 @@ ggplot()+
 
 
 
-ggsave(file="../figures/td/fig4-CMA_TQEF_cur_60.png", dpi = 300, width = 14, height = 10, units = "cm")
+ggsave(plot4, file="../figures/td/fig4-CMA_TQEF_cur_60.png", dpi = 300, width = 14, height = 10, units = "cm")
 beep()
 
 
