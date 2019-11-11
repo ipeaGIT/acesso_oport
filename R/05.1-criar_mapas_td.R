@@ -155,6 +155,20 @@ acess_rio <- read_rds("../data/output_access/acess_rio_2019.rds")
 map_tiles <- read_rds("../data/map_tiles_crop/map_tile_crop_rio.rds")
 
 
+# proporcao que leva mais de 30 minutos
+a <- hex_dt %>%
+  filter(city  == "rio")  %>%  
+  filter(mode == "transit" & pico == 1) 
+setDT(a)
+
+# proporcao da populaco com acesso em ate x minutos
+setDT(a)[, .(sum(pop_total[which(TMISA>30)])) ] / sum(a$pop_total) *100
+setDT(a)[, .(sum(pop_total[which(TMISM<10)])) ] / sum(a$pop_total) *100
+
+# numero de estabelcimentos
+sum(a$saude_alta)
+sum(a$saude_media)
+
 # tirar so pt e pico e colocar em format long
 acess_rio_pt_pico <- acess_rio %>%
   filter(mode == "transit" & pico == 1) %>%
