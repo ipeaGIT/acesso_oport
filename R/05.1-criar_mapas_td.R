@@ -288,7 +288,7 @@ plot3 <- ggplot()+
 
 
 
-ggsave(plot3, file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 300, width = 14, height = 10, units = "cm")
+ggsave(plot3, file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 300, width = 14, height = 8, units = "cm")
 beep()
 
 
