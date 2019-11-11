@@ -245,7 +245,7 @@ plot2 <- ggplot()+
 
 
 # save map
-ggsave(plot2, file="../figures/td/fig2-TMI_EI_bel_walk.png", dpi = 300, width = 8, height = 10, units = "cm")
+ggsave(plot2, file="../figures/td/fig2-TMI_EI_bel_walk.png", dpi = 300, width = 10, height = 10, units = "cm")
 beep()
 
 
@@ -254,8 +254,8 @@ beep()
 
 acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>% 
   filter(mode == "bike") %>%
-  select(city, CMATQ15, CMATQ45) %>%
-  gather(ind, valor, CMATQ15:CMATQ45)
+  select(city, CMATT15, CMATT30) %>%
+  gather(ind, valor, CMATT15:CMATT30)
 
 # abrir tiles
 map_for <- read_rds("../data/map_tiles_crop/map_tile_crop_for.rds")
@@ -263,8 +263,8 @@ map_for <- read_rds("../data/map_tiles_crop/map_tile_crop_for.rds")
 # ajustar levels
 acess_for <- acess_for %>%
   mutate(ind = factor(ind, 
-                      levels = c("CMATQ15", "CMATQ45"), 
-                      labels = c("15 Minutos", "45 Minutos")))
+                      levels = c("CMATT15", "CMATT30"), 
+                      labels = c("15 Minutos", "30 Minutos")))
 
 
 # fazer plots
@@ -276,9 +276,9 @@ plot3 <- ggplot()+
   new_scale_fill() +
   geom_sf(data = st_transform(acess_for, 3857), aes(fill = valor), color = NA, alpha=.7)+
   viridis::scale_fill_viridis(option = "B"
-                              , limits = c(0, 0.72)
-                              , breaks = c(0.001, 0.35, 0.7)
-                              , labels = c(0, "35", "70%")
+                              , limits = c(0, .52)
+                              , breaks = c(0.001, 0.25, 0.5)
+                              , labels = c(0, "25", "50%")
   ) +
   facet_wrap(~ind, nrow = 1)+
   theme_for_CMA()+
@@ -299,8 +299,8 @@ beep()
 
 acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>% 
   filter(mode == "transit") %>%
-  select(city, CMATQ60, CMAEF60) %>%
-  gather(ind, valor, CMATQ60:CMAEF60)
+  select(city, CMATT60, CMAEF60) %>%
+  gather(ind, valor, CMATT60:CMAEF60)
 
 # abrir tiles
 map_cur <- read_rds("../data/map_tiles_crop/map_tile_crop_cur.rds")
@@ -308,7 +308,7 @@ map_cur <- read_rds("../data/map_tiles_crop/map_tile_crop_cur.rds")
 # fazer grafico
 acess_cur <- acess_cur %>%
   mutate(ind = factor(ind, 
-                      levels = c("CMATQ60", "CMAEF60"), 
+                      levels = c("CMATT60", "CMAEF60"), 
                       labels = c("Trabalho", "Educação Fundamental")))
 
 # fazer plots
@@ -435,7 +435,7 @@ acess_walk %>%
   filter(city %in% c("cam", "poa", "goi")) %>%
   mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
   ggplot()+
-  geom_boxplot(aes(x = factor(decil), y = CMATQ30, weight=pop_total, color = factor(decil)),
+  geom_boxplot(aes(x = factor(decil), y = CMATT30, weight=pop_total, color = factor(decil)),
                # size = 1, 
                outlier.colour=rgb(.5,.5,.5, alpha=0.05)) +
   # facet_grid(threshold_name ~ ., scales = "free_y") +
@@ -468,17 +468,17 @@ beep()
 # 7) CMA Palma Renda Todos Trabalho  Walk 30  --------------------------------
 
 # calcular acessibilidade media do 90 percentil e 40 percentil de renda
-# usar caminhada pico CMATQ30
+# usar caminhada pico CMATT30
 
 acess_palma <- hex_dt %>%
   filter(mode == "bike" & pico == 1) %>%
-  select(city, decil, pop_total, CMATQ30) %>%
+  select(city, decil, pop_total, CMATT30) %>%
   # pegar so decis 4 e 9
   filter(decil %in% c(1, 2, 3, 4, 10)) %>%
   # definir ricos e pobres
   mutate(classe = ifelse(decil %in% c(1, 2, 3, 4), "pobre", "rico")) %>%
   group_by(city, classe) %>%
-  summarise(acess_media = weighted.mean(CMATQ30, pop_total)) %>%
+  summarise(acess_media = weighted.mean(CMATT30, pop_total)) %>%
   ungroup() %>%
   spread(classe, acess_media) %>%
   # calcular palma ratio
