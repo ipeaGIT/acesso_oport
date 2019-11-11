@@ -192,7 +192,7 @@ fazer_plot_3 <- function(sigla_muni, cols = 2) {
     # nova escala
     new_scale_fill() +
     geom_sf(data = st_transform(acess, 3857), aes(fill = valor), color = NA, alpha=.7)+
-    viridis::scale_fill_viridis(option = "B"
+    viridis::scale_fill_viridis(option = "B", labels = scales::percent
                                 # , limits = c(0, 0.72)
                                 # , breaks = c(0.001, 0.35, 0.7)
                                 # , labels = c(0, "35", "70%")
@@ -238,7 +238,7 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
     # nova escala
     new_scale_fill() +
     geom_sf(data = st_transform(acess, 3857), aes(fill = valor), color = NA, alpha=.5)+
-    viridis::scale_fill_viridis(option = "B"
+    viridis::scale_fill_viridis(option = "B", labels = scales::percent
                                 # , limits = c(0, 0.9)
                                 # , breaks = c(0.001, 0.45, 0.9)
                                 # , labels = c(0, "45", "90%")
@@ -266,9 +266,9 @@ purrr::walk(munis_df$abrev_muni, fazer_plot_3)
 purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4)
 
 # para o rio, optar por uma coluna so no plot!
-fazer_plot_1(rio, cols = 1)
-fazer_plot_2(rio, cols = 1)
-fazer_plot_3(rio, cols = 1)
-fazer_plot_4(rio, cols = 1)
+fazer_plot_1('rio', cols = 1)
+fazer_plot_2('rio', cols = 1)
+fazer_plot_3('rio', cols = 1)
+fazer_plot_4('rio', cols = 1)
 
 
