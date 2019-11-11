@@ -260,10 +260,10 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
 
 # 5) Aplicar funcoes -----------
 
-purrr::walk(munis_df$abrev_muni, fazer_plot_1)
+purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_1)
 purrr::walk(munis_df$abrev_muni, fazer_plot_2)
 purrr::walk(munis_df$abrev_muni, fazer_plot_3)
-purrr::walk(munis_df$abrev_muni, fazer_plot_4)
+purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4)
 
 # para o rio, optar por uma coluna so no plot!
 fazer_plot_1(rio, cols = 1)
