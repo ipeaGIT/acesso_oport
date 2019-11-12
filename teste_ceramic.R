@@ -14,11 +14,12 @@ tile_for <- cc_location(temp_sf,
 
 
 tile_for <- cc_location(temp_sf, 
-                        type = "styles/v1/kauebraga/cjykmhzgo12421cpjk9qos202/tiles" 
+                        type = "styles/v1/kauebraga/ck2qc9zd22g2x1dqs9qxgfh26/tiles" 
                         # , debug = TRUE
                         )
 
 plotRGB(tile_for)
+
 
 # teste plot
 tab <- as.data.frame(tile_for, xy = TRUE)
