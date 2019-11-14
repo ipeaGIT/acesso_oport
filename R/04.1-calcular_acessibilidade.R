@@ -9,7 +9,7 @@ source('./R/fun/setup.R')
 #### 1. CALCULAR ACESSIBILIDADE --------------------------------------------------------------
 
 
-calcular_acess <- function(sigla_muni, ano) {
+calcular_acess <- function(sigla_muni, ano = 2019) {
   
   # sigla_muni <- "bho"; ano=2019
   # sigla_muni <- "spo"; ano=2019

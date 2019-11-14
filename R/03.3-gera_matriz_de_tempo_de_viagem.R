@@ -62,7 +62,7 @@ b <- tictoc::toc()
 
 # funcao para juntar arquivos por sigla_muni
 
-juntar_output_OTP <- function(sigla_muni, ano){
+juntar_output_OTP <- function(sigla_muni, ano = 2019){
   
   # sigla_muni <- 'bho'; ano <- 2019
   
