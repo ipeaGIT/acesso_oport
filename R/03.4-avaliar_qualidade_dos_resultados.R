@@ -99,7 +99,7 @@ future.apply::future_lapply(X =munis_df$abrev_muni, FUN=gerar_ttmatrix_mediana, 
 
 identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
   
-  # sigla_muni <- "for"
+  # sigla_muni <- "spo"
   
   # status message
   message('Woking on city ', sigla_muni, '\n')
@@ -232,7 +232,7 @@ identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
   
   corrigir_hex_ttmatrix <- function(hex_prob) {
     
-    # hex_prob <- points_corrigidos$id_hex[1]
+    # hex_prob <- points_corrigidos$hex_problema[17]
     
     # qual id correto correspondente
     hex_correto <- subset(points_corrigidos, hex_problema==hex_prob)$hex_blueprint
