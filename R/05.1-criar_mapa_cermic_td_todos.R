@@ -84,7 +84,7 @@ fazer_plot_1 <- function(sigla_muni, cols = 2) {
                         labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade")))
   
   plot1 <- ggplot() + 
-    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 0.5) +
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
     coord_equal() +
     scale_fill_identity()+
     # nova escala
@@ -136,7 +136,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2) {
                         labels = c("Educação Infantil", "Educação Fundamental")))
   
   plot2 <- ggplot()+
-    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = .5) +
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
     coord_equal() +
     scale_fill_identity()+
     # nova escala
@@ -186,7 +186,7 @@ fazer_plot_3 <- function(sigla_muni, cols = 2) {
   
   # fazer plots
   plot3 <- ggplot()+
-    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = .5) +
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
     coord_equal() +
     scale_fill_identity()+
     # nova escala
@@ -232,7 +232,7 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
   
   # fazer plots
   plot4 <- ggplot()+
-    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = .5) +
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
     coord_equal() +
     scale_fill_identity()+
     # nova escala
