@@ -1,8 +1,10 @@
 source('./R/fun/setup.R')
 library(ceramic)
 
-# register api
-Sys.setenv(MAPBOX_API_KEY = "pk.eyJ1Ijoia2F1ZWJyYWdhIiwiYSI6ImNqa2JoN3VodDMxa2YzcHFxMzM2YWw1bmYifQ.XAhHAgbe0LcDqKYyqKYIIQ")
+
+# register mapbox api key
+my_api <- data.table::fread("../data-raw/mapbox_key.txt", header = F)
+Sys.setenv(MAPBOX_API_KEY = my_api$V1)
 
 
 
@@ -17,7 +19,7 @@ baixar_map_tile_ceramic <- function(muni_sigla) {
   
   
   tile_for <- cc_location(temp_sf, 
-                          type = "styles/v1/kauebraga/ck2qc9zd22g2x1dqs9qxgfh26/tiles" 
+                          type = "styles/v1/kauebraga/ck34n83gd0dli1cnvtnrlgber/tiles" 
                           # , debug = TRUE
   )
   
