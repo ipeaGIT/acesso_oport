@@ -171,8 +171,8 @@ fazer_plot_3 <- function(sigla_muni, cols = 2) {
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>%
   filter(mode == "bike") %>%
-    select(city, CMATQ15, CMATQ45) %>%
-    gather(ind, valor, CMATQ15:CMATQ45)
+    select(city, CMATT15, CMATT45) %>%
+    gather(ind, valor, CMATT15:CMATT45)
   
   # abrir tiles
   map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
@@ -180,7 +180,7 @@ fazer_plot_3 <- function(sigla_muni, cols = 2) {
   # ajustar levels
   acess <- acess %>%
     mutate(ind = factor(ind, 
-                        levels = c("CMATQ15", "CMATQ45"), 
+                        levels = c("CMATT15", "CMATT45"), 
                         labels = c("15 Minutos", "45 Minutos")))
   
   
@@ -206,7 +206,7 @@ fazer_plot_3 <- function(sigla_muni, cols = 2) {
   
   
   ggsave(plot3, 
-         file= sprintf("../figures/td_todas/ceramic/fig3-%s_CMA_TQ_1545.png", sigla_muni), 
+         file= sprintf("../figures/td_todas/ceramic/fig3-%s_CMA_TT_1545.png", sigla_muni), 
          dpi = 300, width = 14, height = 10, units = "cm")
 }
 
@@ -218,8 +218,8 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>% 
     filter(mode == "transit") %>%
-    select(city, CMATQ60, CMAEF60) %>%
-    gather(ind, valor, CMATQ60:CMAEF60)
+    select(city, CMATT60, CMAEF60) %>%
+    gather(ind, valor, CMATT60:CMAEF60)
   
   # abrir tiles
   map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
@@ -227,7 +227,7 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
   # fazer grafico
   acess <- acess %>%
     mutate(ind = factor(ind, 
-                        levels = c("CMATQ60", "CMAEF60"), 
+                        levels = c("CMATT60", "CMAEF60"), 
                         labels = c("Trabalho", "Educação Fundamental")))
   
   # fazer plots
@@ -252,7 +252,7 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
   
   
   ggsave(plot4, 
-         file= sprintf("../figures/td_todas/ceramic/fig4-%s_CMA_TQEF_60.png", sigla_muni),
+         file= sprintf("../figures/td_todas/ceramic/fig4-%s_CMA_TTEF_60.png", sigla_muni),
          dpi = 300, width = 14, height = 10, units = "cm")
   
 }
