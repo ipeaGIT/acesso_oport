@@ -162,8 +162,8 @@ a <- hex_dt %>%
 setDT(a)
 
 # proporcao da populaco com acesso em ate x minutos
-setDT(a)[, .(sum(pop_total[which(TMISA>30)])) ] / sum(a$pop_total) *100
-setDT(a)[, .(sum(pop_total[which(TMISM<10)])) ] / sum(a$pop_total) *100
+setDT(a)[, .(sum(pop_total[which(TMISM<15)])) ] / sum(a$pop_total) *100
+setDT(a)[, .(sum(pop_total[which(TMISA<15)])) ] / sum(a$pop_total) *100
 
 # numero de estabelcimentos
 sum(a$saude_alta)
@@ -526,10 +526,10 @@ acess_palma_2 %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = city))+
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
-  scale_y_continuous(breaks = c(0, 0.5, 1, 1.5))+
+  scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
   theme_ipsum_rc(grid = "X")+
-  labs(x = "", y = "Palma Ratio")
+  labs(x = "", y = "Razão Brancos/Negros")
 
 
 ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60.png", dpi = 300, width = 16.5, height = 15, units = "cm")
