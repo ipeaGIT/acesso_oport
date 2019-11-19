@@ -60,7 +60,7 @@ theme_for_TMI <- function(base_size) {
 
 # 1) Mapa TMI saude de media e alta - PT  ---------------------------------------
 
-fazer_plot_1 <- function(sigla_muni, cols = 2) {
+fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
@@ -92,7 +92,7 @@ fazer_plot_1 <- function(sigla_muni, cols = 2) {
     geom_sf(dat = st_transform(acess_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
     viridis::scale_fill_viridis( direction = -1
                                  # , breaks = c(0, 10, 20, 30, 40)
-                                 # , labels = c(0, 10, 20, 30, "+40 min")
+                                 , labels = c(0, 10, 20, "+30 min")
                                  ) +
     labs(fill = "Tempo até a oportunidade\n mais próxima",
          title = munis_df[abrev_muni == sigla_muni]$name_muni)+
@@ -104,7 +104,7 @@ fazer_plot_1 <- function(sigla_muni, cols = 2) {
   # save map
   ggsave(plot1, 
          file= sprintf("../figures/td_todas/ceramic/fig1-%s_TMI_SM_TP.png", sigla_muni), 
-         dpi = 300, width = 14, height = 10, units = "cm")
+         dpi = 300, width = width, height = height, units = "cm")
 }
 
 
@@ -144,7 +144,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2) {
     geom_sf(data = st_transform(acess_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
     viridis::scale_fill_viridis( direction = -1
                                  # , breaks = c(0, 15, 30)
-                                 # , labels = c(0, 15,"+30 min")
+                                 , labels = c(0, 10, 20, "+30 min")
                                  ) +
     labs(fill = "Tempo até a oportunidade\n mais próxima",
          title = munis_df[abrev_muni == sigla_muni]$name_muni)+
@@ -158,7 +158,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2) {
   # save map
   ggsave(plot2, 
          file= sprintf("../figures/td_todas/ceramic/fig2-%s_TMI_EI_walk.png", sigla_muni),
-         dpi = 300, width = 14, height = 10, units = "cm")
+         dpi = 300, width = 12, height = 8, units = "cm")
 }
 
 
@@ -266,7 +266,7 @@ purrr::walk(munis_df$abrev_muni, fazer_plot_3)
 purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4)
 
 # para o rio, optar por uma coluna so no plot!
-fazer_plot_1('rio', cols = 1)
+fazer_plot_1('rio', cols = 1, width = 12, height = 18)
 fazer_plot_2('rio', cols = 1)
 fazer_plot_3('rio', cols = 1)
 fazer_plot_4('rio', cols = 1)
