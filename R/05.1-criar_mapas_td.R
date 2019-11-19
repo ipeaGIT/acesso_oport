@@ -10,7 +10,7 @@ library(ggnewscale) # install.packages("ggnewscale")
 
 # FIGURAS A FAZER
 
-# MAPAS:
+# MAPAS (feitos para todas as cidades):
 
 # 1) TMI Rio SaudeMedia/Alta TP
 # 2) TMI Bel Ed Infantil Walk
@@ -132,209 +132,227 @@ temp_map1 <-
 
 
 # save map
-ggsave(temp_map1, file="../figures/td/fig1_munis_all.png", dpi = 300, width = 16.5, height = 16.5, units = "cm")
+ggsave(temp_map1, file="../figures/td/fig0_munis_all.png", dpi = 300, width = 16.5, height = 16.5, units = "cm")
 beepr::beep()
 
 
 
+# criar diretorio
+# dir.create("../figures/td_todas")
 
 
+# 1) Mapa TMI saude de media e alta - PT  ---------------------------------------
 
-
-### 1) Mapa TMI saude de media e alta - PT - rio  ---------------------------------------
-
-
-# linhas capacidade
-linhas_hm_rio <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%
-  filter(Cidade == "Rio de Janeiro")
-
-# abrir acess rio
-acess_rio <- read_rds("../data/output_access/acess_rio_2019.rds")
-
-# abrir tiles
-map_tiles <- read_rds("../data/map_tiles_crop/map_tile_crop_rio.rds")
-
-
-# proporcao que leva mais de 30 minutos
-a <- hex_dt %>%
-  filter(city  == "rio")  %>%  
-  filter(mode == "transit" & pico == 1) 
-setDT(a)
-
-# proporcao da populaco com acesso em ate x minutos
-setDT(a)[, .(sum(pop_total[which(TMISM<15)])) ] / sum(a$pop_total) *100
-setDT(a)[, .(sum(pop_total[which(TMISA<15)])) ] / sum(a$pop_total) *100
-
-# numero de estabelcimentos
-sum(a$saude_alta)
-sum(a$saude_media)
-
-# tirar so pt e pico e colocar em format long
-acess_rio_pt_pico <- acess_rio %>%
-  filter(mode == "transit" & pico == 1) %>%
-  # tirar so saude medio e alta
-  select(TMISM, TMISA) %>%
-  gather(ind, valor, TMISM:TMISA)
-
-# fazer grafico
-acess_rio_pt_pico <- acess_rio_pt_pico %>%
-  mutate(valor = ifelse(valor > 40, 40, valor)) %>%
-  mutate(ind = factor(ind, 
-                      levels = c("TMISM", "TMISA"), 
-                      labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade")))
-
-plot1 <- ggplot() + 
-  geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 0.5) + 
-  coord_equal() +
-  scale_fill_identity()+
-  # nova escala
-  new_scale_fill() +
-  geom_sf(dat = st_transform(acess_rio_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
-  geom_sf(data = st_transform(linhas_hm_rio, 3857), size=0.3, color="gray70")+
-  viridis::scale_fill_viridis( direction = -1,
-                               breaks = c(0, 10, 20, 30, 40),
-                               labels = c(0, 10, 20, 30, "+40 min")) +
-  labs(fill = "Tempo até a oportunidade\n mais próxima")+
-  facet_wrap(~ind, ncol = 1)+
-  theme_for_TMI()
-
-# save map
-ggsave(plot1, file="../figures/td/fig1-TMI_SM_TP.png", dpi = 300, width = 8, height = 10, units = "cm")
-beep()
+fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
+  
+  # abrir acess
+  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
+  
+  # abrir tiles
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  
+  
+  # tirar so pt e pico e colocar em format long
+  acess_pt_pico <- acess %>%
+    filter(mode == "transit" & pico == 1) %>%
+    # tirar so saude medio e alta
+    select(TMISM, TMISA) %>%
+    gather(ind, valor, TMISM:TMISA)
+  
+  # fazer grafico
+  acess_pt_pico <- acess_pt_pico %>%
+    mutate(valor = ifelse(valor > 30, 30, valor)) %>%
+    mutate(ind = factor(ind, 
+                        levels = c("TMISM", "TMISA"), 
+                        labels = c("Saúde Média Complexidade", "Saúde Alta Complexidade")))
+  
+  plot1 <- ggplot() + 
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+    coord_equal() +
+    scale_fill_identity()+
+    # nova escala
+    new_scale_fill() +
+    geom_sf(dat = st_transform(acess_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
+    viridis::scale_fill_viridis( direction = -1
+                                 # , breaks = c(0, 10, 20, 30, 40)
+                                 , labels = c(0, 10, 20, "+30 min")
+    ) +
+    labs(fill = "Tempo até a oportunidade\n mais próxima",
+         title = munis_df[abrev_muni == sigla_muni]$name_muni)+
+    facet_wrap(~ind, ncol = cols)+
+    theme_for_TMI()+
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  
+  # save map
+  ggsave(plot1, 
+         file= sprintf("../figures/td/fig1/fig1-%s_TMI_SM_TP.png", sigla_muni), 
+         dpi = 300, width = width, height = height, units = "cm")
+}
 
 
 
 
 
-# 2) TMI Bel Ed Infantil Walk -------------------------
+# 2) TMI Ed Infantil Walk -------------------------
 
-# abrir acess bel
-acess_bel <- read_rds("../data/output_access/acess_bel_2019.rds")
-
-# abrir tiles
-map_bel <- read_rds("../data/map_tiles_crop/map_tile_crop_bel.rds")
-
-# tirar so pt e pico e colocar em format long
-acess_bel_pt_pico <- acess_bel %>%
-  filter(mode == "walk" & pico == 1) %>%
-  # tirar so educacao
-  select(TMIEI, TMIEF) %>%
-  gather(ind, valor, TMIEI:TMIEF)
-
-# fazer grafico
-acess_bel_pt_pico <- acess_bel_pt_pico %>%
-  mutate(valor = ifelse(valor > 30, 30, valor)) %>%
-  mutate(ind = factor(ind, 
-                      levels = c("TMIEI", "TMIEF"), 
-                      labels = c("Educação Infantil", "Educação Fundamental")))
-
-plot2 <- ggplot()+
-  geom_raster(data = map_bel, aes(x, y, fill = hex), alpha = .5) + 
-  coord_equal() +
-  scale_fill_identity()+
-  # nova escala
-  new_scale_fill() +
-  geom_sf(data = st_transform(acess_bel_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
-  viridis::scale_fill_viridis( direction = -1,
-                               breaks = c(0, 15, 30),
-                               labels = c(0, 15,"+30 min")) +
-  labs(fill = "Tempo até a oportunidade\n mais próxima")+
-  facet_wrap(~ind, ncol = 2)+
-  theme_for_TMI()
-
-
-
-# save map
-ggsave(plot2, file="../figures/td/fig2-TMI_EI_bel_walk.png", dpi = 300, width = 10, height = 10, units = "cm")
-beep()
-
-
-
-# # 3) CMA For Trabalho Bike 15/45 ----------------------------------
-
-acess_for <- read_rds("../data/output_access/acess_for_2019.rds") %>% 
-  filter(mode == "bike") %>%
-  select(city, CMATT15, CMATT30) %>%
-  gather(ind, valor, CMATT15:CMATT30)
-
-# abrir tiles
-map_for <- read_rds("../data/map_tiles_crop/map_tile_crop_for.rds")
-
-# ajustar levels
-acess_for <- acess_for %>%
-  mutate(ind = factor(ind, 
-                      levels = c("CMATT15", "CMATT30"), 
-                      labels = c("15 Minutos", "30 Minutos")))
-
-
-# fazer plots
-plot3 <- ggplot()+
-  geom_raster(data = map_for, aes(x, y, fill = hex), alpha = .5) + 
-  coord_equal() +
-  scale_fill_identity()+
-  # nova escala
-  new_scale_fill() +
-  geom_sf(data = st_transform(acess_for, 3857), aes(fill = valor), color = NA, alpha=.7)+
-  viridis::scale_fill_viridis(option = "B"
-                              , limits = c(0, .52)
-                              , breaks = c(0.001, 0.25, 0.5)
-                              , labels = c(0, "25", "50%")
-  ) +
-  facet_wrap(~ind, nrow = 1)+
-  theme_for_CMA()+
-  labs(fill = "Porcentagem de oportunidades\n acessíveis",
-       title = "Fortaleza") +
-  theme(plot.title = element_text(hjust = 0.5))
+fazer_plot_2 <- function(sigla_muni, cols = 2) {
+  
+  # abrir acess
+  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
+  
+  # abrir tiles
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  
+  # tirar so pt e pico e colocar em format long
+  acess_pt_pico <- acess %>%
+    filter(mode == "walk" & pico == 1) %>%
+    # tirar so educacao
+    select(TMIEI, TMIEF) %>%
+    gather(ind, valor, TMIEI:TMIEF)
+  
+  # fazer grafico
+  acess_pt_pico <- acess_pt_pico %>%
+    mutate(valor = ifelse(valor > 30, 30, valor)) %>%
+    mutate(ind = factor(ind, 
+                        levels = c("TMIEI", "TMIEF"), 
+                        labels = c("Educação Infantil", "Educação Fundamental")))
+  
+  plot2 <- ggplot()+
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+    coord_equal() +
+    scale_fill_identity()+
+    # nova escala
+    new_scale_fill() +
+    geom_sf(data = st_transform(acess_pt_pico, 3857), aes(fill = valor), color = NA, alpha=.7)  +
+    viridis::scale_fill_viridis( direction = -1
+                                 # , breaks = c(0, 15, 30)
+                                 , labels = c(0, 10, 20, "+30 min")
+    ) +
+    labs(fill = "Tempo até a oportunidade\n mais próxima",
+         title = munis_df[abrev_muni == sigla_muni]$name_muni)+
+    facet_wrap(~ind, ncol = cols)+
+    theme_for_TMI()+
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  
+  
+  
+  # save map
+  ggsave(plot2, 
+         file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.png", sigla_muni),
+         dpi = 300, width = 12, height = 8, units = "cm")
+}
 
 
 
-ggsave(plot3, file="../figures/td/fig3-CMA_TQ_for_1545.png", dpi = 300, width = 14, height = 8, units = "cm")
-beep()
+# 3) CMA Trabalho Bike 15/45 ----------------------------------
 
 
+fazer_plot_3 <- function(sigla_muni, cols = 2) {
+  
+  # abrir acess
+  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>%
+    filter(mode == "bike") %>%
+    select(city, CMATT15, CMATT45) %>%
+    gather(ind, valor, CMATT15:CMATT45)
+  
+  # abrir tiles
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  
+  # ajustar levels
+  acess <- acess %>%
+    mutate(ind = factor(ind, 
+                        levels = c("CMATT15", "CMATT45"), 
+                        labels = c("15 Minutos", "45 Minutos")))
+  
+  
+  # fazer plots
+  plot3 <- ggplot()+
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+    coord_equal() +
+    scale_fill_identity()+
+    # nova escala
+    new_scale_fill() +
+    geom_sf(data = st_transform(acess, 3857), aes(fill = valor), color = NA, alpha=.7)+
+    viridis::scale_fill_viridis(option = "B", labels = scales::percent
+                                # , limits = c(0, 0.72)
+                                # , breaks = c(0.001, 0.35, 0.7)
+                                # , labels = c(0, "35", "70%")
+    ) +
+    facet_wrap(~ind, ncol = cols)+
+    theme_for_CMA()+
+    labs(fill = "Porcentagem de oportunidades\n acessíveis",
+         title = munis_df[abrev_muni == sigla_muni]$name_muni) +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  
+  
+  ggsave(plot3, 
+         file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.png", sigla_muni), 
+         dpi = 300, width = 14, height = 10, units = "cm")
+}
 
 
+# 4) CMA Trabalho/Escola TP 60 ---------------------
 
-# 4) CMA Cur Trabalho/Escola TP 60 ---------------------
+fazer_plot_4 <- function(sigla_muni, cols = 2) {
+  
+  # abrir acess
+  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>% 
+    filter(mode == "transit") %>%
+    select(city, CMATT60, CMAEF60) %>%
+    gather(ind, valor, CMATT60:CMAEF60)
+  
+  # abrir tiles
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  
+  # fazer grafico
+  acess <- acess %>%
+    mutate(ind = factor(ind, 
+                        levels = c("CMATT60", "CMAEF60"), 
+                        labels = c("Trabalho", "Educação Fundamental")))
+  
+  # fazer plots
+  plot4 <- ggplot()+
+    geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+    coord_equal() +
+    scale_fill_identity()+
+    # nova escala
+    new_scale_fill() +
+    geom_sf(data = st_transform(acess, 3857), aes(fill = valor), color = NA, alpha=.5)+
+    viridis::scale_fill_viridis(option = "B", labels = scales::percent
+                                # , limits = c(0, 0.9)
+                                # , breaks = c(0.001, 0.45, 0.9)
+                                # , labels = c(0, "45", "90%")
+    )+
+    facet_wrap(~ind, ncol = cols)+
+    theme_for_CMA()+
+    labs(fill = "Porcentagem de oportunidades\n acessíveis",
+         title = munis_df[abrev_muni == sigla_muni]$name_muni) +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  
+  
+  ggsave(plot4, 
+         file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.png", sigla_muni),
+         dpi = 300, width = 14, height = 10, units = "cm")
+  
+}
 
-acess_cur <- read_rds("../data/output_access/acess_cur_2019.rds") %>% 
-  filter(mode == "transit") %>%
-  select(city, CMATT60, CMAEF60) %>%
-  gather(ind, valor, CMATT60:CMAEF60)
 
-# abrir tiles
-map_cur <- read_rds("../data/map_tiles_crop/map_tile_crop_cur.rds")
+# Aplicar funcoes -----------
 
-# fazer grafico
-acess_cur <- acess_cur %>%
-  mutate(ind = factor(ind, 
-                      levels = c("CMATT60", "CMAEF60"), 
-                      labels = c("Trabalho", "Educação Fundamental")))
+purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_1)
+purrr::walk(munis_df$abrev_muni, fazer_plot_2)
+purrr::walk(munis_df$abrev_muni, fazer_plot_3)
+purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4)
 
-# fazer plots
-plot4 <- ggplot()+
-  geom_raster(data = map_cur, aes(x, y, fill = hex), alpha = .5) + 
-  coord_equal() +
-  scale_fill_identity()+
-  # nova escala
-  new_scale_fill() +
-  geom_sf(data = st_transform(acess_cur, 3857), aes(fill = valor), color = NA, alpha=.5)+
-  viridis::scale_fill_viridis(option = "B"
-                              , limits = c(0, 0.9)
-                              , breaks = c(0.001, 0.45, 0.9)
-                              , labels = c(0, "45", "90%")
-  )+
-  facet_wrap(~ind, nrow = 1)+
-  theme_for_CMA()+
-  labs(fill = "Porcentagem de oportunidades\n acessíveis",
-       title = "Curitiba") +
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-
-ggsave(plot4, file="../figures/td/fig4-CMA_TQEF_cur_60.png", dpi = 300, width = 14, height = 10, units = "cm")
-beep()
-
+# para o rio, optar por uma coluna so no plot!
+fazer_plot_1('rio', cols = 1, width = 12, height = 18)
+fazer_plot_2('rio', cols = 1)
+fazer_plot_3('rio', cols = 1)
+fazer_plot_4('rio', cols = 1)
 
 
 
