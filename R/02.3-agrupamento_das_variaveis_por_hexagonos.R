@@ -96,12 +96,13 @@ agrupar_variaveis <- function(sigla_muni) {
     hex_pop <- hex_muni %>% st_join(centroide_pop)
     
     # Summarize
-    hex_pop <- setDT(hex_pop)[, .(cor_branca = sum(round(cor_branca,0), na.rm = TRUE),
-                                  cor_amarela = sum(round(cor_amarela,0), na.rm = TRUE),
+    hex_pop <- setDT(hex_pop)[, .(cor_branca   = sum(round(cor_branca,0), na.rm = TRUE),
+                                  cor_amarela  = sum(round(cor_amarela,0), na.rm = TRUE),
                                   cor_indigena = sum(round(cor_indigena,0), na.rm = TRUE),
-                                  cor_negra = sum(round(cor_negra,0), na.rm = TRUE),
-                                  pop_total = sum(round(pop_total,0), na.rm = TRUE),
-                                  renda_total = sum(renda, na.rm = TRUE)), by = id_hex ]
+                                  cor_negra    = sum(round(cor_negra,0), na.rm = TRUE),
+                                  pop_total    = sum(round(pop_total,0), na.rm = TRUE),
+                                  renda_total  = sum(renda, na.rm = TRUE)), 
+                              by = id_hex ]
     
     # Calcular quintil e decil de renda
       # calcula renda per capta de cada hexagono
@@ -124,7 +125,7 @@ agrupar_variaveis <- function(sigla_muni) {
       
       # check if pop size in each decile are roughly equal
       hex_pop[, .(po_in_quintil = sum(pop_total, na.rm=T)), by = quintil]
-      hex_pop[, .(po_in_decile = sum(pop_total, na.rm=T)), by = decil]
+      hex_pop[, .(po_in_decile  = sum(pop_total, na.rm=T)), by = decil]
       
       # # remove NAs
       # hex_pop <- hex_pop[ !is.na(decil)]
@@ -137,8 +138,9 @@ agrupar_variaveis <- function(sigla_muni) {
     # Summarize
     hex_rais <- setDT(hex_rais)[, .(empregos_baixa = sum(baixo, na.rm = TRUE),
                                     empregos_media = sum(medio, na.rm = TRUE),
-                                    empregos_alta = sum(alto, na.rm = TRUE),
-                                    empregos_total = sum(alto, medio, baixo, na.rm = TRUE)), by = id_hex ]
+                                    empregos_alta  = sum(alto, na.rm = TRUE),
+                                    empregos_total = sum(alto, medio, baixo, na.rm = TRUE)), 
+                                by = id_hex ]
     
   
     # setDT(hex_muni)[, empregos_total := sum(empregos_alta, empregos_media, empregos_baixa), by=id_hex]
@@ -147,14 +149,15 @@ agrupar_variaveis <- function(sigla_muni) {
   # agrupar saude
     # join espacial 
       cnes_filtrado <- sf::st_transform(cnes_filtrado, sf::st_crs(hex_muni)) # mesma projecao geografica
-      hex_saude <- hex_muni %>% st_join(cnes_filtrado)
+      hex_saude <- hex_muni %>% st_join(cnes_filtrado) %>% setDT()
       
+      hex_saude[, saude_total := ifelse( is.na(CNES), 0, 1) ]
 
       # Summarize
-      hex_saude <- setDT(hex_saude)[, .(saude_total = sum(health_low, health_med, health_high, na.rm=T),
+      hex_saude <- hex_saude[, .(saude_total = sum(saude_total, na.rm=T),
                                  saude_baixa = sum(health_low, na.rm=T),
-                                 saude_media=sum(health_med, na.rm=T),
-                                 saude_alta=sum(health_high, na.rm=T)),
+                                 saude_media = sum(health_med, na.rm=T),
+                                 saude_alta  = sum(health_high, na.rm=T)),
                              by = id_hex ]
 
             
@@ -172,29 +175,30 @@ agrupar_variaveis <- function(sigla_muni) {
         hex_escolas[, edu_total := ifelse( is.na(cod_escola), 0, 1) ]
         
       # Summarize
-        hex_escolas <- hex_escolas[, .(edu_total = sum(edu_total, na.rm = T),
-                                      edu_infantil = sum(mat_infantil, na.rm = T),
-                                       edu_fundamental=sum(mat_fundamental, na.rm = T),
-                                       edu_medio=sum(mat_medio, na.rm = T)), by = id_hex ]
+        hex_escolas <- hex_escolas[, .(edu_total       = sum(edu_total, na.rm = T),
+                                       edu_infantil    = sum(mat_infantil, na.rm = T),
+                                       edu_fundamental = sum(mat_fundamental, na.rm = T),
+                                       edu_medio       = sum(mat_medio, na.rm = T)), 
+                                   by = id_hex ]
         
       
 
-# Junta todos os dados agrupados por hexagonos
-hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
-  left_join(hex_rais) %>%
-  left_join(hex_saude) %>%
-  left_join(hex_escolas)
+        # Junta todos os dados agrupados por hexagonos
+        hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
+          left_join(hex_rais) %>%
+          left_join(hex_saude) %>%
+          left_join(hex_escolas)
+        
+        # substitui NAs por zeros
+        hex_muni_fim[is.na(hex_muni_fim)] <- 0
+        
+        # adiciona sigla do municipio
+        hex_muni_fim$muni <- sigla_muni
 
-# substitui NAs por zeros
-hex_muni_fim[is.na(hex_muni_fim)] <- 0
 
-# adiciona sigla do municipio
-hex_muni_fim$muni <- sigla_muni
-
-
-  # Salva grade de hexagonos com todas informacoes de uso do soloe
-    dir_output <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", sigla_muni, muni_res)
-    readr::write_rds(hex_muni_fim, dir_output)
+        # Salva grade de hexagonos com todas informacoes de uso do soloe
+        dir_output <- sprintf("../data/hex_agregados/hex_agregado_%s_%s.rds", sigla_muni, muni_res)
+        readr::write_rds(hex_muni_fim, dir_output)
   }
   
   # Aplicar funcao para cada resolucao
