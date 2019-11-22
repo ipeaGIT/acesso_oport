@@ -69,37 +69,22 @@ hex_dt_fim <- hex_dt %>%
   # arredondar renda per capta para 0 casas decimais
   mutate(R001 = round(R001, 0)) %>%
   # arredondar acessibilidad para tres casas decimais
-  mutate_at(vars(matches("CMA|TMI")), round, digits = 3)
-
-# dividir as bases por modo?
-hex_dt_fim_transit <- hex_dt_fim %>%
-  filter(modo == "transit") %>%
-  # mudar nome do modo
-  mutate(modo = ifelse(modo == "transit", "tp", modo)) %>%
-  # filtrar so as variaveis de acessibilidade referentes ao modo
-  select_if(~sum(!is.na(.)) > 0)
-
+  mutate_at(vars(matches("CMA|TMI")), round, digits = 3) %>%
   
-hex_dt_fim_ativo <- hex_dt_fim %>%
-  filter(modo %in% c("bike", "walk")) %>%
-  # mudar nome do modo
+  # renomear os modos
+  mutate(modo = ifelse(modo == "transit", "tp", modo)) %>%
   mutate(modo = case_when(
     modo == "bike" ~"bicicleta",
     modo == "walk" ~ "caminhada"
-  )) %>%
-  # filtrar so as variaveis de acessibilidade referentes ao modo
-  select_if(~sum(!is.na(.)) > 0)
+  ))
 
 
-names(hex_dt_fim_ativo)
+names(hex_dt_fim)
 
 
 
 
 # 3) Exportar ---------------------------
 
-# salvar dados de transporte publico
-st_write(hex_dt_fim_transit, "acess_tp_2019.shp")
-
-# salvar dados para transporte ativo
-st_write(hex_dt_fim_ativo, "acess_ativo_2019.shp")
+# salvar dados em shapefile
+st_write(hex_dt_fim %>% st_sf(), "acess_oport_2019.shp")
