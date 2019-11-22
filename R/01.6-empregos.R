@@ -271,12 +271,13 @@ rais_geo <- fread("../data-raw/rais/rais_2017_georef.csv"
                   , colClasses='character'
                   # , nrows = 10
                   )
+nrow(rais_geo) # 8186586 obs
 
 
 # Filtro selecionar so municipios do projeto
 gc(reset=T)
 rais_geo <- rais_geo[codemun %in% substr(munis_df$code_muni, 1, 6) ]
-
+nrow(rais_geo) # 2348816 obs
 
 # recode lat lon column names
 rais_geo <- rais_geo %>% rename(lat=latitude , lon=longitude)
@@ -319,8 +320,9 @@ rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), sum(total_corrigido)] / 
 
 ######################### GOOGLE 1 , somente 1 e 2 estrelas, todos, endereco completo 
 
-# Estabs com baixa precisao do Galileo 1 e 2 estrelas ( 36.300 estabs, 4% do total)
+# Estabs com baixa precisao do Galileo 1 e 2 estrelas
 estabs_problema <- rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), ]
+nrow(estabs_problema) # 34579 obs
 
 
 # lista de enderecos com problema
@@ -386,7 +388,7 @@ register_google(key = my_api$V1)
   rais_rodovias_tipo3 <- rais_rodovias_tipo3[id_estab %nin% c(rais_rodovias_tipo1$id_estab, rais_rodovias_tipo2$id_estab)]
   # juntar todas as rodovias
   rais_rodovias <- rbind(rais_rodovias_tipo1, rais_rodovias_tipo2, rais_rodovias_tipo3)
-  
+  nrow(rais_rodovias) # 9620 obs
   
   # lista de enderecos com problema
   enderecos_rodovias <- rais_rodovias %>% mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% .$fim
@@ -446,7 +448,9 @@ rais_google_mal_geo <- output_google_api1_rais %>%
   
   
 ### Junta outputs 1, 2 e 3 de google API
-  output_google_api1_rais <- rbind(output_google_api2_rais)
+  # bind do output1 com o output2
+  output_google_api1_rais <- rbind(output_google_api1_rais, output_google_api2_rais)
+  # merge tipo look up do resultado anterior com o 3, que busca substituir as coordenadas
   output_google_api1_rais[output_google_api3_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
   
   # save google API output 

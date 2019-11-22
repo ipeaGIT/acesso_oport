@@ -15,6 +15,7 @@ source('./R/fun/setup.R')
 # 1) Ler dados do INEP -----------------------------------------------------------------------------
 
 escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
+nrow(escolas) # 226251 obs 
 
 
 
@@ -29,11 +30,12 @@ escolas_filt <- escolas %>%
   filter(CO_MUNICIPIO %in% munis_df$code_muni) %>%
   filter(CATEGORIA_ADMINISTRATIVA == "Pública") %>%
   rename(lon = LONGITUDE, lat = LATITUDE)
+nrow(escolas_filt) # 12861 obs
 
 
 # excluir escolas paralisadas
 escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALISADA")
-
+nrow(escolas_filt) # 12259 obs
 
 
 
@@ -91,13 +93,13 @@ escolas_filt <- escolas_filt %>% filter(RESTRICAO_ATENDIMENTO != "ESCOLA PARALIS
 
 
 # juntar todos municipios com erro de lat/lon
-  munis_problemaA <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) 
-  munis_problemaB <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE )
-  munis_problemaC <- escolas_filt[ is.na(lat), ]
-  munis_problemaD <- subset(escolas_filt, latlon %in% latlon_problema$latlon)
+  munis_problemaA <- subset(escolas_filt, CO_ENTIDADE %in% A_estbs_pouco_digito$CO_ENTIDADE ) # 14 obs
+  munis_problemaB <- subset(escolas_filt, CO_ENTIDADE %in% B_muni_fora$CO_ENTIDADE ) # 9 obs
+  munis_problemaC <- escolas_filt[ is.na(lat), ] # 1013 obs
+  munis_problemaD <- subset(escolas_filt, latlon %in% latlon_problema$latlon) # 36 obs
   
-  munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
-  munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates
+  munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD) # 1072 obs
+  munis_problema <- dplyr::distinct(munis_problema, CO_ENTIDADE, .keep_all=T) # remove duplicates, 1072 obs
 
 
 # ajeitar enderecos para o galileo
@@ -128,7 +130,7 @@ teste <- munis_problema %>%
 # salvar input para o galileo
 write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", delim = ";")  
   
-
+# Para o Galileo: 1072 obs
 
 
 ### RODAR GALILEO--------------
@@ -182,7 +184,8 @@ educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_
   
   # lista de enderecom com problema
   escolas_problema_gmaps <- rbind(A_escolas_lat_impreciso, B_escolas_problema, C_escolas_galileo_baixo) %>%
-    distinct(CO_ENTIDADE, .keep_all = TRUE)
+    distinct(CO_ENTIDADE, .keep_all = TRU8E)
+  nrow(escolas_problema_gmaps) # 526 obs
   
   
 

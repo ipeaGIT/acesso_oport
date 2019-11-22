@@ -106,7 +106,7 @@ head(cnes19)
 
 # rename columns
 names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", "complex_alta_ambu_est", "complex_alta_ambu_mun", "complex_baix_ambu_est", "complex_baix_ambu_mun", "complex_medi_ambu_est", "complex_medi_ambu_mun", "complex_alta_hosp_est", "complex_alta_hosp_mun", "complex_baix_hosp_est", "complex_baix_hosp_mun", "complex_medi_hosp_est", "complex_medi_hosp_mun", "complex_nao_aplic_est", "complex_nao_aplic_mun")
-
+nrow(cnes19) # 340115 obs
 
 
 
@@ -185,7 +185,7 @@ table(cnes_filter5$health_low, useNA = "always")  # 3625
 table(cnes_filter5$health_med, useNA = "always")  # 4254
 table(cnes_filter5$health_high, useNA = "always") # 881
 
-
+nrow(cnes_filter5) # 5052 obs
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,7 +296,7 @@ table(cnes_filter5$health_high, useNA = "always") # 881
     munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
     munis_problema <- dplyr::distinct(munis_problema, CNES, .keep_all=T) # remove duplicates
     
-    # 1385 de 5.283 que vao para o Galileo
+    # 1307 que vao para o Galileo
     
     
     
@@ -363,7 +363,7 @@ C_cnes_galileo_baixo <- subset(cnes19_df_coords_fixed, CNES %in% cnes_galileo_ba
 
 # Saude que permanecem com problema
 cnes_problema_gmaps <- rbind(A_cnes_lat_impreciso, B_cnes_lat_missing, C_cnes_galileo_baixo) %>%
-  distinct(CNES, .keep_all = TRUE) # 433 casos
+  distinct(CNES, .keep_all = TRUE) # 398 casos
 
 
 # lista de enderecos com problema
