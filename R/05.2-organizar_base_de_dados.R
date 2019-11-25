@@ -76,11 +76,22 @@ hex_dt_fim <- hex_dt %>%
   mutate(modo = case_when(
     modo == "bike" ~"bicicleta",
     modo == "walk" ~ "caminhada"
-  ))
+  )
+  
+  # truncar os valores de TMI quando eh infinito
+  # para caminhada: 60 minutos
+  # para bicicleta de transporte publico: 120 minutos
+  
+  
+  )
+
+
 
 
 names(hex_dt_fim)
 
+
+# TODO: checar Inf no indicador de TMI - truncar para qual valor?
 
 
 
@@ -88,3 +99,5 @@ names(hex_dt_fim)
 
 # salvar dados em shapefile
 st_write(hex_dt_fim %>% st_sf(), "acess_oport_2019.shp")
+st_write(hex_dt_fim %>% st_sf(), "acess_oport_2019.geodb")
+write_rds(hex_dt_fim %>% st_sf(), "acess_oport_2019.rds", )
