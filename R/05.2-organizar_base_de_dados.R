@@ -76,25 +76,20 @@ hex_dt_fim <- hex_dt %>%
   mutate(modo = case_when(
     modo == "bike" ~"bicicleta",
     modo == "walk" ~ "caminhada"
-  )
+  )) %>%
   
   # truncar os valores de TMI quando eh infinito
   # para caminhada: 60 minutos
   # para bicicleta de transporte publico: 120 minutos
+  mutate_at(vars(matches("TMI")), list(~ ifelse(is.infinite(.) & modo == "caminhada", 60, 
+                                             ifelse(is.infinite(.) & modo %in% c("tp", "bicicleta"), 120, .))))
   
-  
-  )
 
 
 
 
 names(hex_dt_fim)
-
-
-# TODO: checar Inf no indicador de TMI - truncar para qual valor?
-
-
-
+s
 # 3) Exportar ---------------------------
 
 # salvar dados em shapefile
