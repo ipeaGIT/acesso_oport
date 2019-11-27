@@ -67,9 +67,9 @@ hex_dt_fim <- hex_dt %>%
   
   # arredondar variaveis
   # arredondar renda per capta para 0 casas decimais
-  mutate(R001 = round(R001, 0)) %>%
+  mutate(R001 = round(R001, 1)) %>%
   # arredondar acessibilidad para tres casas decimais
-  mutate_at(vars(matches("CMA|TMI")), round, digits = 3) %>%
+  mutate_at(vars(matches("CMA|TMI")), round, digits = 4) %>%
   
   # renomear os modos
   mutate(modo = ifelse(modo == "transit", "tp", modo)) %>%
@@ -79,20 +79,29 @@ hex_dt_fim <- hex_dt %>%
   )) %>%
   
   # truncar os valores de TMI quando eh infinito
-  # para caminhada: 60 minutos
-  # para bicicleta de transporte publico: 120 minutos
+  # para caminhada: 60 minutos;  para bicicleta de transporte publico: 120 minutos
   mutate_at(vars(matches("TMI")), list(~ ifelse(is.infinite(.) & modo == "caminhada", 60, 
-                                             ifelse(is.infinite(.) & modo %in% c("tp", "bicicleta"), 120, .))))
+                                             ifelse(is.infinite(.) & modo %in% c("tp", "bicicleta"), 120, .)))) %>%
+  
+  # transformar para sf
+  st_sf()
   
 
 
-
-
 names(hex_dt_fim)
-s
+
+
+
 # 3) Exportar ---------------------------
 
 # salvar dados em shapefile
-st_write(hex_dt_fim %>% st_sf(), "acess_oport_2019.shp")
-st_write(hex_dt_fim %>% st_sf(), "acess_oport_2019.geodb")
-write_rds(hex_dt_fim %>% st_sf(), "acess_oport_2019.rds", )
+st_write(hex_dt_fim, "../data/output_base_final/shp/acess_oport_2019.shp")
+# zip
+zip::zipr(zipfile = "../data/output_base_final/acess_oport_2019.zip", 
+          files = dir("../data/output_base_final/shp", pattern = "*.shp|*.shx|*.dbf|.*prj", full.names = TRUE))
+
+
+# st_write(hex_dt_fim, "acess_oport_2019.geodb")
+
+# salvar rds
+write_rds(hex_dt_fim, "../data/output_base_final/acess_oport_2019.rds", )
