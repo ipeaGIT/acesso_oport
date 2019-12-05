@@ -196,7 +196,7 @@ fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
 
 # 2) TMI Ed Infantil Walk -------------------------
 
-fazer_plot_2 <- function(sigla_muni, cols = 2) {
+fazer_plot_2 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
@@ -241,7 +241,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2) {
   # save map
   ggsave(plot2, 
          file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.png", sigla_muni),
-         dpi = 300, width = 12, height = 8, units = "cm")
+         dpi = 300, width = width, height = height, units = "cm")
 }
 
 
@@ -249,7 +249,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2) {
 # 3) CMA Trabalho Bike 15/45 ----------------------------------
 
 
-fazer_plot_3 <- function(sigla_muni, cols = 2) {
+fazer_plot_3 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>%
@@ -290,13 +290,13 @@ fazer_plot_3 <- function(sigla_muni, cols = 2) {
   
   ggsave(plot3, 
          file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.png", sigla_muni), 
-         dpi = 300, width = 14, height = 10, units = "cm")
+         dpi = 300, width = width, height = height, units = "cm")
 }
 
 
 # 4) CMA Trabalho/Escola TP 60 ---------------------
 
-fazer_plot_4 <- function(sigla_muni, cols = 2) {
+fazer_plot_4 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>% 
@@ -336,7 +336,7 @@ fazer_plot_4 <- function(sigla_muni, cols = 2) {
   
   ggsave(plot4, 
          file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.png", sigla_muni),
-         dpi = 300, width = 14, height = 10, units = "cm")
+         dpi = 300, width = width, height = height, units = "cm")
   
 }
 
@@ -350,9 +350,9 @@ purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4)
 
 # para o rio, optar por uma coluna so no plot!
 fazer_plot_1('rio', cols = 1, width = 12, height = 18)
-fazer_plot_2('rio', cols = 1)
-fazer_plot_3('rio', cols = 1)
-fazer_plot_4('rio', cols = 1)
+fazer_plot_2('rio', cols = 1, width = 12, height = 18)
+fazer_plot_3('rio', cols = 1, width = 12, height = 18)
+fazer_plot_4('rio', cols = 1, width = 12, height = 18)
 
 
 
