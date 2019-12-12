@@ -93,8 +93,8 @@ hex_dt_fim <- hex_dt %>%
   mutate_at(vars(matches("CMA|TMI")), round, digits = 4) %>%
   
   # renomear os modos
-  mutate(modo = ifelse(modo == "transit", "tp", modo)) %>%
   mutate(modo = case_when(
+    modo == "transit" ~ "tp",
     modo == "bike" ~"bicicleta",
     modo == "walk" ~ "caminhada"
   )) %>%

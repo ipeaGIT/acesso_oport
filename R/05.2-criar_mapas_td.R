@@ -1,6 +1,5 @@
 # carregar bibliotecas ----------------
 source('./R/fun/setup.R')
-source("R/fun/crop_ggmap.R")
 
 library(ggalt)
 library(hrbrthemes)
@@ -30,18 +29,8 @@ library(ggnewscale) # install.packages("ggnewscale")
 
 ###### A. Carrega dados ---------------------------
 
-# dados hex agregados
-hex_agreg <- lapply(dir("../data/hex_agregados/", full.names = TRUE, pattern = "09"), read_rds) %>% rbindlist(fill = TRUE)
-head(hex_agreg)
-
-# dados acessibilidade
-acess <- lapply(dir("../data/output_access/", full.names = TRUE), read_rds) %>% rbindlist(fill = TRUE)
-setDT(acess)
-setnames(acess, 'origin', 'id_hex' )
-
-# join data sets
-hex_dt <- left_join(acess, hex_agreg[, -"geometry", with =F], by=c("id_hex", "quintil", "decil"))
-setDT(hex_dt)                                                               
+# abrir dados
+acess_final <- read_rds("../data/output_base_final/acess_oport_2019.rds")
 
 
 ###### B. temas para mapas ---------------------------
@@ -143,18 +132,19 @@ beepr::beep()
 
 # 1) Mapa TMI saude de media e alta - PT  ---------------------------------------
 
-fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
+fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
-  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
+  # acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
+  acess <- acess_final %>% filter(sigla_muni == sigla_munii)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
   
   
   # tirar so pt e pico e colocar em format long
   acess_pt_pico <- acess %>%
-    filter(mode == "transit" & pico == 1) %>%
+    filter(modo == "tp" & pico == 1) %>%
     # tirar so saude medio e alta
     select(TMISM, TMISA) %>%
     gather(ind, valor, TMISM:TMISA)
@@ -178,7 +168,7 @@ fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
                                  , labels = c(0, 10, 20, "+30 min")
     ) +
     labs(fill = "Tempo até a oportunidade\n mais próxima",
-         title = munis_df[abrev_muni == sigla_muni]$name_muni)+
+         title = munis_df[abrev_muni == sigla_munii]$name_muni)+
     facet_wrap(~ind, ncol = cols)+
     theme_for_TMI()+
     theme(plot.title = element_text(hjust = 0.5))
@@ -186,7 +176,7 @@ fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot1, 
-         file= sprintf("../figures/td/fig1/fig1-%s_TMI_SM_TP.png", sigla_muni), 
+         file= sprintf("../figures/td/fig1/fig1-%s_TMI_SM_TP.png", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -196,17 +186,18 @@ fazer_plot_1 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
 
 # 2) TMI Ed Infantil Walk -------------------------
 
-fazer_plot_2 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
+fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
-  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
+  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_munii))
+  acess <- acess_final %>% filter(sigla_muni == sigla_munii)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
   
   # tirar so pt e pico e colocar em format long
   acess_pt_pico <- acess %>%
-    filter(mode == "walk" & pico == 1) %>%
+    filter(modo == "caminhada" & pico == 1) %>%
     # tirar so educacao
     select(TMIEI, TMIEF) %>%
     gather(ind, valor, TMIEI:TMIEF)
@@ -230,7 +221,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
                                  , labels = c(0, 10, 20, "+30 min")
     ) +
     labs(fill = "Tempo até a oportunidade\n mais próxima",
-         title = munis_df[abrev_muni == sigla_muni]$name_muni)+
+         title = munis_df[abrev_muni == sigla_munii]$name_muni)+
     facet_wrap(~ind, ncol = cols)+
     theme_for_TMI()+
     theme(plot.title = element_text(hjust = 0.5))
@@ -240,7 +231,7 @@ fazer_plot_2 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot2, 
-         file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.png", sigla_muni),
+         file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.png", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -249,16 +240,17 @@ fazer_plot_2 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
 # 3) CMA Trabalho Bike 15/45 ----------------------------------
 
 
-fazer_plot_3 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
+fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
-  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>%
-    filter(mode == "bike") %>%
-    select(city, CMATT15, CMATT45) %>%
+  acess <- acess_final %>% filter(sigla_muni == sigla_munii) %>%
+    # read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_munii)) %>%
+    filter(modo == "bicicleta") %>%
+    select(sigla_muni, CMATT15, CMATT45) %>%
     gather(ind, valor, CMATT15:CMATT45)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
   
   # ajustar levels
   acess <- acess %>%
@@ -283,29 +275,30 @@ fazer_plot_3 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
     facet_wrap(~ind, ncol = cols)+
     theme_for_CMA()+
     labs(fill = "Porcentagem de oportunidades\n acessíveis",
-         title = munis_df[abrev_muni == sigla_muni]$name_muni) +
+         title = munis_df[abrev_muni == sigla_munii]$name_muni) +
     theme(plot.title = element_text(hjust = 0.5))
   
   
   
   ggsave(plot3, 
-         file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.png", sigla_muni), 
+         file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.png", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
 
 # 4) CMA Trabalho/Escola TP 60 ---------------------
 
-fazer_plot_4 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
+fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
-  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni)) %>% 
-    filter(mode == "transit") %>%
-    select(city, CMATT60, CMAEF60) %>%
+  acess <-  acess_final %>% filter(sigla_muni == sigla_munii) %>%
+    # read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_munii)) %>% 
+    filter(modo == "tp") %>%
+    select(sigla_muni, CMATT60, CMAEF60) %>%
     gather(ind, valor, CMATT60:CMAEF60)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_muni))
+  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
   
   # fazer grafico
   acess <- acess %>%
@@ -329,13 +322,13 @@ fazer_plot_4 <- function(sigla_muni, cols = 2, width = 14, height = 10) {
     facet_wrap(~ind, ncol = cols)+
     theme_for_CMA()+
     labs(fill = "Porcentagem de oportunidades\n acessíveis",
-         title = munis_df[abrev_muni == sigla_muni]$name_muni) +
+         title = munis_df[abrev_muni == sigla_munii]$name_muni) +
     theme(plot.title = element_text(hjust = 0.5))
   
   
   
   ggsave(plot4, 
-         file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.png", sigla_muni),
+         file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.png", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
   
 }
@@ -364,49 +357,49 @@ fazer_plot_4('rio', cols = 1, width = 12, height = 18)
 # abrir o acess de todas as cidades e juntar
 
 # seleciona so bike
-acess_bike <- setDT(hex_dt)[ mode == "bike" ]
+acess_bike <- setDT(acess_final)[ modo == "bicicleta" ]
 
 # Se nenhuma atividade acessivel (TMIEM==Inf), entao imputar TMIEM de 90 min.
 acess_bike[, TMIEM := fifelse(TMIEM==Inf, 90, TMIEM)]
 
 # tempo medio ponderapo pela populacao de cada hexagono
-df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(pop_total>0)], w = pop_total[which(pop_total>0)], na.rm=T),
-                      Negra = weighted.mean(TMIEM[which(cor_negra>0)], w = cor_negra[which(cor_negra>0)], na.rm=T),
-                      Branca = weighted.mean(TMIEM[which(cor_branca>0)], w = cor_branca[which(cor_branca>0)], na.rm=T),
-                      Q1 = weighted.mean(TMIEM[which(quintil==1)], w = pop_total[which(quintil==1)], na.rm=T),
-                      Q5 = weighted.mean(TMIEM[which(quintil==5)], w = pop_total[which(quintil==5)], na.rm=T)), by=city]
+df4 <- acess_bike[, .(Total = weighted.mean(x = TMIEM[which(P001>0)], w = P001[which(P001>0)], na.rm=T),
+                      Negra = weighted.mean(TMIEM[which(P003>0)], w = P003[which(P003>0)], na.rm=T),
+                      Branca = weighted.mean(TMIEM[which(P002>0)], w = P002[which(P002>0)], na.rm=T),
+                      Q1 = weighted.mean(TMIEM[which(R002==1)], w = P001[which(R002==1)], na.rm=T),
+                      Q5 = weighted.mean(TMIEM[which(R002==5)], w = P001[which(R002==5)], na.rm=T)), by=sigla_muni]
 
 
 
 # ajeitar nome das cidade
 df4 <- df4 %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
+  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni))
 
 
 
 df4 %>%
   ggplot() + 
-  geom_dumbbell(aes(x = Q5, xend = Q1, y = forcats::fct_reorder(city, Q1)), 
+  geom_dumbbell(aes(x = Q5, xend = Q1, y = forcats::fct_reorder(sigla_muni, Q1)), 
                 size=3, color="gray80", alpha=.8, colour_x = "steelblue4", colour_xend = "springgreen4") +
-  geom_point(aes(x = Total, y = city), color = "black", size = 2)+
+  geom_point(aes(x = Total, y = sigla_muni), color = "black", size = 2)+
   scale_color_manual(values=c('#f0a150', '#f48020', '#f0750f'), 
                      name="", 
                      labels=c('Pobres Q1', 'Média', 'Ricos Q5')) +
   scale_x_continuous(name="", limits = c(0, 24),
                      breaks = c(0, 5, 10, 15, 20),
                      labels = c(0, 5,  10, 15,"20 minutos")) +
-  geom_text(data = filter(df4, city == "Goiania"),
-            aes(x = Q1, y = city),
+  geom_text(data = filter(df4, sigla_muni == "Goiania"),
+            aes(x = Q1, y = sigla_muni),
             label = "Pobres Q1", fontface = "bold",
             color = "springgreen4",
             hjust = -0.5) +
-  geom_text(data = filter(df4, city == "Goiania"),
-            aes(x = Q5, y = city),
+  geom_text(data = filter(df4, sigla_muni == "Goiania"),
+            aes(x = Q5, y = sigla_muni),
             label = "Ricos Q5", fontface = "bold",
             color = "steelblue4",
             hjust = 1.5) +
-  geom_text(data = filter(df4, city == "Goiania"),
-            aes(x = Total, y = city),
+  geom_text(data = filter(df4, sigla_muni == "Goiania"),
+            aes(x = Total, y = sigla_muni),
             label = "Total", fontface = "bold",
             color = "black",
             vjust = -1) +
@@ -430,9 +423,9 @@ beep()
 
 # 6) CMA Boxplot Decil cam/poa/goi Trabalho TP 30 ------------------------------
 
-acess_walk <- hex_dt %>%
+acess_walk <- acess_final %>%
   # pegar so TP
-  filter(mode == "walk")
+  filter(modo == "caminhada")
 
 
 
@@ -448,16 +441,16 @@ baseplot2 <- theme_minimal() +
   )
 
 acess_walk %>% 
-  filter(decil >0) %>%
+  filter(R003 >0) %>%
   # filtrar so as cidades de tamanho semelhante
-  filter(city %in% c("cam", "poa", "goi")) %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  filter(sigla_muni %in% c("cam", "poa", "goi")) %>%
+  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
   ggplot()+
-  geom_boxplot(aes(x = factor(decil), y = CMATT30, weight=pop_total, color = factor(decil)),
+  geom_boxplot(aes(x = factor(R003), y = CMATT30, weight=P001, color = factor(R003)),
                # size = 1, 
                outlier.colour=rgb(.5,.5,.5, alpha=0.05)) +
   # facet_grid(threshold_name ~ ., scales = "free_y") +
-  facet_wrap(~city) +
+  facet_wrap(~sigla_muni) +
   scale_colour_brewer(palette = "RdBu", labels=c('D1 Pobres', paste0('D', c(2:9)), 'D10 ricos'), name='Decil de renda') +
   scale_y_percent() +
   hrbrthemes::theme_ipsum_rc(grid = "Y") +
@@ -488,28 +481,28 @@ beep()
 # calcular acessibilidade media do 90 percentil e 40 percentil de renda
 # usar caminhada pico CMATT30
 
-acess_palma <- hex_dt %>%
-  filter(mode == "bike" & pico == 1) %>%
-  select(city, decil, pop_total, CMATT30) %>%
+acess_palma <- acess_final %>%
+  filter(modo == "bicicleta" & pico == 1) %>%
+  select(sigla_muni, R003, P001, CMATT30) %>%
   # pegar so decis 4 e 9
-  filter(decil %in% c(1, 2, 3, 4, 10)) %>%
+  filter(R003 %in% c(1, 2, 3, 4, 10)) %>%
   # definir ricos e pobres
-  mutate(classe = ifelse(decil %in% c(1, 2, 3, 4), "pobre", "rico")) %>%
-  group_by(city, classe) %>%
-  summarise(acess_media = weighted.mean(CMATT30, pop_total)) %>%
+  mutate(classe = ifelse(R003 %in% c(1, 2, 3, 4), "pobre", "rico")) %>%
+  group_by(sigla_muni, classe) %>%
+  summarise(acess_media = weighted.mean(CMATT30, P001)) %>%
   ungroup() %>%
   spread(classe, acess_media) %>%
   # calcular palma ratio
-  group_by(city) %>%
+  group_by(sigla_muni) %>%
   mutate(palma_ratio = rico/pobre) %>%
   ungroup()
 
 # visualizar
 acess_palma %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
-  mutate(city = fct_reorder(city, palma_ratio)) %>%
+  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
   ggplot()+
-  geom_col(aes(y = palma_ratio, x = city))+
+  geom_col(aes(y = palma_ratio, x = sigla_muni))+
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = c(0, 1, 3, 6, 9))+
   coord_flip()+
@@ -527,22 +520,22 @@ ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30.png", dpi = 300, widt
 # calcular acessibilidade media do 90 percentil e 40 percentil de renda
 # usar TP pico CMASA60
 
-acess_palma_2 <- hex_dt %>%
-  filter(mode == "transit" & pico == 1) %>%
-  select(city, decil, pop_total, cor_negra, cor_branca, CMASA60) %>%
-  group_by(city) %>%
-  summarise(acess_brancos = weighted.mean(CMASA60, cor_branca),
-            acess_negros = weighted.mean(CMASA60, cor_negra)) %>%
+acess_palma_2 <- acess_final %>%
+  filter(modo == "tp" & pico == 1) %>%
+  select(sigla_muni, R003, P001, P003, P002, CMASA60) %>%
+  group_by(sigla_muni) %>%
+  summarise(acess_brancos = weighted.mean(CMASA60, P002),
+            acess_negros = weighted.mean(CMASA60, P003)) %>%
   # calcular palma ratio
   mutate(palma_ratio = acess_brancos/acess_negros) %>%
   ungroup()
 
 # visualizar
 acess_palma_2 %>%
-  mutate(city = factor(city, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
-  mutate(city = fct_reorder(city, palma_ratio)) %>%
+  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
   ggplot()+
-  geom_col(aes(y = palma_ratio, x = city))+
+  geom_col(aes(y = palma_ratio, x = sigla_muni))+
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
