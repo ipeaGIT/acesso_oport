@@ -5,8 +5,8 @@ library(leaflet)
 # library(shinydashboard) 
 library(readr)
 library(data.table)
-library(mapview)
-library(leaflet.mapboxgl)
+# library(mapview)
+# library(leaflet.mapboxgl)
 # library(hrbrthemes)
 # library(forcats)
 # library(sp)
@@ -20,15 +20,13 @@ options(mapbox.accessToken = my_api$V1)
 
 # abrir acessibilidade
 
-acess_cum <- read_rds("../data/acess_cum_junto.rds") %>%
+acess_cum <- read_rds("acess_tp_cum_app.rds") %>%
   data.table()
 
-acess_min <- read_rds("../data/acess_min_junto.rds") %>%
+acess_min <- read_rds("acess_tp_min_app.rds") %>%
   data.table()
 
 linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
-
-# limites <- read_rds("../data/limites_munis.rds")
 
 
 # Define a server for the Shiny app
@@ -36,25 +34,30 @@ function(input, output) {
   
   # Reactive expression for the data subsetted to what the user selected
   cidade_filtrada <- reactive({
-    ai <- acess_cum[cidade_nome == input$cidade]
+    ai <- acess_cum[nome_muni == input$cidade]
   })
   
   # Reactive expression for the data subsetted to what the user selected
   cidade_filtrada_min <- reactive({
-    ai <- acess_min[cidade_nome == input$cidade]
+    ai <- acess_min[nome_muni == input$cidade]
   })
+  
+  
   
   # Reactive para a atividade
   atividade_filtrada <- reactive({
-    if (input$atividade == "Saúde") {
+    
+    if(input$atividade_cum == "Trabalho"){
       
-    cidade_filtrada()[, .(id_hex, pop_total, saude_total, tempo_viagem, geometry)] %>% rename(atividade = saude_total)
+      cidade_filtrada()[atividade == "TT"]
       
-    } else if (input$atividade == "Educação")
+    } else if (input$atividade_cum == "Saúde") {
       
-    {
+      cidade_filtrada()[atividade == "ST"]
       
-    cidade_filtrada()[, .(id_hex, pop_total, escolas_total, tempo_viagem, geometry)] %>% rename(atividade = escolas_total)
+    } else if (input$atividade_cum == "Educação") {
+      
+      cidade_filtrada()[atividade == "ET"]
       
     }
   })
@@ -62,17 +65,16 @@ function(input, output) {
   # Atividade filtrada para o indicador minimo
   
   atividade_filtrada_min <- reactive({
-    if (input$atividade == "Saúde") {
+    
+    if (input$atividade_min == "Saúde") {
       
-    cidade_filtrada_min()[, .(id_hex, pop_total, atividade, travel_time, geometry)] %>% 
-        filter(atividade == "saude_total") %>%
-        st_as_sf() 
+      cidade_filtrada_min()[atividade == "ST"] %>% st_as_sf() 
+
       
-    } else if (input$atividade == "Educação") {
+    } else if (input$atividade_min == "Educação") {
       
-    cidade_filtrada_min()[, .(id_hex, pop_total, atividade, travel_time, geometry)] %>% 
-        filter(atividade == "escolas_total") %>% 
-        st_as_sf() 
+
+      cidade_filtrada_min()[atividade == "ET"] %>% st_as_sf() 
       
     }
     
@@ -87,21 +89,24 @@ function(input, output) {
   
   # Reactive para a cor do mapa
   colorpal <- reactive({
-    colorNumeric("BuPu", tempo_filtrado()$atividade)
+    colorNumeric("inferno", tempo_filtrado()$valor)
   })
   
   colorpal_min <- reactive({
-        colorNumeric("BuPu", atividade_filtrada_min()$travel_time)
+        colorNumeric("inferno", atividade_filtrada_min()$valor)
   })
   
-  # Mapa
+  
+  
+  
+  # baseMap
   output$map <- renderLeaflet({
     
-    vai <- filter(acess_cum, cidade_nome == input$cidade) %>% st_as_sf()
+    vai <- filter(acess_cum, nome_muni == input$cidade) %>% st_as_sf()
     
-    limite <- vai %>%
-      mutate(ui = 1) %>%
-      count(ui)
+    # limite <- vai %>%
+    #   mutate(ui = 1) %>%
+    #   count(ui)
     
     bounds <- st_bbox(vai)
     min_lon <- bounds["xmin"] %>% as.numeric()
@@ -111,11 +116,11 @@ function(input, output) {
     
     # cidade_filtrada() %>%
       leaflet(data = vai) %>%
-        addTiles() %>%
+        addProviderTiles(provider = providers$CartoDB) %>%
         # addMapboxGL(style = "mapbox://styles/mapbox/streets-v9") %>%
-        addPolygons(data = limite, stroke = TRUE, color = "black", weight = 5, fill = FALSE)
-        # fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat)
-      # addLegend(data = filter(access, cidade_nome == "Fortaleza"), 
+        # addPolygons(data = limite, stroke = TRUE, color = "black", weight = 5, fill = FALSE)
+        fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat)
+      # addLegend(data = filter(access, nome_muni == "Fortaleza"), 
       #           "bottomright", pal = pal, values = ~saude_total,
       #           title = "Oportunidade de saúde em<br/> até 40 minutos",
       #           opacity = 1)
@@ -126,7 +131,7 @@ function(input, output) {
 
   # observe({
   #   
-  #   p2 <- st_as_sf(acess[cidade_nome == input$cidade])
+  #   p2 <- st_as_sf(acess[nome_muni == input$cidade])
   #   
   #   min_lon <- st_bbox(p2)["xmin"] %>% as.numeric()
   #   min_lat <- st_bbox(p2)["ymin"] %>% as.numeric()
@@ -151,8 +156,8 @@ function(input, output) {
     if (input$indicador == "Cumulativo") {
       pal <- colorpal()
       
-      popup_hex <- paste0("<b>População: </b>", tempo_filtrado()$pop_total, "<br/>",
-                      "<b>Oportunidades: </b>", tempo_filtrado()$atividade, "<br/>")
+      popup_hex <- paste0("<b>População: </b>", tempo_filtrado()$P001, "<br/>",
+                      "<b>% Oportunidades: </b>", tempo_filtrado()$valor, "<br/>")
       
       popup_linha <- paste0("<b>Tipo da linha</b>: ", linhas_cidade$Modo)
       
@@ -161,9 +166,9 @@ function(input, output) {
       leafletProxy("map", data = tempo_filtrado()) %>%
         clearShapes() %>%
         clearControls() %>%
-        addPolygons(stroke = FALSE, weight = 0.7, color = "black",
+        addPolygons(stroke = FALSE, 
                     fillOpacity = 0.7,
-                    fillColor = ~pal(atividade),
+                    fillColor = ~pal(valor),
                     popup = popup_hex) %>%
         addPolylines(data = linhas_cidade,
                      opacity = 1,
@@ -171,8 +176,8 @@ function(input, output) {
                      popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
         addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", position = "topleft",
                          options = layersControlOptions(collapsed = FALSE)) %>%
-        addLegend(data = tempo_filtrado(), "bottomleft", pal = pal, values = ~atividade,
-                  title = sprintf("Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
+        addLegend(data = tempo_filtrado(), "bottomleft", pal = pal, values = ~valor,
+                  title = sprintf("Porcento de Oportunidades acessíveis<br/> em %s minutos", input$tempo)) %>%
         addLegend(data = linhas_cidade, "topleft", pal = colorpal_linhas, values = ~Modo,
                   title = "Modo da Linha", 
                   group = "Corredores de Alta e Média Capacidade")
@@ -182,7 +187,7 @@ function(input, output) {
       
       pal <- colorpal_min()
       
-      popup_hex <- paste0("<b>População: </b>", atividade_filtrada_min()$pop_total, "<br/>")
+      popup_hex <- paste0("<b>População: </b>", atividade_filtrada_min()$P001, "<br/>")
       
       popup_linha <- paste0("<b>Tipo da linha</b>: ", linhas_cidade$Modo)
       
@@ -191,9 +196,9 @@ function(input, output) {
       leafletProxy("map", data = atividade_filtrada_min()) %>%
         clearShapes() %>%
         clearControls() %>%
-        addPolygons(stroke = FALSE, weight = 0.7, color = "black",
+        addPolygons(stroke = FALSE,
                     fillOpacity = 0.7,
-                    fillColor = ~pal(travel_time),
+                    fillColor = ~pal(valor),
                     popup = popup_hex) %>%
         addPolylines(data = linhas_cidade,
                      opacity = 1,
@@ -201,7 +206,7 @@ function(input, output) {
                      popup = popup_linha, color = ~colorpal_linhas(Modo)) %>%
         addLayersControl(overlayGroups = "Corredores de Alta e Média Capacidade", position = "topleft",
                          options = layersControlOptions(collapsed = FALSE)) %>%
-        addLegend(data = atividade_filtrada_min(), "bottomleft", pal = pal, values = ~travel_time,
+        addLegend(data = atividade_filtrada_min(), "bottomleft", pal = pal, values = ~valor,
                   title = c("Minutos atè a oportunidade mais próxima")) %>%
         addLegend(data = linhas_cidade, "topleft", pal = colorpal_linhas, values = ~Modo,
                   title = "Modo da Linha", 
