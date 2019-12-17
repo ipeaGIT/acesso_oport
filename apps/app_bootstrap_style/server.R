@@ -12,7 +12,9 @@ library(leaflet.mapboxgl)
 # library(sp)
 # library(rgdal)
 
-options(mapbox.accessToken = "pk.eyJ1Ijoia2F1ZWJyYWdhIiwiYSI6ImNqa2JoN3VodDMxa2YzcHFxMzM2YWw1bmYifQ.XAhHAgbe0LcDqKYyqKYIIQ")
+# register mapbox api key
+my_api <- data.table::fread("../../../data-raw/mapbox_key.txt", header = F)
+options(mapbox.accessToken = my_api$V1)
 
 
 
@@ -109,8 +111,8 @@ function(input, output) {
     
     # cidade_filtrada() %>%
       leaflet(data = vai) %>%
-        # addTiles() %>%
-        addMapboxGL(style = "mapbox://styles/mapbox/streets-v9") %>%
+        addTiles() %>%
+        # addMapboxGL(style = "mapbox://styles/mapbox/streets-v9") %>%
         addPolygons(data = limite, stroke = TRUE, color = "black", weight = 5, fill = FALSE)
         # fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat)
       # addLegend(data = filter(access, cidade_nome == "Fortaleza"), 
