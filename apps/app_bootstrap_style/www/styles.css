@@ -108,6 +108,33 @@ h1 {
 } */
 
 
+.legend {
+    font-family: "Roboto Condensed", sans-serif;
+    font-size: 16px;
+    background: #fff;
+    padding: 8px;
+    margin: 8px;
+    border: 1px solid #b8b8b8;
+    border-radius: 4px;
+    display: inline-block;
+    max-height: 200px;
+    max-width: 200px;
+    overflow: auto;
+    position: fixed;
+    bottom: 50px;
+    left: 0;
+}
+
+.legendTitle {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+
+
+
+/* ESSA PARTE DE BAIXO SO FUNCIONA SE FOR USADO LEAFET!!!
+
 /* Mudar a font do leaflet! */
 .leaflet-container {
   font: 14px "Roboto Condensed", sans-serif;

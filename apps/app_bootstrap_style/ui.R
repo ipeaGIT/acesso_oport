@@ -2,6 +2,8 @@ library(shiny)
 library(leaflet)
 library(RColorBrewer)
 library(shinyWidgets)
+library(mapdeck)
+
 
 
 # UI SO COM UMA ABA -------------------------------------------------------
@@ -13,7 +15,7 @@ div(class = "navbar-default",
                         # https://divadnojnarg.github.io/blog/customsliderinput/
                         chooseSliderSkin("Modern"),
                         # titlePanel(HTML("<h1>&emsp;Acesso a Oportunidades</h1>")),
-                        leafletOutput("map"),
+                        mapdeckOutput("map"),
                         absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE, draggable = FALSE,
                                       top = 80, right = 20, width = 350, height = 600,
                                       selectInput(inputId = "cidade",
