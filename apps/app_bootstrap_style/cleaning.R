@@ -17,7 +17,7 @@ acess_tp <- acess %>% filter(modo == "tp")
 acess_tp <- acess_tp %>% filter(pico == 1)
 
 # filter columns
-acess_tp <- acess_tp %>% select(nome_muni, P001, matches("30|60|90|120"), starts_with("TMI"))
+acess_tp <- acess_tp %>% dplyr::select(nome_muni, P001, matches("30|60|90|120"), starts_with("TMI"))
 
 # separate between indicators
 acess_tp_cum <- acess_tp %>% dplyr::select(nome_muni, P001, matches("30|60|90|120"))
