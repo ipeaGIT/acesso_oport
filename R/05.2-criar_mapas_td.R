@@ -37,7 +37,8 @@ acess_final <- read_rds("../data/output_base_final/acess_oport_2019.rds")
 
 theme_for_CMA <- function(base_size, ...) {
   
-  theme_void(base_family="Roboto Condensed") %+replace%
+  # theme_void(base_family="Roboto Condensed") %+replace%
+  theme_void() %+replace%
     
     theme(
       legend.position = "bottom",
@@ -55,7 +56,8 @@ theme_for_CMA <- function(base_size, ...) {
 
 theme_for_TMI <- function(base_size) {
   
-  theme_void(base_family="Roboto Condensed") %+replace%
+  # theme_void(base_family="Roboto Condensed") %+replace%
+  theme_void() %+replace%
     
     theme(
       legend.position = "bottom",
@@ -121,7 +123,7 @@ temp_map1 <-
 
 
 # save map
-ggsave(temp_map1, file="../figures/td/fig0_munis_all.png", dpi = 300, width = 16.5, height = 16.5, units = "cm")
+ggsave(temp_map1, file="../figures/td/fig0_munis_all.pdf", dpi = 300, width = 16.5, height = 16.5, units = "cm")
 beepr::beep()
 
 
@@ -176,7 +178,7 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot1, 
-         file= sprintf("../figures/td/fig1/fig1-%s_TMI_SM_TP.png", sigla_munii), 
+         file= sprintf("../figures/td/fig1/fig1-%s_TMI_SM_TP.pdf", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -231,7 +233,7 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot2, 
-         file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.png", sigla_munii),
+         file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.pdf", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -281,7 +283,7 @@ fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   
   ggsave(plot3, 
-         file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.png", sigla_munii), 
+         file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.pdf", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -328,7 +330,7 @@ fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   
   ggsave(plot4, 
-         file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.png", sigla_munii),
+         file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.pdf", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
   
 }
@@ -336,10 +338,10 @@ fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
 
 # Aplicar funcoes -----------
 
-purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_1)
-purrr::walk(munis_df$abrev_muni, fazer_plot_2)
-purrr::walk(munis_df$abrev_muni, fazer_plot_3)
-purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4)
+purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_1, height = 12)
+purrr::walk(munis_df$abrev_muni, fazer_plot_2, height = 12)
+purrr::walk(munis_df$abrev_muni, fazer_plot_3, height = 12)
+purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4, height = 12)
 
 # para o rio, optar por uma coluna so no plot!
 fazer_plot_1('rio', cols = 1, width = 12, height = 18)
@@ -404,7 +406,7 @@ df4 %>%
             color = "black",
             vjust = -1) +
   expand_limits(y = 21)+
-  theme_ipsum_rc(grid= "X") +
+  theme_ipsum(grid= "X") +
   labs(x = "", y = "", title = "")
 
 # TME bike
@@ -412,7 +414,7 @@ df4 %>%
 
 
 
-ggsave(file="../figures/td/fig5_TMIEM_bike_renda90median.png", dpi = 300, width = 16, height = 16, units = "cm")
+ggsave(file="../figures/td/fig5_TMIEM_bike_renda90median.pdf", dpi = 300, width = 16, height = 16, units = "cm")
 beep()
 
 
@@ -453,7 +455,7 @@ acess_walk %>%
   facet_wrap(~sigla_muni) +
   scale_colour_brewer(palette = "RdBu", labels=c('D1 Pobres', paste0('D', c(2:9)), 'D10 ricos'), name='Decil de renda') +
   scale_y_percent() +
-  hrbrthemes::theme_ipsum_rc(grid = "Y") +
+  hrbrthemes::theme_ipsum(grid = "Y") +
   labs(x = "",
        y = "Porcentagem de oportunidades acessíveis") + 
   guides(color=guide_legend(nrow=1)) +
@@ -468,7 +470,7 @@ acess_walk %>%
   )
 
 
-ggsave(file="../figures/td/fig6-boxplot_CMA_rendadecil_walk_TQ_30.png", dpi = 300, width = 25, height = 15, units = "cm")
+ggsave(file="../figures/td/fig6-boxplot_CMA_rendadecil_walk_TQ_30.pdf", dpi = 300, width = 25, height = 15, units = "cm")
 beep()
 
 
@@ -506,11 +508,11 @@ acess_palma %>%
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = c(0, 1, 3, 6, 9))+
   coord_flip()+
-  theme_ipsum_rc(grid = "X")+
+  theme_ipsum(grid = "X")+
   labs(x = "", y = "Palma Ratio")
 
 
-ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
 
 
 
@@ -539,8 +541,33 @@ acess_palma_2 %>%
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
-  theme_ipsum_rc(grid = "X")+
+  theme_ipsum(grid = "X")+
   labs(x = "", y = "Razão Brancos/Negros")
 
 
-ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
+
+
+acess_palma_3 <- acess_final %>%
+  filter(modo == "caminhada") %>%
+  select(sigla_muni, R003, P001, P003, P002, CMASA60) %>%
+  group_by(sigla_muni) %>%
+  summarise(acess_brancos = weighted.mean(CMASA60, P002),
+            acess_negros = weighted.mean(CMASA60, P003)) %>%
+  # calcular palma ratio
+  mutate(palma_ratio = acess_brancos/acess_negros) %>%
+  ungroup()
+
+# visualizar
+acess_palma_3 %>%
+  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
+  ggplot()+
+  geom_col(aes(y = palma_ratio, x = sigla_muni))+
+  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
+  scale_y_continuous(breaks = seq(0, 3, .5))+
+  coord_flip()+
+  theme_ipsum(grid = "X")+
+  labs(x = "", y = "Razão Brancos/Negros")
+
+ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_walk_60.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
