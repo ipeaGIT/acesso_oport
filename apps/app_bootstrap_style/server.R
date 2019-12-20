@@ -16,12 +16,12 @@ set_token(my_api$V1)
 # abrir acessibilidade
 
 acess_cum <- read_rds("acess_tp_cum_app.rds") %>%
-  data.table()
+  setDT()
 
 acess_min <- read_rds("acess_tp_min_app.rds") %>%
-  data.table()
+  setDT()
 
-linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
+# linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 
 limits <- read_rds("cities_centroids.rds")
 
@@ -40,42 +40,18 @@ function(input, output) {
   })
   
   
-  
-  # Reactive para a atividade
+  # # Reactive para a atividade para indicador cumulativo
   atividade_filtrada <- reactive({
-    
-    if(input$atividade_cum == "Trabalho"){
-      
-      cidade_filtrada()[atividade == "TT"]
-      
-    } else if (input$atividade_cum == "Saúde") {
-      
-      cidade_filtrada()[atividade == "ST"]
-      
-    } else if (input$atividade_cum == "Educação") {
-      
-      cidade_filtrada()[atividade == "ET"]
-      
-    }
+    cidade_filtrada()[atividade == input$atividade_cum]
   })
+  
   
   # Atividade filtrada para o indicador minimo
-  
+  # # Reactive para a atividade para indicador cumulativo
   atividade_filtrada_min <- reactive({
-    
-    if (input$atividade_min == "Saúde") {
-      
-      cidade_filtrada_min()[atividade == "ST"] %>% st_sf(crs = 4326) 
-
-      
-    } else if (input$atividade_min == "Educação") {
-      
-
-      cidade_filtrada_min()[atividade == "ET"] %>% st_sf(crs = 4326) 
-      
-    }
-    
+    cidade_filtrada_min()[atividade == input$atividade_min] %>% st_sf(crs = 4326)
   })
+  
   
   # Reactive para o tempo
   tempo_filtrado <- reactive({
@@ -112,28 +88,35 @@ function(input, output) {
     #     addProviderTiles(provider = providers$CartoDB) %>%
     #     fitBounds(~min_lon, ~min_lat, ~max_lon, ~max_lat)
     
-    centroid <- filter(limits, name_muni == input$cidade)
-    
-    mapdeck() %>%
-      mapdeck_view(location = c(centroid$lon, centroid$lat), zoom = 10)
+    mapdeck()
   
     
     })
   
+  
+  centroid_go <- reactive({
+    filter(limits, name_muni == input$cidade)
+  })
 
   
   observe({
     
+    # zoom in the city
+    proxy <- mapdeck_update(map_id = "map") %>%
+      mapdeck_view(location = c(centroid_go()$lon, centroid_go()$lat), zoom = 11,
+                   transition = "fly")
     
-    linhas_cidade <- linhas %>%
-      filter(Cidade == input$cidade) %>%
-      filter(!st_is_empty(.))
     
-    colorpal_linhas <- colorFactor("Accent", linhas_cidade$Modo)
+    
+    # linhas_cidade <- linhas %>%
+    #   filter(Cidade == input$cidade) %>%
+    #   filter(!st_is_empty(.))
+    
+    # colorpal_linhas <- colorFactor("Accent", linhas_cidade$Modo)
     
     if (input$indicador == "Cumulativo") {
       
-      mapdeck_update(map_id = "map") %>%
+      proxy %>%
         clear_polygon(layer_id = "acess_min_go") %>%
         clear_legend(layer_id = "acess_min_go") %>%
         add_polygon(
@@ -145,14 +128,20 @@ function(input, output) {
           update_view = FALSE,
           focus_layer = FALSE,
           legend = TRUE,
-          legend_options = list(title = "% de Oportunidades Acessíveis")
-          # legend_format = list(fill_colour = scales::percent)
+          legend_options = list(title = "% de Oportunidades Acessíveis"),
+          legend_format = list( fill_colour = as.integer)
         )
       
       
     } else if (input$indicador == "Oportunidade mais próxima") {
       
-      mapdeck_update(map_id = "map") %>%
+      # create viridis scale in the reverse direction
+      # create matrix
+      colorss <- colourvalues::color_values_rgb(x = 1:256, "viridis")
+      # invert matrix
+      colorss <- apply(colorss, 2, rev)
+      
+      proxy %>%
         clear_polygon(layer_id = "acess_cum_go") %>%
         clear_legend(layer_id = "acess_cum_go") %>%
         add_polygon(
@@ -160,13 +149,12 @@ function(input, output) {
           fill_colour = "valor",
           fill_opacity = 200,
           layer_id = "acess_min_go",
-          palette = "inferno",
+          palette = colorss,
           update_view = FALSE,
           legend = TRUE,
-          legend_options = list(title = "Minutos atè a oportunidade mais próxima")
+          legend_options = list(title = "Minutos atè a oportunidade mais próxima"),
+          legend_format = list( fill_colour = as.integer)
         )
-      
-      
       
     }
       
