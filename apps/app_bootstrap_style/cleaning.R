@@ -51,3 +51,6 @@ write_rds(acess_tp_cum_long %>%   # tirar sao paulo e rio para teste
 
 write_rds(acess_tp_min_long %>%   # tirar sao paulo e rio para teste
             filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro")), "acess_tp_min_app.rds") 
+
+
+# para abrir
