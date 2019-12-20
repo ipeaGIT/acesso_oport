@@ -30,13 +30,19 @@ acess_tp_cum_long <- acess_tp_cum %>%
   # extract time threshld (separate at the position 5 of the string)
   tidyr::separate(tipo, c("indicador", "tempo_viagem"), sep = 5) %>%
   # extract activity
-  tidyr::separate(indicador, c("indicador", "atividade"), sep = 3)
+  tidyr::separate(indicador, c("indicador", "atividade"), sep = 3) %>%
+  # multiply percent
+  mutate(valor = valor * 100)
   
 acess_tp_min_long <- acess_tp_min %>%
   # wide to long
   tidyr::gather(tipo, valor, TMIST:TMIEM) %>%
   # extract activity
-  tidyr::separate(tipo, c("indicador", "atividade"), sep = 3)
+  tidyr::separate(tipo, c("indicador", "atividade"), sep = 3) %>%
+  # ajeitar infinitos
+  mutate(valor = ifelse(is.infinite(valor), 120, valor)) %>%
+  # truncar valores acima de 30 minutos
+  mutate(valor = ifelse(valor > 30, 30, valor))
 
 
 # salvar
