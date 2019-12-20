@@ -9,7 +9,7 @@ limits1 <- do.call(rbind, limits) %>%
   st_centroid() %>%
   sfc_as_cols() %>%
   # add abrev muni
-  left_join(munis_df %>% select(code_muni, abrev_muni), by = c("code_muni"))
+  left_join(munis_df %>% dplyr::select(code_muni, abrev_muni), by = c("code_muni"))
   
 
 # save
