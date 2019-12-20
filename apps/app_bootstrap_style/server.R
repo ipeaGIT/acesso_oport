@@ -1,10 +1,19 @@
 library(shiny)
 library(dplyr)
 library(sf)
-library(leaflet)
+# library(leaflet)
 library(readr)
 library(data.table)
 library(mapdeck)
+
+
+
+# Use GForce Optimisations in data.table operations
+options(datatable.optimize=Inf)
+
+# set number of threads used in data.table
+data.table::setDTthreads(percent = 100)
+
 
 # register mapbox api key
 my_api <- data.table::fread("../../../data-raw/mapbox_key.txt", header = F)
@@ -15,11 +24,11 @@ set_token(my_api$V1)
 
 # abrir acessibilidade
 
-acess_cum <- read_rds("acess_tp_cum_app.rds") %>%
-  setDT()
+acess_cum <- read_rds("data/acess_tp_cum_app_sgeo.rds")
 
-acess_min <- read_rds("acess_tp_min_app.rds") %>%
-  setDT()
+acess_min <- read_rds("data/acess_tp_min_app_sgeo.rds")
+
+hex <- read_rds("data/hex_teste.rds")
 
 # linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 
@@ -31,12 +40,12 @@ function(input, output) {
   
   # Reactive expression for the data subsetted to what the user selected
   cidade_filtrada <- reactive({
-    acess_cum[nome_muni == input$cidade]
+    acess_cum[sigla_muni == input$cidade]
   })
   
   # Reactive expression for the data subsetted to what the user selected
   cidade_filtrada_min <- reactive({
-    acess_min[nome_muni == input$cidade]
+    acess_min[sigla_muni == input$cidade]
   })
   
   
@@ -49,13 +58,18 @@ function(input, output) {
   # Atividade filtrada para o indicador minimo
   # # Reactive para a atividade para indicador cumulativo
   atividade_filtrada_min <- reactive({
-    cidade_filtrada_min()[atividade == input$atividade_min] %>% st_sf(crs = 4326)
+    cidade_filtrada_min()[atividade == input$atividade_min] %>%
+      merge(hex, by = "id_hex", all.x = TRUE) %>% 
+      st_sf(crs = 4326)
+    
   })
   
   
   # Reactive para o tempo
   tempo_filtrado <- reactive({
-    atividade_filtrada()[tempo_viagem == input$tempo] %>% st_sf(crs = 4326) 
+    atividade_filtrada()[tempo_viagem == input$tempo] %>%
+      merge(hex, by = "id_hex", all.x = TRUE) %>% 
+      st_sf(crs = 4326)
   })
   
   
@@ -95,15 +109,22 @@ function(input, output) {
   
   
   centroid_go <- reactive({
-    filter(limits, name_muni == input$cidade)
+    filter(limits, abrev_muni == input$cidade)
   })
 
   
+  
+  
   observe({
     
-    # zoom in the city
+    if(input$cidade %in% c("spo", "rio")) {
+      
+    zoom1 <- 9
+        
+    } else {zoom1 <- 10}
+    
     proxy <- mapdeck_update(map_id = "map") %>%
-      mapdeck_view(location = c(centroid_go()$lon, centroid_go()$lat), zoom = 11,
+      mapdeck_view(location = c(centroid_go()$lon, centroid_go()$lat), zoom = zoom1,
                    transition = "fly")
     
     
