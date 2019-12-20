@@ -46,11 +46,38 @@ acess_tp_min_long <- acess_tp_min %>%
 
 
 # salvar
-write_rds(acess_tp_cum_long %>%   # tirar sao paulo e rio para teste
-          filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro")), "acess_tp_cum_app.rds") 
+write_rds(acess_tp_cum_long,   # tirar sao paulo e rio para teste
+          # filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro"))
+          "acess_tp_cum_app.rds") 
 
-write_rds(acess_tp_min_long %>%   # tirar sao paulo e rio para teste
-            filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro")), "acess_tp_min_app.rds") 
+write_rds(acess_tp_min_long,  # tirar sao paulo e rio para teste
+            # filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro")), 
+          "acess_tp_min_app.rds") 
+
+# salvar sem geometria
+write_rds(acess_tp_cum_long %>% st_set_geometry(NULL),   # tirar sao paulo e rio para teste
+          # filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro")), 
+          "acess_tp_cum_app_sgeo.rds") 
+
+write_rds(acess_tp_min_long %>%  st_set_geometry(NULL),   # tirar sao paulo e rio para teste
+          # filter(nome_muni %nin% c("São Paulo", "Rio de Janeiro")), 
+          "acess_tp_min_app_sgeo.rds") 
+
+
+# geometrias ----------------------------------------------------------------------------------
+
+# dados hex agregados
+hex_agreg <- lapply(dir("../data/hex_agregados/", full.names = TRUE, pattern = "09"), read_rds) %>% rbindlist(fill = TRUE)
+
+# pegar pontos nao-vazios
+points <- read_csv("../otp/")
+
 
 
 # para abrir
+system.time(read_rds("acess_tp_cum_app.rds")) # 4.3s
+
+system.time(read_rds("acess_tp_cum_app_sgeo.rds")) # 1.14s
+            
+            read_r
+            ) # 0.8s
