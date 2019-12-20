@@ -1,5 +1,4 @@
 library(shiny)
-library(leaflet)
 library(RColorBrewer)
 library(shinyWidgets)
 library(mapdeck)
@@ -21,8 +20,13 @@ div(class = "navbar-default",
                                       top = 80, right = 20, width = 350, height = 600,
                                       selectInput(inputId = "cidade",
                                                   label = h1("Escolha a cidade:"),
-                                                  choices = c("Belo Horizonte", "Fortaleza", "Rio de Janeiro",
-                                                              "São Paulo", "Curitiba", "Porto Alegre", "Recife"),
+                                                  choices = c("Belo Horizonte" = "bho", 
+                                                              "Fortaleza" = "for", 
+                                                              "Rio de Janeiro" = "rio",
+                                                              "São Paulo" = "spo", 
+                                                              "Curitiba" = "cur", 
+                                                              "Porto Alegre" = "poa", 
+                                                              "Recife" = "rec"),
                                                   selected = "Fortaleza"),
                                       awesomeRadio(inputId = "indicador",
                                                    # label = HTML("<h1>Escolha o indicador de acessibilidade: <img src=\"ipea.jpg\" align=\"leftright\" width=\"70\"/></h1>"),
