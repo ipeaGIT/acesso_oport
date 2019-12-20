@@ -117,7 +117,7 @@ h1 {
     border: 1px solid #b8b8b8;
     border-radius: 4px;
     display: inline-block;
-    max-height: 200px;
+    max-height: 300px;
     max-width: 200px;
     overflow: auto;
     position: fixed;
