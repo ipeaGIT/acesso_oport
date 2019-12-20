@@ -32,7 +32,7 @@ hex <- read_rds("data/hex_teste.rds")
 
 # linhas <- read_rds("../../../data/linhas_HMcapacidade/linhas_HMcapacidade.rds")
 
-limits <- read_rds("cities_centroids.rds")
+limits <- read_rds("data/cities_centroids.rds")
 
 
 # Define a server for the Shiny app
