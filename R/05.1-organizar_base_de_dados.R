@@ -99,6 +99,16 @@ hex_dt_fim <- hex_dt %>%
     modo == "walk" ~ "caminhada"
   )) %>%
   
+  # filtrar cidades que so tem ativo que porventura tenham tp
+  mutate(ok = ifelse(sigla_muni %in% munis_df[modo == "ativo"]$abrev_muni & modo == "tp", 1, 0)) %>%
+  filter(is.na(ok) | ok == 0) %>%
+  select(-ok) %>%
+  
+  # garantir que so tenha um unico hexagono para cada cidade, modo e pico
+  distinct(id_hex, sigla_muni, modo, pico, .keep_all = TRUE) %>%
+
+
+  
   # # truncar os valores de TMI quando eh infinito
   # # para caminhada: 60 minutos;  para bicicleta de transporte publico: 120 minutos
   # mutate_at(vars(matches("TMI")), list(~ ifelse(is.infinite(.) & modo == "caminhada", 60, 
