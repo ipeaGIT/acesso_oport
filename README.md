@@ -1,5 +1,5 @@
 
-<img align="right" src="ipea.jpg" alt="ipea" width="250">
+<img align="right" src="ipea.png" alt="ipea" width="250">
 
 # Projeto Acesso a Oportunidades
 
