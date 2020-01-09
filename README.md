@@ -1,29 +1,24 @@
 
 <img align="right" src="ipea.jpg" alt="ipea" width="250">
 
+
 # Projeto Acesso a Oportunidades
 
-Repositório com os códigos utilizados no projeto do Ipea Acesso a
-Oportunidades
+Repositório com os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. 
 
 # Sobre o projeto
 
-Este projeto tem como objetivo analisar o número de oportunidades de
-emprego, educação e saúde que a população consegue acessar por meio do
-transporte público, a pé e de bicicleta em grandes áreas urbanas do
-Brasil. O projeto tem foco particular na análise das desigualdades
-sociais e espaciais no acesso a oportunidades em relação às políticas
-urbanas de transporte, habitação e uso do solo.
 
-Combinando dados de uso do solo, Censo Demográfico e de transporte
-(incluindo dados do OpenStreetMap e dados de transporte público em
-formato GTFS), o projeto irá estimar o acesso da população à postos de
-trabalho formais, escolas públicas e serviços de saúde providos pelos
-SUS utilizando medidas de acessibilidade gravitacionais e de acesso
-acumulativo de oportunidades, entre outras. As analises serão realizadas
-em alta resolução espacial, permitindo identificar a distribuição dos
-serviços de transporte público em cada área urbana e apontar clusters
-espaciais de áreas com baixo nível de acesso a oportunidades.
+  
+O projeto tem como objetivos:
+1. Estimar anualmente o acesso da população a oportunidades de trabalho, serviços de saúde e educação por modo de transporte nos maiores centros urbanos do país,
+2. Criar uma base de dados abertos sobre as condições de acessibilidade urbana nas cidades brasileiras. 
+3. Construir redes de pesquisa para utilizar esses dados em estudos comparativos e no planejamento e avaliação de políticas públicas
+  
+<p align="justify"> O projeto combina dados de registros administrativos, pesquisas amostrais, dados de imagens de satélite e de mapeamento colaborativo para calcular os níveis de acessibilidade em alta resolução espacial e desagregados por grupos socioeconômicos segundo nível de renda e cor/raça para as maiores cidades do Brasil.
+
+Para mais informações sobre a pesquisa, visite o site do projeto (em breve no ar).
+</p>
 
 # Hierarquia organizacional
 
@@ -57,6 +52,7 @@ porque contém dados grande demais para a plataforma do GitHub:
     OpenTripPlanner.
 
 Futuramente esses dados serão disponibilizados através de uma API.
+
 
 ## Aplicativo Acesso a Oportunidades
 
