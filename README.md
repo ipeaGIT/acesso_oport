@@ -3,8 +3,7 @@
 
 # Projeto Acesso a Oportunidades
 
-Repositório com os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. 
-
+Este repositório contem os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. Para mais informações sobre a pesquisa com seus resultados e metodologia, visite o site do projeto (em breve no ar).
 
 # Sobre o projeto
  
@@ -15,8 +14,6 @@ O projeto tem como objetivos:
   
 <p align="justify">
 O projeto combina dados de registros administrativos, pesquisas amostrais, dados de imagens de satélite e de mapeamento colaborativo para calcular os níveis de acessibilidade em alta resolução espacial e desagregados por grupos socioeconômicos segundo nível de renda e cor/raça para as maiores cidades do Brasil.
-
-Para mais informações sobre a pesquisa, e o relatório do estudo com resultados e metodologia, visite o site do projeto (em breve no ar).
 </p>
 
 # Organização do repositório
