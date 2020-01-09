@@ -128,13 +128,14 @@ names(hex_dt_fim)
 # 3) Exportar ---------------------------
 
 # salvar rds
-write_rds(hex_dt_fim, "../data/output_base_final/acess_oport_2019.rds", compress = "gz")
+write_rds(hex_dt_fim, "../data/output_base_final/dados2019_AcessOport_v1.0_20200116.rds", compress = "gz")
 
-# salvar dados em geopakage
-st_write(hex_dt_fim, "../data/output_base_final/acess_oport_2019.gpkg")
+
+# salvar dados em geopackage
+st_write(hex_dt_fim, "../data/output_base_final/dados2019_AcessOport_v1.0_20200116.gpkg")
 
   # zip
-  zip::zipr(zipfile = "../data/output_base_final/acess_oport_2019.zip", 
+  zip::zipr(zipfile = "../data/output_base_final/dados2019_AcessOport_v1.0_20200116.zip", 
             files = dir("../data/output_base_final/", pattern = "*.gpkg", full.names = TRUE))
 
   
