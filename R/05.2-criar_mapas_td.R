@@ -30,7 +30,7 @@ library(ggnewscale) # install.packages("ggnewscale")
 ###### A. Carrega dados ---------------------------
 
 # abrir dados
-acess_final <- read_rds("../data/output_base_final/acess_oport_2019.rds")
+acess_final <- read_rds("../data/output_base_final/dados2019_AcessOport_v1.0_20200116.rds")
 
 
 ###### B. temas para mapas ---------------------------
@@ -406,7 +406,7 @@ df4 %>%
             color = "black",
             vjust = -1) +
   expand_limits(y = 21)+
-  theme_ipsum(grid= "X") +
+  theme_ipsum(grid= "X", base_family = "Helvetica") +
   labs(x = "", y = "", title = "")
 
 # TME bike
@@ -455,7 +455,7 @@ acess_walk %>%
   facet_wrap(~sigla_muni) +
   scale_colour_brewer(palette = "RdBu", labels=c('D1 Pobres', paste0('D', c(2:9)), 'D10 ricos'), name='Decil de renda') +
   scale_y_percent() +
-  hrbrthemes::theme_ipsum(grid = "Y") +
+  hrbrthemes::theme_ipsum(grid = "Y", base_family = "Helvetica") +
   labs(x = "",
        y = "Porcentagem de oportunidades acessíveis") + 
   guides(color=guide_legend(nrow=1)) +
@@ -508,7 +508,7 @@ acess_palma %>%
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = c(0, 1, 3, 6, 9))+
   coord_flip()+
-  theme_ipsum(grid = "X")+
+  theme_ipsum(grid = "X", base_family = "Helvetica")+
   labs(x = "", y = "Palma Ratio")
 
 
@@ -532,6 +532,8 @@ acess_palma_2 <- acess_final %>%
   mutate(palma_ratio = acess_brancos/acess_negros) %>%
   ungroup()
 
+
+
 # visualizar
 acess_palma_2 %>%
   mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
@@ -541,7 +543,7 @@ acess_palma_2 %>%
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
-  theme_ipsum(grid = "X")+
+  theme_ipsum(grid = "X", base_family = "Helvetica")+
   labs(x = "", y = "Razão Brancos/Negros")
 
 
@@ -567,7 +569,7 @@ acess_palma_3 %>%
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
-  theme_ipsum(grid = "X")+
+  theme_ipsum(grid = "X", base_family = "Helvetica")+
   labs(x = "", y = "Razão Brancos/Negros")
 
 ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_walk_60.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
