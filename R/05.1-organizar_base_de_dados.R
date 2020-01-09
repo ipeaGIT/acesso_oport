@@ -141,14 +141,15 @@ st_write(hex_dt_fim, "../data/output_base_final/dados2019_AcessOport_v1.0_202001
   
   
   
+## exportanto dados para ITDP Mobilidados
+# so modos ativos e acesso a saude e educacao
+atv <- subset(hex_dt_fim, modo %in% c('bicicleta', 'caminhada'))
+atv <- atv %>% select(-contains("CMATT"))
+atv <- atv %>% select(-contains("CMATD"))
+atv <- atv %>% select(-contains("CMATQ"))
   
-  
-  
-aaa <- subset(hex_dt_fim, sigla_muni %in% c('bel', 'poa'))  
-  
-  
-  
-  write_rds(aaa, "../data/output_base_final/acess_oport_2019_test.rds", compress = "gz")
+# save
+write_rds(atv, "../data/output_base_final/ativo_edu_saude_2019.rds", compress = "gz")
   
   
   
