@@ -3,7 +3,7 @@
 
 # Projeto Acesso a Oportunidades
 
-Este repositório contem os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. Para mais informações sobre a pesquisa com seus resultados e metodologia, visite o site do projeto (em breve no ar).
+Este repositório contem os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. [Para mais informações sobre a pesquisa com seus resultados e metodologia, visite o site do projeto (em breve no ar)](www.ipea.gov.br).
 
 # Sobre o projeto
  
