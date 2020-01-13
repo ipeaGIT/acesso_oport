@@ -34,8 +34,3 @@ porque contém dados grande demais para a plataforma do GitHub:
   - `otp`: arquivos utilizados na construção do *router* do
     OpenTripPlanner.
 
-
-
-## Mapa interativo Acesso a Oportunidades
-
-Um aplicativo web em Shiny com os resultados do projeto estará disponível breve.
