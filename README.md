@@ -3,18 +3,9 @@
 
 # Projeto Acesso a Oportunidades
 
-Este repositório contem os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. Para mais informações sobre a pesquisa com seus resultados e metodologia, visite o site do projeto (em breve no ar).
+Este repositório contem os códigos utilizados no processamento e análise de dados do **Projeto Acesso a Oportunidades**, do Ipea. **[Para mais informações sobre a pesquisa com seus resultados e metodologia, visite o site do projeto (em breve no ar)](www.ipea.gov.br)**.
 
-# Sobre o projeto
- 
-O projeto tem como objetivos:
-1. Estimar anualmente o acesso da população a oportunidades de trabalho, serviços de saúde e educação por modo de transporte nos maiores centros urbanos do país,
-2. Criar uma base de dados abertos sobre as condições de acessibilidade urbana nas cidades brasileiras. 
-3. Construir redes de pesquisa para utilizar esses dados em estudos comparativos e no planejamento e avaliação de políticas públicas
-  
-<p align="justify">
-O projeto combina dados de registros administrativos, pesquisas amostrais, dados de imagens de satélite e de mapeamento colaborativo para calcular os níveis de acessibilidade em alta resolução espacial e desagregados por grupos socioeconômicos segundo nível de renda e cor/raça para as maiores cidades do Brasil.
-</p>
+
 
 # Organização do repositório
 
@@ -43,8 +34,3 @@ porque contém dados grande demais para a plataforma do GitHub:
   - `otp`: arquivos utilizados na construção do *router* do
     OpenTripPlanner.
 
-
-
-## Mapa interativo Acesso a Oportunidades
-
-Um aplicativo web em Shiny com os resultados do projeto estará disponível breve.
