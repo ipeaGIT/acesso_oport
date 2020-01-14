@@ -123,7 +123,7 @@ temp_map1 <-
 
 
 # save map
-ggsave(temp_map1, file="../figures/td/fig0_munis_all.pdf", dpi = 300, width = 16.5, height = 16.5, units = "cm")
+ggsave(temp_map1, file="../figures/td/mapa1_cidades do projeto.pdf", dpi = 300, width = 16.5, height = 16.5, units = "cm")
 beepr::beep()
 
 
@@ -134,7 +134,7 @@ beepr::beep()
 
 # 1) Mapa TMI saude de media e alta - PT  ---------------------------------------
 
-fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_mapa_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   # acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
@@ -170,7 +170,7 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
                                  , labels = c(0, 10, 20, "+30 min")
     ) +
     labs(fill = "Tempo até a oportunidade\n mais próxima",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni)+
+         title = subset(munis_df, abrev_muni == sigla_munii)$name_muni)+
     facet_wrap(~ind, ncol = cols)+
     theme_for_TMI()+
     theme(plot.title = element_text(hjust = 0.5))
@@ -178,7 +178,7 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot1, 
-         file= sprintf("../figures/td/fig1/fig1-%s_TMI_SM_TP.pdf", sigla_munii), 
+         file= sprintf("../figures/td/mapa2_tempo de viagem por transp-publico ate estab saude mais proximo/mapa2_%s_TMI_SM_TP.pdf", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -188,7 +188,7 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
 
 # 2) TMI Ed Infantil Walk -------------------------
 
-fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_mapa_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_munii))
@@ -223,7 +223,7 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
                                  , labels = c(0, 10, 20, "+30 min")
     ) +
     labs(fill = "Tempo até a oportunidade\n mais próxima",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni)+
+         title = subset(munis_df, abrev_muni == sigla_munii)$name_muni)+
     facet_wrap(~ind, ncol = cols)+
     theme_for_TMI()+
     theme(plot.title = element_text(hjust = 0.5))
@@ -233,7 +233,7 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot2, 
-         file= sprintf("../figures/td/fig2/fig2-%s_TMI_EI_walk.pdf", sigla_munii),
+         file= sprintf("../figures/td/mapa3_tempo de viagem a pe ate a escola mais proxima/mapa3-%s_TMI_EI_walk.pdf", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -242,7 +242,7 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
 # 3) CMA Trabalho Bike 15/45 ----------------------------------
 
 
-fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_mapa_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <- acess_final %>% filter(sigla_muni == sigla_munii) %>%
@@ -277,20 +277,20 @@ fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
     facet_wrap(~ind, ncol = cols)+
     theme_for_CMA()+
     labs(fill = "Porcentagem de oportunidades\n acessíveis",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni) +
+         title = subset(munis_df, abrev_muni == sigla_munii)$name_muni) +
     theme(plot.title = element_text(hjust = 0.5))
   
   
   
   ggsave(plot3, 
-         file= sprintf("../figures/td/fig3/fig3-%s_CMA_TT_1545.pdf", sigla_munii), 
+         file= sprintf("../figures/td/mapa4_proporcao de empregos acessiveis por bicicleta em 15 e 30 min/mapa4-%s_CMA_TT_1545.pdf", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
 
 # 4) CMA Trabalho/Escola TP 60 ---------------------
 
-fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_mapa_5_6 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <-  acess_final %>% filter(sigla_muni == sigla_munii) %>%
@@ -324,30 +324,31 @@ fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
     facet_wrap(~ind, ncol = cols)+
     theme_for_CMA()+
     labs(fill = "Porcentagem de oportunidades\n acessíveis",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni) +
+         title = subset(munis_df, abrev_muni == sigla_munii)$name_muni) +
     theme(plot.title = element_text(hjust = 0.5))
   
   
   
   ggsave(plot4, 
-         file= sprintf("../figures/td/fig4/fig4-%s_CMA_TTEF_60.pdf", sigla_munii),
+         file= sprintf("../figures/td/mapas5,6_proporcao de empregos e escolas-med acessiveis por transp-pubico em ate 60 min/mapa5,6-%s_CMA_TTEF_60.pdf", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
   
 }
 
 
 # Aplicar funcoes -----------
+future::plan(future::multiprocess)
 
-purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_1, height = 12)
-purrr::walk(munis_df$abrev_muni, fazer_plot_2, height = 12)
-purrr::walk(munis_df$abrev_muni, fazer_plot_3, height = 12)
-purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4, height = 12)
+furrr::future_map(munis_df[modo == "todos"]$abrev_muni, fazer_mapa_2, height = 13, .progress = T)
+furrr::future_map(munis_df$abrev_muni, fazer_mapa_3, height = 13, .progress = T)
+furrr::future_map(munis_df$abrev_muni, fazer_mapa_4, height = 13, .progress = T)
+furrr::future_map(munis_df[modo == "todos"]$abrev_muni, fazer_mapa_5_6, height = 13, .progress = T)
 
 # para o rio, optar por uma coluna so no plot!
-fazer_plot_1('rio', cols = 1, width = 12, height = 18)
-fazer_plot_2('rio', cols = 1, width = 12, height = 18)
-fazer_plot_3('rio', cols = 1, width = 12, height = 18)
-fazer_plot_4('rio', cols = 1, width = 12, height = 18)
+fazer_mapa_2('rio', cols = 1, width = 12, height = 18)
+fazer_mapa_3('rio', cols = 1, width = 12, height = 18)
+fazer_mapa_4('rio', cols = 1, width = 12, height = 18)
+fazer_mapa_5_6('rio', cols = 1, width = 12, height = 18)
 
 
 

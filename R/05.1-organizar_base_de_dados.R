@@ -153,12 +153,16 @@ st_write(a_sf, "../data/output_base_final/dados2019_AcessOport_v1.0_20200116.gpk
   
   
 ## exportanto dados para ITDP Mobilidados
+a_sf <- readr::read_rds("../data/output_base_final/dados2019_AcessOport_v1.0_20200116.rds")
+  
 # so modos ativos e acesso a saude e educacao
 atv <- subset(a_sf, modo %in% c('bicicleta', 'caminhada'))
 atv <- atv %>% select(-contains("CMATT"))
 atv <- atv %>% select(-contains("CMATD"))
 atv <- atv %>% select(-contains("CMATQ"))
-  
+ 
+table(atv$modo) 
+
 # save
 write_rds(atv, "../data/output_base_final/ativo_edu_saude_2019.rds", compress = "gz")
   
