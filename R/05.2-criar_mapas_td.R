@@ -483,7 +483,10 @@ beep()
 # calcular acessibilidade media do 90 percentil e 40 percentil de renda
 # usar caminhada pico CMATT30
 
-acess_palma <- acess_final %>%
+temp_palma <- copy(acess_final)
+temp_palma$geometry <- NULL
+
+acess_palma <- temp_palma %>%
   filter(modo == "bicicleta" & pico == 1) %>%
   select(sigla_muni, R003, P001, CMATT30) %>%
   # pegar so decis 4 e 9
@@ -493,26 +496,31 @@ acess_palma <- acess_final %>%
   group_by(sigla_muni, classe) %>%
   summarise(acess_media = weighted.mean(CMATT30, P001)) %>%
   ungroup() %>%
+  group_by(sigla_muni) %>%
   spread(classe, acess_media) %>%
   # calcular palma ratio
   group_by(sigla_muni) %>%
   mutate(palma_ratio = rico/pobre) %>%
   ungroup()
 
+head(acess_palma)
+summary(acess_palma$P001)
+
 # visualizar
 acess_palma %>%
   mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
   mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
   ggplot()+
-  geom_col(aes(y = palma_ratio, x = sigla_muni))+
-  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
+  geom_col(aes(y = palma_ratio, x = sigla_muni)) +
+  geom_text(aes(y = palma_ratio, x = sigla_muni, label = round(palma_ratio,1)), size = 3, position = position_stack(vjust = 0.88), color='gray99') +
+  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed") +
   scale_y_continuous(breaks = c(0, 1, 3, 6, 9))+
   coord_flip()+
   theme_ipsum(grid = "X", base_family = "Helvetica")+
   labs(x = "", y = "Palma Ratio")
 
 
-ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30_label.png", dpi = 300, width = 16.5, height = 15, units = "cm")
 
 
 
@@ -532,7 +540,7 @@ acess_palma_2 <- acess_final %>%
   mutate(palma_ratio = acess_brancos/acess_negros) %>%
   ungroup()
 
-
+head(acess_palma_2)
 
 # visualizar
 acess_palma_2 %>%
@@ -540,6 +548,7 @@ acess_palma_2 %>%
   mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = sigla_muni))+
+  geom_text(aes(y = palma_ratio, x = sigla_muni, label = round(palma_ratio,1)), size = 3, position = position_stack(vjust = 0.95), color='gray99') +
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
@@ -547,7 +556,7 @@ acess_palma_2 %>%
   labs(x = "", y = "Razão Brancos/Negros")
 
 
-ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60_label.png", dpi = 300, width = 16.5, height = 15, units = "cm")
 
 
 acess_palma_3 <- acess_final %>%
@@ -566,10 +575,11 @@ acess_palma_3 %>%
   mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
   ggplot()+
   geom_col(aes(y = palma_ratio, x = sigla_muni))+
+  geom_text(aes(y = palma_ratio, x = sigla_muni, label = round(palma_ratio,1)), size = 3, position = position_stack(vjust = 0.95), color='gray99') +
   geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
   scale_y_continuous(breaks = seq(0, 3, .5))+
   coord_flip()+
   theme_ipsum(grid = "X", base_family = "Helvetica")+
   labs(x = "", y = "Razão Brancos/Negros")
 
-ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_walk_60.pdf", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_walk_60_label.png", dpi = 300, width = 16.5, height = 15, units = "cm")
