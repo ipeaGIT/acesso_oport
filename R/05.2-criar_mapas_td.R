@@ -178,7 +178,7 @@ fazer_mapa_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot1, 
-         file= sprintf("../figures/td/mapa2_tempo de viagem por transp-publico ate estab saude mais proximo/mapa2_%s_TMI_SM_TP.pdf", sigla_munii), 
+         file= sprintf("../figures/td/mapa2_tempo de viagem por transp-publico ate estab saude mais proximo/mapa2_%s_TMI_SM_TP.svg", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -233,7 +233,7 @@ fazer_mapa_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # save map
   ggsave(plot2, 
-         file= sprintf("../figures/td/mapa3_tempo de viagem a pe ate a escola mais proxima/mapa3-%s_TMI_EI_walk.pdf", sigla_munii),
+         file= sprintf("../figures/td/mapa3_tempo de viagem a pe ate a escola mais proxima/mapa3-%s_TMI_EI_walk.svg", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -283,14 +283,14 @@ fazer_mapa_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   
   ggsave(plot3, 
-         file= sprintf("../figures/td/mapa4_proporcao de empregos acessiveis por bicicleta em 15 e 30 min/mapa4-%s_CMA_TT_1545.pdf", sigla_munii), 
+         file= sprintf("../figures/td/mapa4_proporcao de empregos acessiveis por bicicleta em 15 e 30 min/mapa4-%s_CMA_TT_1545.svg", sigla_munii), 
          dpi = 300, width = width, height = height, units = "cm")
 }
 
 
 # 4) CMA Trabalho/Escola TP 60 ---------------------
 
-fazer_mapa_5_6 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_mapa_5 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   # abrir acess
   acess <-  acess_final %>% filter(sigla_muni == sigla_munii) %>%
@@ -330,7 +330,7 @@ fazer_mapa_5_6 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
   
   
   ggsave(plot4, 
-         file= sprintf("../figures/td/mapas5,6_proporcao de empregos e escolas-med acessiveis por transp-pubico em ate 60 min/mapa5,6-%s_CMA_TTEF_60.pdf", sigla_munii),
+         file= sprintf("../figures/td/mapa5/mapa_5-%s_CMA_TTEF_60.svg", sigla_munii),
          dpi = 300, width = width, height = height, units = "cm")
   
 }
@@ -342,13 +342,13 @@ future::plan(future::multiprocess)
 furrr::future_map(munis_df[modo == "todos"]$abrev_muni, fazer_mapa_2, height = 13, .progress = T)
 furrr::future_map(munis_df$abrev_muni, fazer_mapa_3, height = 13, .progress = T)
 furrr::future_map(munis_df$abrev_muni, fazer_mapa_4, height = 13, .progress = T)
-furrr::future_map(munis_df[modo == "todos"]$abrev_muni, fazer_mapa_5_6, height = 13, .progress = T)
+furrr::future_map(munis_df[modo == "todos"]$abrev_muni, fazer_mapa_5, height = 13, .progress = T)
 
 # para o rio, optar por uma coluna so no plot!
 fazer_mapa_2('rio', cols = 1, width = 12, height = 18)
 fazer_mapa_3('rio', cols = 1, width = 12, height = 18)
 fazer_mapa_4('rio', cols = 1, width = 12, height = 18)
-fazer_mapa_5_6('rio', cols = 1, width = 12, height = 18)
+fazer_mapa_5('rio', cols = 1, width = 12, height = 18)
 
 
 
@@ -415,7 +415,7 @@ df4 %>%
 
 
 
-ggsave(file="../figures/td/fig5_TMIEM_bike_renda90median.pdf", dpi = 300, width = 16, height = 16, units = "cm")
+ggsave(file="../figures/td/graf1_tempo medio de bicicleta ate escola-med mais proxima.svg", dpi = 300, width = 16, height = 16, units = "cm")
 beep()
 
 
@@ -471,7 +471,7 @@ acess_walk %>%
   )
 
 
-ggsave(file="../figures/td/fig6-boxplot_CMA_rendadecil_walk_TQ_30.pdf", dpi = 300, width = 25, height = 15, units = "cm")
+ggsave(file="../figures/td/graf2_distribuicao da proporcao de empregos acessiveis a pe em ate 30min por renda_POA, GOI, CAM.svg", dpi = 300, width = 25, height = 15, units = "cm")
 beep()
 
 
@@ -521,12 +521,39 @@ acess_palma %>%
   labs(x = "", y = "Palma Ratio")
 
 
-ggsave(file="../figures/td/fig7-palma_ratio_CMA_TQ_walk_30_label.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/graf3_razao de palma_empregos acessiveis a pe em menos d 30min_ pobres e ricos.svg", dpi = 300, width = 16.5, height = 15, units = "cm")
 
 
 
 
 # 8) CMA Palma Cor SaudeAlta TP 60  --------------------------------
+
+acess_palma_3 <- acess_final %>%
+  filter(modo == "caminhada") %>%
+  select(sigla_muni, R003, P001, P003, P002, CMASA60) %>%
+  group_by(sigla_muni) %>%
+  summarise(acess_brancos = weighted.mean(CMASA60, P002),
+            acess_negros = weighted.mean(CMASA60, P003)) %>%
+  # calcular palma ratio
+  mutate(palma_ratio = acess_brancos/acess_negros) %>%
+  ungroup()
+
+# visualizar
+acess_palma_3 %>%
+  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
+  mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
+  ggplot()+
+  geom_col(aes(y = palma_ratio, x = sigla_muni))+
+  geom_text(aes(y = palma_ratio, x = sigla_muni, label = round(palma_ratio,1)), size = 3, position = position_stack(vjust = 0.95), color='gray99') +
+  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
+  scale_y_continuous(breaks = seq(0, 3, .5))+
+  coord_flip()+
+  theme_ipsum(grid = "X", base_family = "Helvetica")+
+  labs(x = "", y = "Razão Brancos/Negros")
+
+ggsave(file="../figures/td/graf4_razao de palma_saude-alta acessiveis a pe em menos d 60min_ brancos e negros.svg", dpi = 300, width = 16.5, height = 15, units = "cm")
+
+
 
 # calcular acessibilidade media do 90 percentil e 40 percentil de renda
 # usar TP pico CMASA60
@@ -557,30 +584,4 @@ acess_palma_2 %>%
   labs(x = "", y = "Razão Brancos/Negros")
 
 
-ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_TP_60_label.png", dpi = 300, width = 16.5, height = 15, units = "cm")
-
-
-acess_palma_3 <- acess_final %>%
-  filter(modo == "caminhada") %>%
-  select(sigla_muni, R003, P001, P003, P002, CMASA60) %>%
-  group_by(sigla_muni) %>%
-  summarise(acess_brancos = weighted.mean(CMASA60, P002),
-            acess_negros = weighted.mean(CMASA60, P003)) %>%
-  # calcular palma ratio
-  mutate(palma_ratio = acess_brancos/acess_negros) %>%
-  ungroup()
-
-# visualizar
-acess_palma_3 %>%
-  mutate(sigla_muni = factor(sigla_muni, levels = munis_df$abrev_muni, labels = munis_df$name_muni)) %>%
-  mutate(sigla_muni = fct_reorder(sigla_muni, palma_ratio)) %>%
-  ggplot()+
-  geom_col(aes(y = palma_ratio, x = sigla_muni))+
-  geom_text(aes(y = palma_ratio, x = sigla_muni, label = round(palma_ratio,1)), size = 3, position = position_stack(vjust = 0.95), color='gray99') +
-  geom_hline(yintercept = 1, color = "grey90", linetype = "dashed")+
-  scale_y_continuous(breaks = seq(0, 3, .5))+
-  coord_flip()+
-  theme_ipsum(grid = "X", base_family = "Helvetica")+
-  labs(x = "", y = "Razão Brancos/Negros")
-
-ggsave(file="../figures/td/fig8-palma_ratio_cor_CMA_SA_walk_60_label.png", dpi = 300, width = 16.5, height = 15, units = "cm")
+ggsave(file="../figures/td/graf5_razao de palma_saude-alta acessiveis em transp-publico em menos d 60min_ brancos e negros.svg", dpi = 300, width = 16.5, height = 15, units = "cm")

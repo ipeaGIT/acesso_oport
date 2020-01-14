@@ -34,7 +34,7 @@ library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/
 library(ggmap) # geocoding
 library(h3jsr) # h3 hex
 library(bit64) # viz large numbers
-
+library(quantreg)
 
 
 
