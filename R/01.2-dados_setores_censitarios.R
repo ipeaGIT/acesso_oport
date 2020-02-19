@@ -34,10 +34,10 @@ setores1 <- setores1[Cod_municipio %in% munis_df$code_muni,]
 # Renda 6.19 - variavel escolhida: V003 = Total do rendimento nominal mensal dos domicílios particulares permanentes
 setores_renda <-  setores1 %>% 
   dplyr::select(cod_uf = Cod_UF, cod_muni = Cod_municipio, cod_setor = Cod_setor, renda_total = DomRend_V003, moradores_total = Dom2_V002, cor_branca=Pess3_V002, cor_preta=Pess3_V003, cor_amarela=Pess3_V004, cor_parda=Pess3_V005, cor_indigena=Pess3_V006)
- 
- 
- 
- 
+
+
+
+
 # Criar variavel de renda domicilias per capita de cada setor censitario
 setDT(setores_renda)[, renda_per_capta := renda_total / moradores_total]
 setores_renda[, cod_setor := as.character(cod_setor)]
@@ -50,7 +50,7 @@ setores_renda[, cod_setor := as.character(cod_setor)]
 # funcao para fazer merge dos dados e salve arquivos na pata 'data'
 merge_renda_setores <- function(sigla){
   
-#  sigla <- "for"
+  #  sigla <- "for"
   
   # status message
   message('Woking on city ', sigla, '\n')
@@ -66,10 +66,10 @@ merge_renda_setores <- function(sigla){
   
   # merge
   sf2 <- dplyr::left_join(sf, dados, c('code_tract'='cod_setor'))
-    
+  
   # salvar
   readr::write_rds(sf2,  paste0("../data/setores_agregados/setores_agregados_", sigla,".rds"))
-  }
+}
 
 
 # aplicar funcao

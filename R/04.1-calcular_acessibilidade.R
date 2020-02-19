@@ -14,26 +14,26 @@ calcular_acess <- function(sigla_muni, ano = 2019) {
   # sigla_muni <- "bho"; ano=2019
   # sigla_muni <- "spo"; ano=2019
   # sigla_muni <- "for"; ano=2019
+  # sigla_muni <- "for"; ano=2020
   
   # status message
-  message('Woking on city ', sigla_muni, '\n')
+  message('Woking on city ', sigla_muni, ' at year ', ano,  '\n')
   
   # 1) Abrir tttmatrix ---------------------------------------------------
   
-  ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_agregada_cor/ttmatrix_agregada_cor_%s.rds", sigla_muni))
-  # ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_agregada/ttmatrix_agregada_%s.rds", sigla_muni))
+  ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_agregada_cor/%s/ttmatrix_agregada_cor_%s_%s.rds", ano, sigla_muni, ano))
   
   
   # 2) Agregar dados de uso do solo à ttmatrix --------------------------
   
   # Pegar arquivo com os hexagonos com as atividades
-  dir_hex <- sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)
+  dir_hex <- sprintf("../data/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, sigla_muni, ano)
   
   # Abrir oportunidades com hexagonos
   hexagonos_sf <- readr::read_rds(dir_hex) 
   
   # Filtrar apenas colunas com info demograficas na origem
-  hex_orig <- setDT(hexagonos_sf)[, .(id_hex, pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, renda_total, renda_capta, quintil, decil)]
+  hex_orig <- setDT(hexagonos_sf)[, .(id_hex, pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, renda_total, renda_capita, quintil, decil)]
   
   # Filtrar apenas colunas com info de uso do solo no destino
   hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_total, empregos_baixa, empregos_media, empregos_alta,  
@@ -43,8 +43,8 @@ calcular_acess <- function(sigla_muni, ano = 2019) {
   
   # Merge dados de origem na matrix de tempo de viagem
   ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
-                              c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capta','quintil','decil') :=
-                                list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, i.renda_total, i.renda_capta, i.quintil, i.decil)]
+                              c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capita','quintil','decil') :=
+                                list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, i.renda_total, i.renda_capita, i.quintil, i.decil)]
   
   # Merge dados de destino na matrix de tempo de viagem
   ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
@@ -74,7 +74,7 @@ calcular_acess <- function(sigla_muni, ano = 2019) {
   #          # Selecionar variaveis de populacao
   #          P001 = pop_total, P002 = cor_branca, P003 = cor_negra, P004 = cor_indigena, P005 = cor_amarela,
   #          # Selecionar variveis de renda
-  #          R001 = renda_capta, R002 = quintil, R003 = decil,
+  #          R001 = renda_capita, R002 = quintil, R003 = decil,
   #          # Selecionar atividades de trabalho
   #          T001 = empregos_total, T002 = empregos_baixa, T003 = empregos_media, T004 = empregos_baixa,
   #          # Selecionar atividades de educacao
@@ -409,7 +409,7 @@ calcular_acess <- function(sigla_muni, ano = 2019) {
   
   # 7) Salvar output --------------------------------------
   
-  path_out <- sprintf("../data/output_access/acess_%s_%s.rds", sigla_muni, ano)
+  path_out <- sprintf("../data/output_access/%s/teste/acess_%s_%s.rds", ano, sigla_muni, ano)
   write_rds(acess_sf, path_out)
   
   # gc colletc
@@ -422,10 +422,7 @@ calcular_acess <- function(sigla_muni, ano = 2019) {
 
 # 2. APLICAR PARA TODOS AS CIDADADES --------------------------------------------------------------
 future::plan(future::multiprocess)
-future.apply::future_lapply(X= munis_df$abrev_muni, FUN=calcular_acess, ano = 2019)
-
-
-
+future.apply::future_lapply(X= munis_df$abrev_muni, FUN=calcular_acess, ano = 2020)
 
 
 
@@ -438,7 +435,7 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=calcular_acess, ano = 20
 sigla_muni <- "for"
 
 # Abrir teste
-acess_for <- read_rds("../data/output_access/acess_for_2019.rds")
+acess_for <- read_rds("../data/output_access/2019/acess_for_2019.rds")
 
 # Abrir linhas de alta/media capasigla_muni
 linhas_hm <- read_rds("../data/linhas_HMcapacidade/linhas_HMcapacidade.rds") %>%

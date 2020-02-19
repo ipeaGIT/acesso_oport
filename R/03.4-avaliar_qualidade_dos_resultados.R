@@ -23,13 +23,14 @@ gerar_ttmatrix_mediana <- function(sigla_muni, ano = 2019) {
   
   # sigla_muni <- "bho"; ano=2019
   # sigla_muni <- "spo"; ano=2019
+  # sigla_muni <- "for"; ano=2020
   
   # status message
-  message('Woking on city ', sigla_muni, '\n')
+  message('Woking on city ', sigla_muni, ' at year ', ano)
   
   
   # Listar arquivos de matriz em formato .csv
-  tt_files <- dir(path= sprintf("E:/data/output_ttmatrix/%s/", sigla_muni), pattern = '.csv', full.names = T)
+  tt_files <- dir(path= sprintf("E:/data/output_ttmatrix/%s/%s/", ano, sigla_muni), pattern = '.csv', full.names = T)
   
   # Ler e empilhar ttmatrix
   future::plan(future::multiprocess)
@@ -63,7 +64,7 @@ gerar_ttmatrix_mediana <- function(sigla_muni, ano = 2019) {
   ttmatrix_median[, tt_median := tt_median/60]
   
   # salvar
-  path_out <- sprintf("E:/data/ttmatrix_agregada/ttmatrix_agregada_%s.rds", sigla_muni)
+  path_out <- sprintf("E:/data/ttmatrix_agregada/%s/ttmatrix_agregada_%s_%s.rds", ano, sigla_muni, ano)
   
   write_rds(ttmatrix_median, path_out)
   
@@ -97,15 +98,15 @@ future.apply::future_lapply(X =munis_df$abrev_muni, FUN=gerar_ttmatrix_mediana, 
 # que nao tenha menos que 10 hex de acess.
 
 
-identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
+identificar_e_corrigir_extremos_acess <- function(sigla_muni, ano) {
   
   # sigla_muni <- "spo"
   
   # status message
-  message('Woking on city ', sigla_muni, '\n')
+  message('Woking on city ', sigla_muni, ' at year ', ano)
   
   # abrir matrix da cidade
-  ttmatrix_allmodes <- read_rds(sprintf("E:/data/ttmatrix_agregada/ttmatrix_agregada_%s.rds", sigla_muni))
+  ttmatrix_allmodes <- read_rds(sprintf("E:/data/ttmatrix_agregada/%s/ttmatrix_agregada_%s_%s.rds", ano, sigla_muni, ano))
   
   # Para fazer o teste, pegar so um modo e so hora pico! 
   # Pegar so pico
@@ -123,7 +124,7 @@ identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
   }
   
   # abrir os pontos da resolucao 09 ~~~~
-  points_file <- sprintf("../otp/points/points_%s_09.csv", sigla_muni)
+  points_file <- sprintf("../otp/points/%s/points_%s_09_%s.csv", ano, sigla_muni, ano)
   points <- fread(points_file)
   
   
@@ -258,7 +259,7 @@ identificar_e_corrigir_extremos_acess <- function(sigla_muni) {
                             ttmatrix_hex_prob_corrigidos)
     
   # salvar output corrigido
-  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_agregada_cor/ttmatrix_agregada_cor_%s.rds", sigla_muni))
+  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_agregada_cor/%s/ttmatrix_agregada_cor_%s_%s.rds", ano, sigla_muni, ano))
   
 
 }

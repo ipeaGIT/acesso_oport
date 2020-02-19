@@ -14,7 +14,7 @@ source('./R/fun/setup.R')
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 1) Ler dados do INEP -----------------------------------------------------------------------------
 
-escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
+escolas <- fread("../data-raw/censo_escolar/2019/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
 nrow(escolas) # 226251 obs 
 
 
@@ -128,7 +128,7 @@ teste <- munis_problema %>%
   select(CO_ENTIDADE, rua = logradouro, cidade, bairro, cep = cep1, uf)
 
 # salvar input para o galileo
-write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", delim = ";")  
+write_delim(teste, "../data-raw/censo_escolar/2019/escolas_2019_input_galileo.csv", delim = ";")  
   
 # Para o Galileo: 1072 obs
 
@@ -137,7 +137,7 @@ write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", d
 # depois de rodar o galileo...
 
 # abrir output do galileo
-educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_galileo.csv") %>%
+educacao_output_galileo <- fread("../data-raw/censo_escolar/2019/Òescolas_2019_output_galileo.csv") %>%
   # filtrar somente os maiores que 2 estrelas
   filter(PrecisionDepth %in% c("4 Estrelas")) %>%
   # substituir virgula por ponto
@@ -351,6 +351,6 @@ table(escolas_etapa_fim$mat_medio, useNA = "always")
 # 5. salvar ----------------------------------------------------------------------------------------
 
 # salvar
-  write_rds(escolas_etapa_fim, "../data/censo_escolar/educacao_inep_2019.rds")
+  write_rds(escolas_etapa_fim, "../data/censo_escolar/2019/educacao_inep_2019.rds")
 
 

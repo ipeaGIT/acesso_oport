@@ -15,13 +15,13 @@ source('./R/fun/setup.R')
 # FUNCAO PARA CONSTRUIR GRAPH (SO RODAR UMA VEZ!) -------------------------
 # graph.obj é salvo na pasta './otp/graphs/cidade
 
-construir_graph <- function(sigla_muni) {
+construir_graph <- function(sigla_muni, ano) {
   
-  message(paste0("Criando Graph da cidade ",sigla_muni,"\n"))
+  message(paste0("Criando Graph da cidade ",sigla_muni, " para o ano ", ano, "\n"))
   
   # Os arquivos de gtfs e .obj devem estar na pasta de cada cidade
   opentripplanner::otp_build_graph(otp = "../otp/programs/otp-1.4.0-shaded.jar", memory = 3,
-                                   dir = "../otp", router = sigla_muni) 
+                                   dir = "../otp", router = sprintf("%s/%s", ano, sigla_muni)) 
   
 }
 

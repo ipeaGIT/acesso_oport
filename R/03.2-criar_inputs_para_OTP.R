@@ -10,20 +10,21 @@ source('./R/fun/setup.R')
 
 ### 1) Funcao para gerar pontos de origem e destino -----------------------------------
 
-gerar_pontos_OTP <- function(sigla_muni) {
+gerar_pontos_OTP <- function(sigla_muni, ano) {
 
   # sigla_muni <- "for"
+  # ano <- 2019
   
   # status message
-  message('Woking on city ', sigla_muni, '\n')
+  message('Woking on city ', sigla_muni, ' at year ', ano, '\n')
   
   
   # Lista resolucoes disponiveis
-  dir <- dir("../data/hex_agregados/", pattern = sigla_muni)
-  res <- str_extract(dir, "\\d+")
+  dir <- dir(sprintf("../data/hex_agregados/%s", ano), pattern = sigla_muni)
+  res <- str_extract(dir, "\\d{2}(?=_)")
   
   # Lista arquivos de hexagonos
-  dir_muni <- paste0("../data/hex_agregados/hex_agregado_", sigla_muni, "_", res, ".rds")
+  dir_muni <- paste0("../data/hex_agregados/", ano, "/hex_agregado_", sigla_muni, "_", res, "_", ano, ".rds")
   
   # funcao que aplica por resolucao  
   gerar_por_resolucao <- function(muni_res) {
@@ -34,7 +35,7 @@ gerar_pontos_OTP <- function(sigla_muni) {
     dir_muni <- muni_res
     
     # Identifica resolucao utilizada
-    res <- str_extract(dir_muni, "\\d+")
+    res <- str_extract(dir_muni, "\\d{2}(?=_)")
     
     
     # adiciona totais
@@ -56,7 +57,7 @@ gerar_pontos_OTP <- function(sigla_muni) {
   
       
   # salvar centroids
-    dir_output <- sprintf("../otp/points/points_%s_%s.csv", sigla_muni, res)
+    dir_output <- sprintf("../otp/points/%s/points_%s_%s_%s.csv", ano, sigla_muni, res, ano)
     data.table::fwrite(hex_centroides, dir_output)
     
   }
@@ -67,8 +68,7 @@ gerar_pontos_OTP <- function(sigla_muni) {
 
 # Aplica funcao para todas cidades
 future::plan(future::multiprocess)
-future.apply::future_lapply(X= munis_df$abrev_muni, FUN=gerar_pontos_OTP)
-
+future.apply::future_lapply(X= munis_df$abrev_muni, FUN=gerar_pontos_OTP, ano = 2019)
 
 
 
@@ -78,16 +78,19 @@ future.apply::future_lapply(X= munis_df$abrev_muni, FUN=gerar_pontos_OTP)
 source("./R/fun/criar_script_python_parallel_multiple.R")
 
 # pico
-pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes, 
+pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes,
+         ano = 2019,
          from = 6, until = 8, every = 15, modo = "todos")
 
 # fora pico, # apenas modo transporte publico
 pblapply(munis_df[modo == "todos"]$abrev_muni, criar_script_python_paral_modes, 
+         ano = 2019,
          from = 14, until = 16, every = 15, modo = 'tp') 
 
 # para as cidades sem gtfs, sera somente transporte ativo
 # cidades: bsb, sal, man, rec, goi, bel, gua, cam, slz, sgo, mac, duq, cgr, nat
 pblapply(munis_df[modo == "ativo"]$abrev_muni, criar_script_python_paral_modes, 
+         ano = 2019,
          modo='ativo') 
 
 

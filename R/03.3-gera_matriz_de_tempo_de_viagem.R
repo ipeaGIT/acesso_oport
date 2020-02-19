@@ -24,19 +24,23 @@ source('./R/fun/setup.R')
 
 #### 1) Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem -----------------------
 
-gerar_tt_matrix <- function(sigla_muni) {
+gerar_tt_matrix <- function(sigla_muni, ano) {
   
-  # sigla_muni <- "cur"
+  # sigla_muni <- "for"
+  # ano <- 2019
   
   # status message
-  message('Woking on city ', sigla_muni, '\n')
+  message('Woking on city ', sigla_muni, ' at year ', ano)
+  
+  # criar diretorio
+  dir.create(sprintf("../data/output_ttmatrix/2020/%s", sigla_muni))
   
   # lista scripts em python daquela cidade
-  python_scripts <- dir("../otp/py", pattern = sprintf("otp_%s", sigla_muni))
+  python_scripts <- dir(sprintf("../otp/py/%s/%s", ano, sigla_muni), pattern = sprintf("otp_%s", sigla_muni))
   
   # Funcao para chamar OTP
   chama_otp <- function(x){
-    comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp-1.4.0-shaded.jar py/%s", x)
+    comando <- sprintf("cd ../otp && java -jar programs/jython.jar -Dpython.path=programs/otp-1.4.0-shaded.jar py/%s/%s/%s", ano, sigla_muni, x)
     shell(comando)
   }
   
@@ -67,18 +71,18 @@ juntar_output_OTP <- function(sigla_muni, ano = 2019){
   # sigla_muni <- 'bho'; ano <- 2019
   
   # status message
-  message("Working on city ", sigla_muni, "\n")
+  message("Working on city ", sigla_muni, ' at year ', ano, "\n")
   
   ### Public Transport
   # pegar os arquivos
-  files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni),
+  files <- dir(sprintf("../data/output_ttmatrix/%s/%s", ano, sigla_muni),
                pattern = "^ttmatrix_\\w{3}_pt",
                full.names = TRUE)
   #    files <- files[c(1:2, 22, 24,45)]
   # files <- files[c(1:20)]
   
   # abrir, juntar e salvar arquivos
-  path_out <- sprintf("E:/data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.csv", sigla_muni, ano, sigla_muni,'pt')
+  path_out <- sprintf("E:/data/output_ttmatrix/%s/%s/ttmatrix_%s_%s_%s.csv", ano, sigla_muni, sigla_muni,'pt', ano)
   
   # ler, empilhar e salvar arquivos
   plan(multiprocess)
@@ -90,12 +94,12 @@ juntar_output_OTP <- function(sigla_muni, ano = 2019){
   
   ### Walking and Cycling
   # pegar os arquivos
-  files <- dir(sprintf("../data/output_ttmatrix/%s", sigla_muni), 
+  files <- dir(sprintf("../data/output_ttmatrix/%s/%s", ano, sigla_muni), 
                pattern = "^ttmatrix_\\w{3}_walk|^ttmatrix_\\w{3}_bike",
                full.names = TRUE)
   
   # abrir, juntar e salvar arquivos
-  path_out <- sprintf("E:/data/output_ttmatrix/%s/ttmatrix_%s_%s_%s.csv", sigla_muni, ano, sigla_muni,'ativo')
+  path_out <- sprintf("E:/data/output_ttmatrix/%s/%s/ttmatrix_%s_%s_%s.csv", ano, sigla_muni, sigla_muni, 'ativo',ano)
   
   # ler, empilhar e salvar arquivos
   # furrr::future_map(files, data.table::fread, nThread=getDTthreads()) %>%
