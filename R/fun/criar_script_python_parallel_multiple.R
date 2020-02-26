@@ -26,12 +26,7 @@
 
 
 
-criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
-                                            ano,
-                                            from = 7, 
-                                            until = 8, 
-                                            every = 15,
-                                            time_threshold = 7200, max_walk_distance = 800
+criar_script_python_paral_modes_muni <- function(sigla_muni
                                             ) {
   
   
@@ -499,6 +494,7 @@ criar_script_python_paral_modes <- function(sigla_muni, modo = "todos",
   # Start writing to an output file
   # Start by creating the folder
   dir.create(sprintf("../otp/py/%s/%s", ano, sigla_muni))
+  
   # So salva a hora de partida se tiver o modo de transporte publico
   if (modo %in% c("todos", "tp")) {
     

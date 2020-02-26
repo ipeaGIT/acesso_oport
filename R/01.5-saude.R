@@ -8,6 +8,14 @@
 source('./R/fun/setup.R')
 
 
+# ATENCAO ####################################################################
+# ESSE SCRIPT SO FUNCIONA PARA O ANO DE 2019!
+
+# Determinar o ano
+ano <- 2019
+
+# Select the corerspondent munis_df
+munis_df <- get(sprintf("munis_df_%s", ano))
 
 
 

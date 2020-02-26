@@ -8,6 +8,15 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
+# ATENCAO ####################################################################
+# ESSE SCRIPT SO FUNCIONA PARA O ANO DE 2019!
+
+# Determinar o ano
+ano <- 2019
+
+# Select the corerspondent munis_df
+munis_df <- get(sprintf("munis_df_%s", ano))
+
 
 
 
@@ -63,7 +72,7 @@ nrow(escolas_filt) # 12259 obs
 # B) fora dos limites do municipio
   
   # carrega shapes
-  shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% 
+  shps <- purrr::map_dfr(dir("../data-raw/municipios/2019", recursive = TRUE, full.names = TRUE), read_rds) %>% 
     as_tibble() %>% 
     st_sf(crs = 4326)
   

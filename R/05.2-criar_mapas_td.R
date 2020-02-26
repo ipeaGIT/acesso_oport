@@ -149,7 +149,7 @@ fazer_figuras_td <- function(ano = 2019) {
     acess <- acess_final %>% filter(sigla_muni == sigla_munii)
     
     # abrir tiles
-    map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+    map_tiles <- read_rds(sprintf("../data/maptiles_crop/%s/mapbox/maptile_crop_mapbox_%s_%s.rds", ano, sigla_munii, ano))
     
     
     # tirar so pt e pico e colocar em format long
@@ -205,7 +205,7 @@ fazer_figuras_td <- function(ano = 2019) {
     acess <- acess_final %>% filter(sigla_muni == sigla_munii)
     
     # abrir tiles
-    map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+    map_tiles <- read_rds(sprintf("../data/maptiles_crop/%s/mapbox/maptile_crop_mapbox_%s_%s.rds", ano, sigla_munii, ano))
     
     # tirar so pt e pico e colocar em format long
     acess_pt_pico <- acess %>%
@@ -264,7 +264,7 @@ fazer_figuras_td <- function(ano = 2019) {
       gather(ind, valor, CMATT15:CMATT45)
     
     # abrir tiles
-    map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+    map_tiles <- read_rds(sprintf("../data/maptiles_crop/%s/mapbox/maptile_crop_mapbox_%s_%s.rds", ano, sigla_munii, ano))
     
     # ajustar levels
     acess <- acess %>%
@@ -314,7 +314,7 @@ fazer_figuras_td <- function(ano = 2019) {
       gather(ind, valor, CMATT60:CMAEF60)
     
     # abrir tiles
-    map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+    map_tiles <- read_rds(sprintf("../data/maptiles_crop/%s/mapbox/maptile_crop_mapbox_%s_%s.rds", ano, sigla_munii, ano))
     
     # fazer grafico
     acess <- acess %>%

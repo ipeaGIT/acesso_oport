@@ -25,7 +25,7 @@
 #   
 #   
 #   # Nome da cidade
-#   cidade <- munis_df[abrev_muni==sigla_muni]$name_muni
+#   cidade <- munis_df_2019[abrev_muni==sigla_muni]$name_muni
 #   cidade_string <- paste0(cidade, ", brazil")
 #   
 #   # Tags disponiveis

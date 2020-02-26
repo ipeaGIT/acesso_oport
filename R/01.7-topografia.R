@@ -21,59 +21,74 @@ source('./R/fun/setup.R')
 
 # sigla_muni <- "slz"
 
-  
-# Funcao para gerar arquivo raster com a topografia do municipio  ------------------------------------------------------------------
-crop_save_raster <- function(sigla_muni) {
+crop_save_raster <- function(ano, munis = "all") {
   
   
-  my_merge <- function(...) {
+  # Select the corerspondent munis_df
+  munis_df <- get(sprintf("munis_df_%s", ano))
+  
+  # Criar pasta para salvar arquivos
+  dir.create(sprintf("../data/topografia/%s", ano), recursive = TRUE)
+  
+  # Funcao para gerar arquivo raster com a topografia do municipio  ------------------------------------------------------------------
+  crop_save_raster_muni <- function(sigla_muni) {
     
-    x <- raster::merge(..., tolerance = 10)
+    
+    my_merge <- function(...) {
+      
+      x <- raster::merge(..., tolerance = 10)
+    }
+    
+    # listar arquivos .tiff na pasta
+    dir <- sprintf("../data-raw/topografia/%s/%s", ano, sigla_muni)
+    files <- dir(dir, full.names = T, pattern = ".tif$")
+    
+    # leitura de arquivo raster
+    if (length(files) == 1) {
+      elev_img_bind <- raster::raster(files)
+      
+    } else {
+      elev_img <- purrr::map(files, raster::raster)
+      
+      # atencao: tem que reprojetar os raster para um origin comum com o uso da funcao raster::resample
+      # onde o segundo raster da funcao eh o raster de referencia
+      # nesse caso sempre pegar o primeiro raster como referencia para o resample
+      
+      # elev_img_corrigido <- c(elev_img[[1]], map(elev_img[c(-1)], raster::resample, elev_img[[1]]))
+      
+      # elev_img_bind <- do.call(raster::merge, elev_img_corrigido)
+      elev_img_bind <- do.call(my_merge, elev_img)
+    }
+    
+    # carrega shape do municipio
+    muni_sf <- readr::read_rds(sprintf("../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano))
+    
+    # Cria bounding box do municipio
+    bb <- sf::st_bbox(muni_sf)
+    bb1 <- c(bb[1], bb[3], bb[2], bb[4])
+    
+    # Converte para spatial polygon para fazer o crop
+    e <- as(extent(bb1), 'SpatialPolygons')
+    crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
+    e <- spTransform(e, CRS(proj4string(elev_img_bind)))
+    
+    # crop do municipio com raster de topografia
+    elev_img_fim <- raster::crop(elev_img_bind, e)
+    
+    # salvar
+    output <- sprintf("../data/topografia/%s/topografia_%s_%s.tif", ano, sigla_muni, ano)
+    raster::writeRaster(elev_img_fim, output, format="GTiff", overwrite=TRUE)
   }
   
-  # listar arquivos .tiff na pasta
-  dir <- sprintf("../data-raw/topografia2/Topografia/%s", sigla_muni)
-  files <- dir(dir, full.names = T, pattern = ".tif$")
-  
-  # leitura de arquivo raster
-  if (length(files) == 1) {
-    elev_img_bind <- raster::raster(files)
+  #### Aplicando funcao em paralelo para salvar grades de hexagonos ---------------------------------------------------------------
+  if (munis == "all") {
     
-  } else {
-    elev_img <- purrr::map(files, raster::raster)
+    x = munis_df$abrev_muni
     
-    # atencao: tem que reprojetar os raster para um origin comum com o uso da funcao raster::resample
-    # onde o segundo raster da funcao eh o raster de referencia
-    # nesse caso sempre pegar o primeiro raster como referencia para o resample
-    
-    # elev_img_corrigido <- c(elev_img[[1]], map(elev_img[c(-1)], raster::resample, elev_img[[1]]))
-    
-    # elev_img_bind <- do.call(raster::merge, elev_img_corrigido)
-    elev_img_bind <- do.call(my_merge, elev_img)
-    }
+  } else (x = munis)
   
-  # carrega shape do municipio
-  muni_sf <- readr::read_rds(paste0("../data-raw/municipios/",sigla_muni,'/municipio_',sigla_muni,".rds"))
+  # Parallel processing using future.apply
+  future::plan(future::multiprocess)
+  future.apply::future_lapply(X=x, FUN=crop_save_raster_muni, future.packages=c('sf', 'raster'))
   
-  # Cria bounding box do municipio
-  bb <- sf::st_bbox(muni_sf)
-  bb1 <- c(bb[1], bb[3], bb[2], bb[4])
-  
-  # Converte para spatial polygon para fazer o crop
-  e <- as(extent(bb1), 'SpatialPolygons')
-  crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
-  e <- spTransform(e, CRS(proj4string(elev_img_bind)))
-  
-  # crop do municipio com raster de topografia
-  elev_img_fim <- raster::crop(elev_img_bind, e)
-  
-  # salvar
-  output <- sprintf("../data/topografia2/topografia2_%s.tif", sigla_muni)
-  raster::writeRaster(elev_img_fim, output, format="GTiff", overwrite=TRUE)
 }
-
-#### Aplicando funcao em paralelo para salvar grades de hexagonos ---------------------------------------------------------------
-
-# Parallel processing using future.apply
-future::plan(future::multiprocess)
-future.apply::future_lapply(X=munis_df$abrev_muni, FUN=crop_save_raster, future.packages=c('sf', 'raster'))

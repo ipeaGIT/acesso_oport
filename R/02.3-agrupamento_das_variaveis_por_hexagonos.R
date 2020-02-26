@@ -4,11 +4,11 @@
 # carregar bibliotecas -----------------------------------------------------------------------------
 source('./R/fun/setup.R')
 
-
-agrupar_variaveis_hex <- function(siglas_muni, ano) {
+agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
-  
+  # Select the corerspondent munis_df
+  munis_df <- get(sprintf("munis_df_%s", ano))
   
   # ABRIR ARQUIVOS COM AS OPORTUNIDADES -------------------------------------
   
@@ -47,7 +47,6 @@ agrupar_variaveis_hex <- function(siglas_muni, ano) {
     
   }
   
-  x_x <- siglas_muni
   
   # FUNCAO PARA REALIZAR EM CADA MUNICIPIO ----------------------------------
   
@@ -60,10 +59,10 @@ agrupar_variaveis_hex <- function(siglas_muni, ano) {
     message('Woking on city ', sigla_muni, '\n')
     
     # resolucoes disponiveis
-    res <- str_extract(dir("../data/hex_municipio/", pattern = sigla_muni), "\\d+")
+    res <- str_extract(dir(sprintf("../data/hex_municipio/%s/", ano), pattern = sigla_muni), "\\d+")
     
     # Pegar endereco das grades e hexagonos em todas resolucoes
-    grade_file <- paste0("../data/grade_municipio_com_renda_cor/grade_renda_cor_", sigla_muni, ".rds")
+    grade_file <- sprintf("../data/grade_municipio_com_renda_cor/%s/grade_renda_cor_%s_%s.rds", ano, sigla_muni, ano)
     
     # Gerar centroide da grade grade de cada municipio
     centroide_pop <- readr::read_rds(grade_file) %>%
@@ -93,7 +92,7 @@ agrupar_variaveis_hex <- function(siglas_muni, ano) {
       # muni_res <- '09'
       
       # endereco do hexagono na resolucao
-      hexf <- paste0("../data/hex_municipio/hex_",sigla_muni,'_',muni_res, '.rds')
+      hexf <- sprintf("../data/hex_municipio/%s/hex_%s_%s_%s.rds", ano, sigla_muni, muni_res, ano)
       
       # Ler arquivo de hexagono  
       hex_muni <- readr::read_rds(hexf)
@@ -211,21 +210,29 @@ agrupar_variaveis_hex <- function(siglas_muni, ano) {
     
     # Aplicar funcao para cada resolucao
     walk(res, por_resolucao)
+    
   }
   
   # Aplica funcao para cada municipio
+  if (munis == "all") {
+    
+    x = munis_df$abrev_muni
+    
+  } else (x = munis)
   
   # Parallel processing using future.apply
   future::plan(future::multiprocess)
   #options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
-  future.apply::future_lapply(X = x_x, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table', 'Hmisc'))
+  future.apply::future_lapply(X = x, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table', 'Hmisc'))
+  
   
 }
 
 
-# aplicar para todas as cidades
-agrupar_variaveis_hex(munis_df$abrev_muni, ano = 2019)
 
+# aplicar funcao -----------------
+agrupar_variaveis_hex(ano = 2019)
+agrupar_variaveis_hex(ano = 2020)
 
 
 
