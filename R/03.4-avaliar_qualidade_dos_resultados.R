@@ -47,15 +47,16 @@ gerar_ttmatrix_mediana <- function(ano = 2019, munis = "all") {
     # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
     # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
     ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
-    ttmatrix_allmodes[mode=='bike', travel_time := ifelse(origin == destination, 110, travel_time)]
-    ttmatrix_allmodes[mode %in% 'walk|transit', travel_time := ifelse(origin == destination, 350, travel_time)]
+    ttmatrix_allmodes[mode=='bike', travel_time := fifelse(origin == destination, 110, travel_time)]
+    ttmatrix_allmodes[mode == "walk", travel_time := fifelse(origin == destination, 350, travel_time)]
+    ttmatrix_allmodes[mode == "transit", travel_time := fifelse(origin == destination, 350, travel_time)]
     
     # convert depart_time para formato itime
     ttmatrix_allmodes[, depart_time := as.ITime(depart_time)]
     
     # Classificar informacao de horario de partida como pico ou fora pico
-    ttmatrix_allmodes[, pico := ifelse(mode %in% c("bike", "walk"), 1,
-                                       ifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
+    ttmatrix_allmodes[, pico := fifelse(mode %in% c("bike", "walk"), 1,
+                                       fifelse( depart_time %between% c(as.ITime("06:0:00"), as.ITime("08:00:00")),1,0))]
     
     
     
