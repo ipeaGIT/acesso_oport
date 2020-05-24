@@ -65,7 +65,13 @@ nrow(escolas_filt) # 12259 obs
 
 
 # A) Numero de digitos de lat/long apos ponto
-  setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Checar isso aqui e nos scripts de saude e educacao
+
+# usao em 2019
+#  setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+
+# Acho que esse aqui funciona melhor
+ setDT(escolas_filt)[, ndigitos := nchar( gsub("^.*\\.","", y) )]
   A_estbs_pouco_digito <- escolas_filt[ ndigitos <=2,]
 
 
