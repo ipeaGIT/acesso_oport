@@ -2,6 +2,7 @@
 source('./R/fun/setup.R')
 source("R/fun/crop_ggmap.R")
 
+devtools::install_github('kauebraga/ceramic')
 
 library(ggmap)
 
