@@ -63,12 +63,23 @@ organizar_base_acess <- function(ano) {
     hex_dt_fim <- hex_dt %>%
       select(sigla_muni = muni, nome_muni, cod_muni, id_hex, 
              
-             # Selecionar variaveis de populacao
+             # Selecionar variaveis de populacao (cor)
              P001 = pop_total, 
              P002 = cor_branca, 
              P003 = cor_negra, 
              P004 = cor_indigena, 
              P005 = cor_amarela,
+             
+             # Selecionar variaveis de populacao (idade)
+             P006  = idade_0a9  , 
+             P007  = idade_10a14, 
+             P008  = idade_15a19, 
+             P009  = idade_20a29,  
+             P010 = idade_30a39, 
+             P011 = idade_40a49, 
+             P012 = idade_50a59, 
+             P013 = idade_60a69, 
+             P014 = idade_70   , 
              
              # Selecionar variveis de renda
              R001 = renda_capita, 

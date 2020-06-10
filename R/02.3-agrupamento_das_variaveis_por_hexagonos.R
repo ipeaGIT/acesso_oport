@@ -66,7 +66,9 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     # Gerar centroide da grade grade de cada municipio
     centroide_pop <- readr::read_rds(grade_file) %>%
-      dplyr::select(id_grade, pop_total, renda,  cor_branca, cor_amarela, cor_indigena, cor_negra) %>%
+      dplyr::select(id_grade, pop_total, renda,  cor_branca, cor_amarela, cor_indigena, cor_negra,  
+                    idade_0a9, idade_10a14, idade_15a19, idade_20a29, 
+                    idade_30a39, idade_40a49, idade_50a59, idade_60a69, idade_70   ) %>%
       st_centroid()
     
     # Qual o codigo do municipio em questao?
@@ -107,6 +109,17 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                                     cor_amarela  = sum(round(cor_amarela,0), na.rm = TRUE),
                                     cor_indigena = sum(round(cor_indigena,0), na.rm = TRUE),
                                     cor_negra    = sum(round(cor_negra,0), na.rm = TRUE),
+                                    # age variables
+                                    idade_0a9   = sum(idade_0a9   , na.rm = TRUE),
+                                    idade_10a14 = sum(idade_10a14 , na.rm = TRUE),
+                                    idade_15a19 = sum(idade_15a19 , na.rm = TRUE),
+                                    idade_20a29 = sum(idade_20a29 , na.rm = TRUE),
+                                    idade_30a39 = sum(idade_30a39 , na.rm = TRUE),
+                                    idade_40a49 = sum(idade_40a49 , na.rm = TRUE),
+                                    idade_50a59 = sum(idade_50a59 , na.rm = TRUE),
+                                    idade_60a69 = sum(idade_60a69 , na.rm = TRUE),
+                                    idade_70    = sum(idade_70    , na.rm = TRUE),
+                                    # total pop and income 
                                     pop_total    = sum(round(pop_total,0), na.rm = TRUE),
                                     renda_total  = sum(renda, na.rm = TRUE)), 
                                 by = id_hex ]
