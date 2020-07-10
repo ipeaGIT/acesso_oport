@@ -8,12 +8,22 @@
 source('./R/fun/setup.R')
 
 
+# ATENCAO ####################################################################
+# ESSE SCRIPT SO FUNCIONA PARA O ANO DE 2019!
+
+# Determinar o ano
+ano <- 2019
+
+# Select the corerspondent munis_df
+munis_df <- get(sprintf("munis_df_%s", ano))
+
+
 
 ##### 1) Filtrar Rais-2017 pessoas-------------------------------------------------------
 
 
 # Leitura dos dados da RAIS estabs geocoded
-rais_estabs <- fread("../data-raw/rais/rais_2017_georef.csv", colClasses = 'character')
+rais_estabs <- fread("../data-raw/rais/2019/rais_2017_georef.csv", colClasses = 'character')
 
 
 rais_estabs[ id_estab == '33892175000290'] # ipea
@@ -21,7 +31,7 @@ rais_estabs[ id_estab == '33892175000100'] # ipea
 
 
 # Leitura dos dados da RAIS pessoas com colunas que vamos usar
-rais_trabs <- data.table::fread("../data-raw/rais/brasil2017.csv"
+rais_trabs <- data.table::fread("../data-raw/rais/2019/brasil2017.csv"
                                 , select = c("id_estab", "grau_instr", "emp_31dez", 'clas_cnae20', 'uf', 'codemun', 'nat_jur2016')
                                 , colClasses='character'
                                 # , nrows = 1000
@@ -97,7 +107,7 @@ rais_filtro_3 <- rais_filtro_2[nat_jur2016 != "2011"]
 
 
 # Salvar em formato rds para formato rapido
-write_rds(rais_filtro_3, "../data/rais/rais_2017_ind_filtrada.rds")
+write_rds(rais_filtro_3, "../data/rais/2019/rais_2017_ind_filtrada.rds")
 
 
 
@@ -105,7 +115,7 @@ write_rds(rais_filtro_3, "../data/rais/rais_2017_ind_filtrada.rds")
 ####### 2) Categorizar trabalhadores por grau de instrucao  ----------------------------------------------------------------------------------
 
 # Abrir RAIS  em formato rapido rds
-rais_trabs <- read_rds("../data/rais/rais_2017_ind_filtrada.rds")
+rais_trabs <- read_rds("../data/rais/2019/rais_2017_ind_filtrada.rds")
 
 
 
@@ -137,7 +147,7 @@ write_rds(rais_fim_wide, "../data/rais/rais_2017_vin_instrucao.rds")
 ### 3) Limpar outliers (empresas que ainda declara muitos trabalhadores na mesma sede) -----------------------------------------------------
 
 # Abrir
-rais <- read_rds("../data/rais/rais_2017_vin_instrucao.rds")
+rais <- read_rds("../data/rais/2019/rais_2017_vin_instrucao.rds")
 
 
 # 1) Primeiro faz correcao do total de vinculos ouliers por CNAE
@@ -254,7 +264,7 @@ rais[, c('corte', 'prop_baixo', 'prop_medio',  'prop_alto') := NULL]
 
 
 # Salvar Rais de estabelecimentos com numero de vinculos corrigos e quant de pessoas por escolaridade
-write_rds(rais, "../data/rais/rais_2017_corrigido.rds")
+write_rds(rais, "../data/rais/2019/rais_2017_corrigido.rds")
 
 
 
@@ -262,11 +272,11 @@ write_rds(rais, "../data/rais/rais_2017_corrigido.rds")
 ##### 4) Adicionar dados de lat long-------------------------------------------------------
 
 # Abrir Rais de estabelecimentos com numero de vinculos corrigos e quant de pessoas por escolaridade
-rais <- read_rds("../data/rais/rais_2017_corrigido.rds")
+rais <- read_rds("../data/rais/2019/rais_2017_corrigido.rds")
 
 
 # leitura da RAIS geocodificada ( output do galileo )
-rais_geo <- fread("../data-raw/rais/rais_2017_georef.csv"
+rais_geo <- fread("../data-raw/rais/2019/rais_2017_georef.csv"
                   , select = c("id_estab", "codemun", "latitude", 'longitude', 'precisiondepth', 'logradouro', 'cep', 'uf', 'BA_Nome_do_municipio')
                   , colClasses='character'
                   # , nrows = 10
@@ -454,18 +464,18 @@ rais_google_mal_geo <- output_google_api1_rais %>%
   output_google_api1_rais[output_google_api3_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
   
   # save google API output 
-  fwrite(output_google_api1_rais, "../data/rais/output_google_api_rais.csv")
+  fwrite(output_google_api1_rais, "../data/rais/2019/output_google_api_rais.csv")
   
   
   # open google API output
-  output_google_api1_rais <- fread("../data/rais/output_google_api_rais.csv", colClasses = 'character')
+  output_google_api1_rais <- fread("../data/rais/2019/output_google_api_rais.csv", colClasses = 'character')
   
   
 # atualiza lat lon a partir de google geocode
   setDT(rais)[output_google_api1_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
 
 # Salvar
-write_rds(rais, "../data/rais/rais_2017_corrigido_latlon.rds")
+write_rds(rais, "../data/rais/2019/rais_2017_corrigido_latlon.rds")
 
 
 
@@ -475,11 +485,11 @@ write_rds(rais, "../data/rais/rais_2017_corrigido_latlon.rds")
 
 
 # abri rais corrigida
-rais <- read_rds("../data/rais/rais_2017_corrigido_latlon.rds")
+rais <- read_rds("../data/rais/2019/rais_2017_corrigido_latlon.rds")
 
 
 # abrir censo escolar geo
-escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
+escolas <- read_rds("../data/censo_escolar/2019/educacao_inep_2019.rds") %>%
   # Deletar escolas q nao foram localizadas
   dplyr::filter(!is.na(lat)) %>%
   # Selecionar variaveis
@@ -510,7 +520,7 @@ rais2 <- rbind(rais, escolas_prop, fill = T)
 
 
 # Salvar
-write_rds(rais2, "../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
+write_rds(rais2, "../data/rais/2019/rais_2017_corrigido_latlon_censoEscolar.rds")
 
 
 
@@ -539,7 +549,7 @@ subset(output_google_api1_rais, !is.na(lat)) %>%
 # 7) Corrigir a posteriori falhas no geocode do Galileo --------------------------
 
 # abrir rais
-rais <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds")
+rais <- readr::read_rds("../data/rais/2019/rais_2017_corrigido_latlon_censoEscolar.rds")
 
 # lista dos hexagonos problematicos
 
@@ -568,7 +578,7 @@ hex_probs <- data.frame(
 
   
 # ler hex agregados e juntar
-hex <- lapply(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", unique(hex_probs$sigla_muni)), read_rds) %>%
+hex <- lapply(sprintf("../data/hex_agregados/2019/hex_agregado_%s_09_2019.rds", unique(hex_probs$sigla_muni)), read_rds) %>%
   rbindlist() %>%
   st_sf() %>%
   select(id_hex) %>%
@@ -627,7 +637,7 @@ hist(rais_dif$dist[rais_dif$dist < 5000])
 setDT(rais)[output_google_etapa7_rais, on='id_estab', c('lat', 'lon') := list(i.lat, i.lon) ]
 
 # Salvar
-write_rds(rais, "../data/rais/rais_2017_etapa7.rds")
+write_rds(rais, "../data/rais/2019/rais_2017_etapa7.rds")
 
 
 a <- geocode('AV ENGENHEIRO EMILIANO MACIEIRA, 1030 - SÃO LUÍS, Maranhão, CEP 65095603', output='more', force=T, data=T) 
@@ -641,7 +651,7 @@ a$lon == b$lon
 # maior que 3000 empregos
 
 # Abrir rais da etapa 7
-rais <- read_rds("../data/rais/rais_2017_etapa7.rds")
+rais <- read_rds("../data/rais/2019/rais_2017_etapa7.rds")
 
 # Trazer CNPJs problematicos
 # Lista de CNPJS problematicos
@@ -657,4 +667,4 @@ cnpjs_prob <- c("01437408000198", # for - Nordeste Cidadania
 rais_etapa8 <- rais[id_estab %nin% cnpjs_prob]
 
 # Salvar RAIS etapa 8 
-write_rds(rais_etapa8, "../data/rais/rais_2017_etapa8.rds")
+write_rds(rais_etapa8, "../data/rais/2019/rais_2017_etapa8.rds")

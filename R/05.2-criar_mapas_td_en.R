@@ -4,6 +4,7 @@ source('./R/fun/setup.R')
 library(ggalt)
 library(hrbrthemes)
 library(ggnewscale) # install.packages("ggnewscale")
+library(ggsn)
 
 
 
@@ -30,7 +31,7 @@ library(ggnewscale) # install.packages("ggnewscale")
 ###### A. Carrega dados ---------------------------
 
 # abrir dados
-acess_final <- read_rds("../data/output_base_final/acess_oport_2019.rds")
+acess_final <- read_rds("../data/output_base_final/2019/dados2019_AcessOport_v1.0_20200116_interno.rds")
 
 
 ###### B. temas para mapas ---------------------------
@@ -100,13 +101,88 @@ worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf()
 
 # load map of Brazil and municipalities
 states_sf <- geobr::read_state(code_state = "all", year = 2018)
-munis_sf <- lapply(munis_df$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
+munis_sf <- lapply(munis_df_2019$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
 st_crs(munis_sf) <- st_crs(states_sf)
+
+munis_sf <- munis_sf %>%
+  left_join(munis_df_2019, by = "code_muni") %>%
+  # number it according to order
+  mutate(n = case_when(abrev_muni == "bho" ~ 1,
+                       abrev_muni == "cur" ~ 2,
+                       abrev_muni == "for" ~ 3,
+                       abrev_muni == "poa" ~ 4,
+                       abrev_muni == "rec" ~ 5,
+                       abrev_muni == "rio" ~ 6,
+                       abrev_muni == "spo" ~ 7,
+                       abrev_muni == "bel" ~ 8,
+                       abrev_muni == "bsb" ~ 9,
+                       abrev_muni == "cam" ~ 10,
+                       abrev_muni == "cgr" ~ 11,
+                       abrev_muni == "duq" ~ 12,
+                       abrev_muni == "goi" ~ 13,
+                       abrev_muni == "gua" ~ 14,
+                       abrev_muni == "mac" ~ 15,
+                       abrev_muni == "man" ~ 16,
+                       abrev_muni == "nat" ~ 17,
+                       abrev_muni == "sal" ~ 18,
+                       abrev_muni == "sgo" ~ 19,
+                       abrev_muni == "slz" ~ 20
+  )) %>%
+  # format
+  mutate(text = paste0(n, ".", " ", name_muni.x)) %>%
+  mutate(type = ifelse(abrev_muni %in% c("bho", "cur", "for", "poa", "rec", "rio", "spo"), 
+                       "Active and Public Transport",
+                       "Active Transport")) %>%
+  mutate(color = ifelse(abrev_muni %in% c("bho", "cur", "for", "poa", "rec", "rio", "spo"), 
+                        "#469c77", "steelblue4"))
 
 # get centroids of municipalities
 munis_centroids <- st_centroid(munis_sf)
-munis_tp_centroids <- subset(munis_centroids, code_muni %in% munis_df$code_muni[which(munis_df$modo=='todos')])
+munis_tp_centroids <- subset(munis_centroids, code_muni %in% munis_df_2019$code_muni[which(munis_df_2019$modo=='todos')])
 
+munis_tp_centroids_df <- sfc_as_cols(munis_centroids)
+  
+
+
+# create sp map
+sp <- ggplot()+
+  geom_sf(data=worldMap, fill="white", color="gray90") +
+  geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
+  geom_sf(data=st_buffer(munis_centroids, dist =.1), fill="steelblue4", color="gray95", alpha=.8) +
+  geom_sf(data=st_buffer(munis_tp_centroids, dist =.1), fill="#469c77", color="gray95", alpha=.8) +
+  ggrepel::geom_text_repel(data = filter(munis_tp_centroids_df, abbrev_state == "SP"), aes(x = lon, y = lat, label = n),
+                           segment.size = 3, size=2.5)+
+  theme_void() +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), 
+        panel.grid = element_blank(), 
+        panel.background=element_rect(fill = "gray98"),
+        panel.border = element_rect(fill = NA))+
+  coord_sf(expand = FALSE,
+           xlim = c(filter(munis_tp_centroids_df, abrev_muni == "spo")$lon-1.2, 
+                    filter(munis_tp_centroids_df, abrev_muni == "spo")$lon+1.2),
+           ylim = c(filter(munis_tp_centroids_df, abrev_muni == "spo")$lat-0.8, 
+                    filter(munis_tp_centroids_df, abrev_muni == "spo")$lat+1.2))
+
+# create rio map
+rio <- ggplot()+
+  geom_sf(data=worldMap, fill="white", color="gray90") +
+  geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
+  geom_sf(data=st_buffer(munis_centroids, dist =.1), fill="steelblue4", color="gray95", alpha=.8) +
+  geom_sf(data=st_buffer(munis_tp_centroids, dist =.1), fill="#469c77", color="gray95", alpha=.8) +
+  ggrepel::geom_text_repel(data = filter(munis_tp_centroids_df, abbrev_state == "RJ"), aes(x = lon, y = lat, label = n),
+                           segment.size = 3, size=2.5)+
+  theme_void() +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), 
+        panel.grid = element_blank(), 
+        panel.background=element_rect(fill = "gray98"),
+        panel.border = element_rect(fill = NA))+
+  coord_sf(expand = FALSE,
+           xlim = c(filter(munis_tp_centroids_df, abrev_muni == "rio")$lon-1.2, 
+                    filter(munis_tp_centroids_df, abrev_muni == "rio")$lon+1.2),
+           ylim = c(filter(munis_tp_centroids_df, abrev_muni == "rio")$lat-0.5, 
+                    filter(munis_tp_centroids_df, abrev_muni == "rio")$lat+1))
+  
+  
 
 # create map
 
@@ -116,14 +192,104 @@ temp_map1 <-
   geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
   geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
   geom_sf(data=st_buffer(munis_tp_centroids, dist =.5), fill="#469c77", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
-  theme(panel.background = element_rect(fill = "gray98", colour = NA)) + 
-  theme(axis.text = element_blank(), axis.ticks = element_blank(), 
-        panel.grid = element_blank(), panel.background=element_rect(fill = "gray98")) +
-  coord_sf(expand = F, xlim = c(st_bbox(states_sf)[[1]], st_bbox(states_sf)[[3]]),ylim = c(st_bbox(states_sf)[[2]], st_bbox(states_sf)[[4]])) # coord_cartesian Coordinates Zoom
+  ggrepel::geom_text_repel(data = filter(munis_tp_centroids_df, abbrev_state %nin% c("SP", "RJ")), 
+                                         aes(x = lon, y = lat, label = n),
+                           segment.size = 3, size=3)+
+  theme(panel.background = element_rect(fill = "gray98", colour = NA),
+        axis.text = element_blank(), axis.ticks = element_blank(), 
+        panel.grid = element_blank()) + 
+  labs(x = '', y = '')+
+  coord_sf(expand = FALSE, 
+           xlim = c(st_bbox(states_sf)[[1]], st_bbox(states_sf)[[3]]),
+           ylim = c(st_bbox(states_sf)[[2]], st_bbox(states_sf)[[4]])) # coord_cartesian Coordinates Zoom
+  # guides(colour = guide_legend(override.aes = list(size=8)))
+
+arrowA <- data.frame(x1 = 14.5, x2 = 10, 
+                     y1 = 6.1,  y2 = 5) # 1: arrow!
+
+arrowB <- data.frame(x1 = 16.9, x2 = 17.7, 
+                     y1 = 6.1,  y2 = 5.3) # 1: arrow!
+
+library(cowplot)
+library(gridExtra)
+
+t1 <- ttheme_default(core=list(
+  fg_params=list(fontface=c(rep("plain", 4), "bold.italic")),
+  bg_params = list(fill=c(rep(c("grey95", "grey90"),
+                              length.out=4), "#6BAED6"),
+                   alpha = rep(c(1,0.5), each=5))
+))
+
+tt1 <- ttheme_minimal(
+  
+  padding = unit(c(2, 2), "mm"),
+  base_size = 8.5,
+  core=list(fg_params=list(col="#469c77", hjust=0, x=0))
+  
+  )
+
+tt2 <- ttheme_minimal(
+  
+  padding = unit(c(2, 2), "mm"),
+  base_size = 8.5,
+  core=list(fg_params=list(col="steelblue4", hjust=0, x=0))
+  
+  )
+
+# textos
+t1 <- textGrob("Active and Public\n Transport",  gp=gpar(col="#469c77", fontsize=10, fontface = "bold"),
+               just = c("right"))
+t2 <- textGrob("Active\n Transport", gp=gpar(col="steelblue4", fontsize=10, fontface = "bold"), 
+               just = c("right"))
+# t <- textGrob("[", gp=gpar(fontsize=50))
+
+# tabelas
+table1 <- munis_tp_centroids_df %>% arrange(n) %>% filter(modo == "todos") %>% .$text
+table2 <- munis_tp_centroids_df %>% arrange(n) %>% filter(modo == "ativo") %>% .$text
+
+fim <- ggplot() +
+  coord_equal(xlim = c(0, 35), ylim = c(0, 20), expand = FALSE) +
+  annotation_custom(ggplotGrob(temp_map1), 
+                    xmin = 0, xmax = 25, 
+                    ymin = 0, ymax = 20) +
+  annotation_custom(ggplotGrob(sp), 
+                    xmin = 1.5, xmax = 9, 
+                    ymin = 0, ymax = 9) +
+  annotation_custom(t1, 
+                    xmin = 21, xmax = 24,
+                    ymin = 17, ymax = 18)+
+  annotation_custom(t2, 
+                    xmin = 21, xmax = 24,
+                    ymin = 8, ymax = 9)+
+  # annotation_custom(t, 
+  #                   xmin = 22, xmax = 23,
+  #                   ymin = 0, ymax = 12)+
+  annotation_custom(gridExtra::tableGrob(table1,
+                                         rows = NULL, cols = NULL, theme = tt1),
+                    xmin = 19, xmax = Inf,
+                    ymin = 12, ymax = 20.5)+
+  annotation_custom(gridExtra::tableGrob(table2, 
+                                         rows = NULL, cols = NULL, theme = tt2),
+                    xmin = 20.3, xmax = Inf,
+                    ymin = 0, ymax = 12.5)+
+  geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), data = arrowA, 
+               arrow = arrow(length = unit(0.02, "npc")), lineend = "round")+
+  annotation_custom(ggplotGrob(rio), 
+                    xmin = 15, xmax = 21, 
+                    ymin = 0, ymax = 5)+
+  geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), data = arrowB, 
+               arrow = arrow(length = unit(0.02, "npc")), lineend = "round")+
+  theme(panel.background = element_rect(fill = NA, colour = NA),
+        axis.text = element_blank(), axis.ticks = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"))+
+  labs(x = "", y = "")
+
 
 
 # save map
-ggsave(temp_map1, file="../figures/td_en/fig0_munis_all.png", dpi = 300, width = 16.5, height = 16.5, units = "cm")
+ggsave(fim, 
+       file="../publicacoes/2020_access_inequalities_paper/figures/fig0_munis_all_test.png", 
+       dpi = 300, width = 16, height = 12, units = "cm")
 beepr::beep()
 
 
@@ -134,14 +300,16 @@ beepr::beep()
 
 # 1) Mapa TMI saude de media e alta - PT  ---------------------------------------
 
-fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+# sigla_munii <- "bsb"; cols = 2; width = 14; height = 10
+
+fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 11) {
   
   # abrir acess
   # acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_muni))
   acess <- acess_final %>% filter(sigla_muni == sigla_munii)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+  map_tiles <- read_rds(sprintf("../data/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_munii))
   
   
   # tirar so pt e pico e colocar em format long
@@ -159,6 +327,9 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
                         labels = c("Medium Complexity Health Care", 
                                    "High Complexity Health Care")))
   
+  # determine scale size
+  dist_scale <- ifelse(sigla_munii %in% c("spo", "rio"), 8, 4)
+  
   plot1 <- ggplot() + 
     geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
     coord_equal() +
@@ -171,15 +342,21 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
                                  , labels = c(0, 10, 20, "+30 min")
     ) +
     labs(fill = "Time to reach\n the closest opportunity",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni)+
+         title = munis_df_2019[abrev_muni == sigla_munii]$name_muni)+
     facet_wrap(~ind, ncol = cols)+
     theme_for_TMI()+
-    theme(plot.title = element_text(hjust = 0.5))
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggsn::scalebar(st_transform(acess_pt_pico, 3857), dist = dist_scale, dist_unit = "km", st.dist = 0.03,
+             transform = FALSE, model = "WGS84", st.size = 2.5, height=0.01,
+             facet.var = 'ind',
+             border.size = 0.3,
+             facet.lev = 'High Complexity Health Care')
   
   
   # save map
-  ggsave(plot1, 
-         file= sprintf("../figures/td_en/fig1/fig1-%s_TMI_SM_TP.png", sigla_munii), 
+  ggsave(plot = plot1, 
+         filename = sprintf("../publicacoes/2020_access_inequalities_paper/figures/fig1/fig1-%s_TMI_SM_TP.png", sigla_munii), 
+         device  = "png",
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -189,14 +366,13 @@ fazer_plot_1 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
 
 # 2) TMI Ed Infantil Walk -------------------------
 
-fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 13) {
   
   # abrir acess
-  acess <- read_rds(sprintf("../data/output_access/acess_%s_2019.rds", sigla_munii))
   acess <- acess_final %>% filter(sigla_muni == sigla_munii)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+  map_tiles <- read_rds(sprintf("../data/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_munii))
   
   # tirar so pt e pico e colocar em format long
   acess_pt_pico <- acess %>%
@@ -213,6 +389,13 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
                         labels = c("Early Childhood Education", 
                                    "Elementary Education")))
   
+  # determine scale size
+  dist_scale <- ifelse(sigla_munii %in% c("man"), 16,
+                       ifelse(sigla_munii %in% c("man", "cgr", "bsb"), 12,
+                              ifelse(sigla_munii %in% c("spo", "rio", "man", "bsb", "cgr"), 8, 
+                                     ifelse(sigla_munii %in% c("goi"), 6,
+                                            ifelse(sigla_munii %in% c("nat"), 3, 4)))))
+  
   plot2 <- ggplot()+
     geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
     coord_equal() +
@@ -225,17 +408,21 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
                                  , labels = c(0, 10, 20, "+30 min")
     ) +
     labs(fill = "Time to reach\n the closest opportunity",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni)+
+         title = munis_df_2019[abrev_muni == sigla_munii]$name_muni)+
     facet_wrap(~ind, ncol = cols)+
     theme_for_TMI()+
-    theme(plot.title = element_text(hjust = 0.5))
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggsn::scalebar(st_transform(acess_pt_pico, 3857), dist = dist_scale, dist_unit = "km", st.dist = 0.03,
+             transform = FALSE, model = "WGS84", st.size = 2.5, height=0.01,
+             facet.var = 'ind',
+             border.size = 0.3,
+             facet.lev = 'Elementary Education')
+
   
-  
-  
-  
-  # save map
-  ggsave(plot2, 
-         file= sprintf("../figures/td_en/fig2/fig2-%s_TMI_EI_walk.png", sigla_munii),
+  # save 
+  ggsave(plot = plot2, 
+         filename = sprintf("../publicacoes/2020_access_inequalities_paper/figures/fig2/fig2-%s_TMI_EI_walk.png", sigla_munii), 
+         device  = "png",
          dpi = 300, width = width, height = height, units = "cm")
 }
 
@@ -244,7 +431,7 @@ fazer_plot_2 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
 # 3) CMA Trabalho Bike 15/45 ----------------------------------
 
 
-fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 11) {
   
   # abrir acess
   acess <- acess_final %>% filter(sigla_muni == sigla_munii) %>%
@@ -254,13 +441,20 @@ fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
     gather(ind, valor, CMATT15:CMATT45)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+  map_tiles <- read_rds(sprintf("../data/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_munii))
   
   # ajustar levels
   acess <- acess %>%
     mutate(ind = factor(ind, 
                         levels = c("CMATT15", "CMATT45"), 
                         labels = c("15 Minutes", "45 Minutes")))
+  
+  # determine scale size
+  dist_scale <- ifelse(sigla_munii %in% c("man"), 16,
+                       ifelse(sigla_munii %in% c("man", "cgr", "bsb"), 12,
+                              ifelse(sigla_munii %in% c("spo", "rio", "man", "bsb", "cgr"), 8, 
+                                     ifelse(sigla_munii %in% c("goi"), 6,
+                                            ifelse(sigla_munii %in% c("nat"), 3, 4)))))
   
   
   # fazer plots
@@ -279,20 +473,27 @@ fazer_plot_3 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
     facet_wrap(~ind, ncol = cols)+
     theme_for_CMA()+
     labs(fill = "Proportion of accessible\n opportunities",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni) +
-    theme(plot.title = element_text(hjust = 0.5))
+         title = munis_df_2019[abrev_muni == sigla_munii]$name_muni) +
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggsn::scalebar(st_transform(acess, 3857), dist = dist_scale, dist_unit = "km", st.dist = 0.03,
+             transform = FALSE, model = "WGS84", st.size = 2.5, height=0.01,
+             facet.var = 'ind',
+             border.size = 0.3,
+             facet.lev = '45 Minutes')
   
   
   
-  ggsave(plot3, 
-         file= sprintf("../figures/td_en/fig3/fig3-%s_CMA_TT_1545.png", sigla_munii), 
+  # save 
+  ggsave(plot = plot3, 
+         filename = sprintf("../publicacoes/2020_access_inequalities_paper/figures/fig3/fig3-%s_CMA_TT_1545.png", sigla_munii), 
+         device  = "png",
          dpi = 300, width = width, height = height, units = "cm")
 }
 
 
 # 4) CMA Trabalho/Escola TP 60 ---------------------
 
-fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
+fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 11) {
   
   # abrir acess
   acess <-  acess_final %>% filter(sigla_muni == sigla_munii) %>%
@@ -302,13 +503,20 @@ fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
     gather(ind, valor, CMATT60:CMAEF60)
   
   # abrir tiles
-  map_tiles <- read_rds(sprintf("../data/map_tiles_crop/ceramic/map_tile_crop_ceramic_%s.rds", sigla_munii))
+  map_tiles <- read_rds(sprintf("../data/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_munii))
   
   # fazer grafico
   acess <- acess %>%
     mutate(ind = factor(ind, 
                         levels = c("CMATT60", "CMAEF60"), 
                         labels = c("Work", "Elementary Education")))
+  
+  # determine scale size
+  dist_scale <- ifelse(sigla_munii %in% c("man"), 16,
+                       ifelse(sigla_munii %in% c("man", "cgr", "bsb"), 12,
+                              ifelse(sigla_munii %in% c("spo", "rio", "man", "bsb", "cgr"), 8, 
+                                     ifelse(sigla_munii %in% c("goi"), 6,
+                                            ifelse(sigla_munii %in% c("nat"), 3, 4)))))
   
   # fazer plots
   plot4 <- ggplot()+
@@ -326,13 +534,20 @@ fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
     facet_wrap(~ind, ncol = cols)+
     theme_for_CMA()+
     labs(fill = "Proportion of accessible\n opportunities",
-         title = munis_df[abrev_muni == sigla_munii]$name_muni) +
-    theme(plot.title = element_text(hjust = 0.5))
+         title = munis_df_2019[abrev_muni == sigla_munii]$name_muni) +
+    theme(plot.title = element_text(hjust = 0.5))+
+    ggsn::scalebar(st_transform(acess, 3857), dist = dist_scale, dist_unit = "km", st.dist = 0.03,
+             transform = FALSE, model = "WGS84",  st.size = 2.5, height=0.01,
+             facet.var = 'ind',
+             border.size = 0.3,
+             facet.lev = 'Elementary Education')
   
   
   
-  ggsave(plot4, 
-         file= sprintf("../figures/td_en/fig4/fig4-%s_CMA_TTEF_60.png", sigla_munii),
+  # save 
+  ggsave(plot = plot4, 
+         filename = sprintf("../publicacoes/2020_access_inequalities_paper/figures/fig4/fig4-%s_CMA_TTEF_60.png", sigla_munii), 
+         device  = "png",
          dpi = 300, width = width, height = height, units = "cm")
   
 }
@@ -340,15 +555,24 @@ fazer_plot_4 <- function(sigla_munii, cols = 2, width = 14, height = 10) {
 
 # Aplicar funcoes -----------
 
-purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_1, height = 12)
-purrr::walk(munis_df$abrev_muni, fazer_plot_2, height = 12)
-purrr::walk(munis_df$abrev_muni, fazer_plot_3, height = 12)
-purrr::walk(munis_df[modo == "todos"]$abrev_muni, fazer_plot_4, height = 12)
+purrr::walk(munis_df_2019[modo == "todos"]$abrev_muni, fazer_plot_1, height = 12)
+purrr::walk(munis_df_2019$abrev_muni, fazer_plot_2, height = 12)
+purrr::walk(munis_df_2019$abrev_muni, fazer_plot_3, height = 12)
+purrr::walk(munis_df_2019[modo == "todos"]$abrev_muni, fazer_plot_4, height = 12)
 
 # para o rio, optar por uma coluna so no plot!
-fazer_plot_1('rio', cols = 1, width = 12, height = 18)
+fazer_plot_1('rio', cols = 1, width = 12, height = 16)
+fazer_plot_1('bsb', cols = 1, width = 12, height = 18)
+fazer_plot_1('man', cols = 1, width = 12, height = 18)
+
 fazer_plot_2('rio', cols = 1, width = 12, height = 18)
+fazer_plot_2('bsb', cols = 1, width = 12, height = 18)
+fazer_plot_2('man', cols = 1, width = 12, height = 18)
+
 fazer_plot_3('rio', cols = 1, width = 12, height = 18)
+fazer_plot_3('bsb', cols = 1, width = 12, height = 18)
+fazer_plot_3('man', cols = 1, width = 12, height = 18)
+
 fazer_plot_4('rio', cols = 1, width = 12, height = 18)
 
 

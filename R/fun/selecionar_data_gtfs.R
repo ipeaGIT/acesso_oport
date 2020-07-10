@@ -1,14 +1,15 @@
 #### Funcao para selecionar a data do gtfs que sera usada no script Python para o OTP
 
-selecionar_data_gtfs <- function(sigla_muni) {
+selecionar_data_gtfs <- function(sigla_muni, ano) {
   # sigla_muni <- 'for'
+  # ano <- 2019
   
   file.remove("../data/temp/calendar.txt")
   
   message(sprintf("working on %s", sigla_muni))
   
   # Leitura do gtfs para pasta temporaria
-  path_zip <- sprintf("../otp/graphs/%s", sigla_muni)
+  path_zip <- sprintf("../otp/graphs/%s/%s", ano, sigla_muni)
   file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)[1]
   unzip(file_zip, files = "calendar.txt", exdir = "../data/temp")
   
@@ -55,4 +56,4 @@ selecionar_data_gtfs <- function(sigla_muni) {
 }
 
 
-lapply(munis_df[modo == "todos"]$abrev_muni[6], selecionar_data_gtfs)
+# lapply(munis_df[modo == "todos"]$abrev_muni[6], selecionar_data_gtfs)

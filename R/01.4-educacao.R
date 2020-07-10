@@ -8,13 +8,22 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
+# ATENCAO ####################################################################
+# ESSE SCRIPT SO FUNCIONA PARA O ANO DE 2019!
+
+# Determinar o ano
+ano <- 2019
+
+# Select the corerspondent munis_df
+munis_df <- get(sprintf("munis_df_%s", ano))
+
 
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 1) Ler dados do INEP -----------------------------------------------------------------------------
 
-escolas <- fread("../data-raw/censo_escolar/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
+escolas <- fread("../data-raw/censo_escolar/2019/ESCOLAS_APLI_CATALOGO_ABR2019.csv")
 nrow(escolas) # 226251 obs 
 
 
@@ -56,14 +65,20 @@ nrow(escolas_filt) # 12259 obs
 
 
 # A) Numero de digitos de lat/long apos ponto
-  setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Checar isso aqui e nos scripts de saude e educacao
+
+# usao em 2019
+#  setDT(escolas_filt)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+
+# Acho que esse aqui funciona melhor
+ setDT(escolas_filt)[, ndigitos := nchar( gsub("^.*\\.","", y) )]
   A_estbs_pouco_digito <- escolas_filt[ ndigitos <=2,]
 
 
 # B) fora dos limites do municipio
   
   # carrega shapes
-  shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% 
+  shps <- purrr::map_dfr(dir("../data-raw/municipios/2019", recursive = TRUE, full.names = TRUE), read_rds) %>% 
     as_tibble() %>% 
     st_sf(crs = 4326)
   
@@ -128,7 +143,7 @@ teste <- munis_problema %>%
   select(CO_ENTIDADE, rua = logradouro, cidade, bairro, cep = cep1, uf)
 
 # salvar input para o galileo
-write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", delim = ";")  
+write_delim(teste, "../data-raw/censo_escolar/2019/escolas_2019_input_galileo.csv", delim = ";")  
   
 # Para o Galileo: 1072 obs
 
@@ -137,7 +152,7 @@ write_delim(teste, "../data-raw/censo_escolar/escolas_2019_input_galileo.csv", d
 # depois de rodar o galileo...
 
 # abrir output do galileo
-educacao_output_galileo <- fread("../data-raw/censo_escolar/escolas_2019_output_galileo.csv") %>%
+educacao_output_galileo <- fread("../data-raw/censo_escolar/2019/Òescolas_2019_output_galileo.csv") %>%
   # filtrar somente os maiores que 2 estrelas
   filter(PrecisionDepth %in% c("4 Estrelas")) %>%
   # substituir virgula por ponto
@@ -351,6 +366,6 @@ table(escolas_etapa_fim$mat_medio, useNA = "always")
 # 5. salvar ----------------------------------------------------------------------------------------
 
 # salvar
-  write_rds(escolas_etapa_fim, "../data/censo_escolar/educacao_inep_2019.rds")
+  write_rds(escolas_etapa_fim, "../data/censo_escolar/2019/educacao_inep_2019.rds")
 
 

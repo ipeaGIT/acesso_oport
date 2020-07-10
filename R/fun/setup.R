@@ -42,7 +42,28 @@ library(quantreg)
 
 # mudanças na geração do script em python
 
-munis_df <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
+munis_df_2019 <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
+                                     5300108, 2927408, 1302603, 2611606, 5208707, 1501402,
+                                     3518800, 3509502, 2111300, 3304904, 2704302, 3301702,
+                                     5002704, 2408102),
+                        abrev_muni=c('for', 'spo', 'rio', 'cur', 'poa', 'bho', 
+                                     'bsb', 'sal', 'man', 'rec', 'goi', 'bel',
+                                     'gua', 'cam', 'slz', 'sgo', 'mac', 'duq',
+                                     'cgr', 'nat'),
+                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte',
+                                    'Brasilia', 'Salvador', 'Manaus', 'Recife', 'Goiania', 'Belem',
+                                    'Guarulhos', 'Campinas', 'Sao Luis', 'Sao Goncalo', 'Maceio', 'Duque de Caxias',
+                                    'Campo Grande', 'Natal'),
+                        abrev_estado=c('CE', 'SP', 'RJ', 'PR', 'RS', 'MG',
+                                      'DF', 'BA', 'AM', 'PE', 'GO', 'PA',
+                                      'SP', 'SP', 'MA', 'RJ', 'AL', 'RJ',
+                                      'MS', 'RN'),
+                        modo = c('todos', 'todos', 'todos', 'todos', 'todos', 'todos',
+                                 'ativo', 'ativo', 'ativo', 'todos', 'ativo', 'ativo',
+                                 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
+                                 'ativo', 'ativo'))
+
+munis_df_2020 <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
                                      5300108, 2927408, 1302603, 2611606, 5208707, 1501402,
                                      3518800, 3509502, 2111300, 3304904, 2704302, 3301702,
                                      5002704, 2408102),
