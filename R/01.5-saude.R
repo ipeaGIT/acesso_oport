@@ -18,7 +18,7 @@ source('./R/fun/setup.R')
 #   # file  http://189.28.128.100/dab/docs/portaldab/documentos/microdados_pmaq_cliclo3/modulo_I_ubs/UBS_Brasil.xlsx
 
   # read original Excel sheet
-  pmaq_df <- readxl::read_xlsx(path = '../data-raw/hospitais/PMAQ/UBS_Brasil_ciclo3.xlsx',
+  pmaq_df <- readxl::read_xlsx(path = '../data-raw/hospitais/2019/PMAQ/UBS_Brasil_ciclo3.xlsx',
                    sheet = 'Módulo I', col_types = rep("text", 425))
   
 
@@ -95,7 +95,7 @@ gc(reset = T)
   
 ## 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
 
-cnes19 <- readxl::read_xlsx(path = '../data-raw/hospitais/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
+cnes19 <- readxl::read_xlsx(path = '../data-raw/hospitais/2019/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
                         sheet = 'BANCO', skip = 14, 
                         col_types = c(rep("text", 11), "numeric", "numeric", rep("text", 17)))
 
