@@ -1,7 +1,7 @@
 Sys.setenv(TZ='UTC') # Fuso horario local
 
 # carregar bibliotecas
-library(raster)
+# library(raster)
 library(ggplot2)      # visualizacao de dados
 library(ggthemes)     # temas para visualizacao de dados
 library(sf)           # leitura e manipulacao de dados espaciais
@@ -154,7 +154,7 @@ rm_accent <- function(str,pattern="all") {
 #' @param x Um objeto `sf` com pontos do tipo 
 #' @param names Um vetor com as colunas desejadas de output de longitude e latitute
 sfc_as_cols <- function(x, names = c("lon","lat")) {
-  stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
+  stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))                                                                                                                                                                                                                                                     
   ret <- sf::st_coordinates(x)
   ret <- tibble::as_tibble(ret)
   stopifnot(length(names) == ncol(ret))
@@ -176,3 +176,6 @@ change_remotes <- function(remote, branch = "master") {
   
   
 }
+
+
+options(scipen = 99999)
