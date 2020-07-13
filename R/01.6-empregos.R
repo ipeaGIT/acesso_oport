@@ -284,9 +284,9 @@ rais_geo <- fread("../data-raw/rais/2019/rais_2017_georef.csv"
 nrow(rais_geo) # 8186586 obs
 
 
-# Filtro selecionar so municipios do projeto
+# Filtro selecionar so municipios do projeto (2019 so far)
 gc(reset=T)
-rais_geo <- rais_geo[codemun %in% substr(munis_df$code_muni, 1, 6) ]
+rais_geo <- rais_geo[codemun %in% substr(munis_df_2019$code_muni, 1, 6) ]
 nrow(rais_geo) # 2348816 obs
 
 # recode lat lon column names
@@ -334,6 +334,8 @@ rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), sum(total_corrigido)] / 
 estabs_problema <- rais[ precisiondepth %in% c('1 Estrela', '2 Estrelas'), ]
 nrow(estabs_problema) # 34579 obs
 
+fwrite(estabs_problema, "../data/rais/2019/georef/georef_google1.csv")
+
 
 # lista de enderecos com problema
 enderecos <- estabs_problema %>% mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% .$fim
@@ -350,9 +352,9 @@ register_google(key = my_api$V1)
   
 
   # view
-  subset(output_google_api1_rais, !is.na(lat)) %>%
-    to_spatial() %>%
-    mapview()
+  # subset(output_google_api1_rais, !is.na(lat)) %>%
+  #   to_spatial() %>%
+  #   mapview()
   
 
 ######################### GOOGLE 2 , somente 3 estrelas, rodovias, endereco completo 
@@ -400,6 +402,8 @@ register_google(key = my_api$V1)
   rais_rodovias <- rbind(rais_rodovias_tipo1, rais_rodovias_tipo2, rais_rodovias_tipo3)
   nrow(rais_rodovias) # 9620 obs
   
+  fwrite(rais_rodovias, "../data/rais/2019/georef/georef_google2_rodovias.csv")
+  
   # lista de enderecos com problema
   enderecos_rodovias <- rais_rodovias %>% mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% .$fim
   
@@ -424,8 +428,8 @@ register_google(key = my_api$V1)
   
   # carrega shape dos munis
   shps <- purrr::map_dfr(dir("../data-raw/municipios/", recursive = TRUE, full.names = TRUE), read_rds) %>% as_tibble() %>% st_sf()
-
-rais_google_mal_geo <- output_google_api1_rais %>%
+  
+  rais_google_mal_geo <- output_google_api1_rais %>%
     filter(!is.na(lat)) %>% 
     st_as_sf(coords = c('lon', 'lat'), crs = 4326) %>%
     sf::st_join(shps %>% st_set_crs(4326)) %>%
@@ -563,16 +567,20 @@ hex_probs <- data.frame(
     "89800882a3bffff", # slz, AV JERONIMO DE ALBUQUERQUE
     "89800882a0fffff", # slz, AV JERONIMO DE ALBUQUERQUE de novo
     "89800882a53ffff", # slz, - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
-    "89a8a2a6413ffff", # sgo, - Avenida Eugênio Borges (rodovia?)
-    "8980055454bffff", # ter, - AV DEPUTADO PAULO FERRAZ
-    "89800556a2bffff", # ter, - muitas ruas
-    "89800554ccfffff", # ter, - muitas ruas
-    "89800554eabffff", # ter, - muitas ruas
-    "89800554d8bffff", # ter, - muitas ruas
-    "89800554e17ffff"),# ter - muitas ruas
+    "89a8a2a6413ffff" # sgo, - Avenida Eugênio Borges (rodovia?)
+    # "8980055454bffff" # ter, - AV DEPUTADO PAULO FERRAZ
+    # "89800556a2bffff", # ter, - muitas ruas
+    # "89800554ccfffff", # ter, - muitas ruas
+    # "89800554eabffff", # ter, - muitas ruas
+    # "89800554d8bffff", # ter, - muitas ruas
+    # "89800554e17ffff"  # ter - muitas ruas
+    
+    ),
   
 
-  sigla_muni = c("goi", "slz","slz", "slz", "slz", "slz", "slz", "slz", "slz", "sgo", "ter", "ter", "ter", "ter", "ter", "ter")
+  sigla_muni = c("goi", "slz","slz", "slz", "slz", "slz", "slz", "slz", "slz", "sgo"
+                 # "ter", "ter", "ter", "ter", "ter", "ter"
+                 )
   
 )
 
@@ -586,7 +594,7 @@ hex <- lapply(sprintf("../data/hex_agregados/2019/hex_agregado_%s_09_2019.rds", 
   filter(id_hex %in% hex_probs$hexs)
 
 # Qual o codigo dos municipio em questao?
-cod_mun_ok <- munis_df[abrev_muni %in% unique(hex_probs$sigla_muni)]$code_muni
+cod_mun_ok <- munis_df_2019[abrev_muni %in% unique(hex_probs$sigla_muni)]$code_muni
 
 # Carrega somente os dados da rais estabes nestes municipios
 base <- rais %>%
@@ -610,6 +618,9 @@ rais_prob <- rais %>%
 enderecos_etapa7 <- rais_prob %>% 
   mutate(fim = paste0(logradouro, " - ", BA_Nome_do_municipio, ", ", uf, " - CEP ", cep)) %>% 
   .$fim
+
+# export
+fwrite(rais_prob, "../data/rais/2019/georef/georef_google3_manual.csv")
 
 # registrar Google API Key
 my_api <- data.table::fread("../data-raw/google_key.txt", header = F)
