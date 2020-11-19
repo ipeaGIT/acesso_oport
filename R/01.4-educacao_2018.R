@@ -217,7 +217,7 @@ estabs_problema_geocoded_dt <- rbind(estabs_problema_geocoded_dt,
 
 
 
-#### GOOGLE 2, so ceps ------------------------
+#### so ceps ------------------------
 
 # ainda ha escolas mal georreferenciadas!
 # identificar essas escolas e separa-las
