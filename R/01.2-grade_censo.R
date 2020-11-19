@@ -14,10 +14,11 @@ criar_grade_muni_all <- function(ano, munis = "all") {
   
   
   # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
+  munis_df <- munis_df_2019
+  # munis_df <- get(sprintf("munis_df_%s", ano))
   
   # Criar pasta para salvar arquivos
-  dir.create(sprintf("../data-raw/grade_municipio/%s", ano))
+  dir.create(sprintf("../../data-raw/grade_municipio/%s", ano))
   
   # funcao para criar grade por municipio
   criar_grade_muni <- function(sigla){
@@ -30,7 +31,7 @@ criar_grade_muni_all <- function(ano, munis = "all") {
     # Leitura das grades estatisticas dos estados
     grade <- read_statistical_grid(code_grid = cod_estado, year = 2010)
     # Leitura do municipio
-    muni <- readr::read_rds( sprintf("../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla, ano) )
+    muni <- readr::read_rds( sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla, ano) )
     
     # mesma projecao geografica
     grade <- grade %>% st_transform(crs = 4326)
@@ -48,7 +49,7 @@ criar_grade_muni_all <- function(ano, munis = "all") {
     gc(reset=T)
     
     # salvar no disco
-    write_rds(grade_muni, sprintf("../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla, ano))
+    write_rds(grade_muni, sprintf("../../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla, ano))
   
     }
   
@@ -70,5 +71,7 @@ criar_grade_muni_all <- function(ano, munis = "all") {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
+criar_grade_muni_all(ano = 2017)
+criar_grade_muni_all(ano = 2018)
 criar_grade_muni_all(ano = 2019)
 

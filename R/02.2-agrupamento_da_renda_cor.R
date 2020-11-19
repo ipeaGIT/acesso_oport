@@ -22,7 +22,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     message('Woking on city ', sigla_muni, '\n')
     
     # endereco dos arquivos
-    path_setor <- sprintf("../data/setores_agregados/%s/setores_agregados_%s_%s.rds", ano, sigla_muni, ano)
+    path_setor <- sprintf("../../data/acesso_oport/setores_agregados/%s/setores_agregados_%s_%s.rds", ano, sigla_muni, ano)
     path_grade <- sprintf("../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla_muni, ano)
     
     # leitura de shapes de setores censitarios e grade estatistica

@@ -18,13 +18,16 @@ source('./R/fun/setup.R')
 criar_hexagonos <- function(ano, munis = "all") {
   
   # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
+  # munis_df <- get(sprintf("munis_df_%s", ano))
+  munis_df <- munis_df_2019
   
   shape_to_hexagon <- function(sigla_muni) {
     
-    dir_muni <- sprintf("../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano)
+    code <- filter(munis_df_2019, abrev_muni == sigla_muni)
     
-    muni <- read_rds(dir_muni) %>% 
+    code <- code$code_muni
+    
+    muni <- geobr::read_municipality(code) %>% 
       st_transform(crs=4326) %>% # projecao
       # Buffer para extender a area do municipio e assim evitar que os hexagonos nao considerem areas de borda
       st_buffer(dist = 0.003)
@@ -58,10 +61,11 @@ criar_hexagonos <- function(ano, munis = "all") {
       # rsolution
       if (nchar(resolution) == 1) res_fim <- paste0("0", resolution) else res_fim <- resolution
       
+      dir.create(sprintf("../../data/acesso_oport/hex_municipio/%s", ano))
       
       # salvar no disco
       write_rds(hex_grid, 
-                sprintf("../data/hex_municipio/%s/hex_%s_%s_%s.rds", ano, sigla_muni, res_fim, ano))
+                sprintf("../../data/acesso_oport/hex_municipio/%s/hex_%s_%s_%s.rds", ano, sigla_muni, res_fim, ano))
     }
     
     # salve arquivo de cada resolucao
@@ -88,5 +92,7 @@ criar_hexagonos <- function(ano, munis = "all") {
 
 
 #### 2) Aplicar funcao ------------
+criar_hexagonos(ano = 2017)
+criar_hexagonos(ano = 2018)
 criar_hexagonos(ano = 2019)
 criar_hexagonos(ano = 2020)

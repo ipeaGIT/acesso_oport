@@ -10,14 +10,15 @@ diagnost_hex_uso_solo <- function(sigla_muni, uso_do_solo, corte) {
   # corte <- 5
   
   # Qual o codigo do municipio em questao?
-  cod_mun_ok <- munis_df[abrev_muni == sigla_muni]$code_muni
+  cod_mun_ok <- munis_df_2019[abrev_muni == sigla_muni]$code_muni
   
   if (uso_do_solo == "trabalho") {
     
     base <- empregos %>% 
       filter(codemun == substr(cod_mun_ok, 1, 6)) %>%
       st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-      select(codemun, cnae.setor, id_estab, clas_cnae20, total_corrigido)
+      select(codemun, cnae.setor, id_estab, razao_social, clas_cnae20, total_corrigido, SearchedAddress, MatchedAddress,
+             geocode_engine, PrecisionDepth)
     
   } else if (uso_do_solo == "educacao") {
     
@@ -44,7 +45,7 @@ diagnost_hex_uso_solo <- function(sigla_muni, uso_do_solo, corte) {
   var_go <- subset(df_apoio, us == uso_do_solo)$var
   
   # ler hex agregados
-  hex <- read_rds(sprintf("../data/hex_agregados/hex_agregado_%s_09.rds", sigla_muni)) %>%
+  hex <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2018/hex_agregado_%s_09_2018.rds", sigla_muni)) %>%
     select(id_hex, UQ(as.symbol(var_go)))
   
   # filtra hex ids acima do corte

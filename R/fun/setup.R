@@ -1,7 +1,7 @@
 Sys.setenv(TZ='UTC') # Fuso horario local
 
 # carregar bibliotecas
-# library(raster)
+library(raster)
 library(ggplot2)      # visualizacao de dados
 library(ggthemes)     # temas para visualizacao de dados
 library(sf)           # leitura e manipulacao de dados espaciais
@@ -32,7 +32,7 @@ library(patchwork)
 # library(osmdata) # Download de dados do OpenStreeteMaps (OSM)
 library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/opentripplanner
 library(ggmap) # geocoding
-library(h3jsr) # h3 hex
+library(h3jsr) # h3 hex remotes::install_github("obrl-soil/h3jsr")
 library(bit64) # viz large numbers
 library(quantreg)
 
@@ -42,47 +42,6 @@ library(quantreg)
 
 # mudanças na geração do script em python
 
-munis_df_2019 <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
-                                     5300108, 2927408, 1302603, 2611606, 5208707, 1501402,
-                                     3518800, 3509502, 2111300, 3304904, 2704302, 3301702,
-                                     5002704, 2408102),
-                        abrev_muni=c('for', 'spo', 'rio', 'cur', 'poa', 'bho', 
-                                     'bsb', 'sal', 'man', 'rec', 'goi', 'bel',
-                                     'gua', 'cam', 'slz', 'sgo', 'mac', 'duq',
-                                     'cgr', 'nat'),
-                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte',
-                                    'Brasilia', 'Salvador', 'Manaus', 'Recife', 'Goiania', 'Belem',
-                                    'Guarulhos', 'Campinas', 'Sao Luis', 'Sao Goncalo', 'Maceio', 'Duque de Caxias',
-                                    'Campo Grande', 'Natal'),
-                        abrev_estado=c('CE', 'SP', 'RJ', 'PR', 'RS', 'MG',
-                                      'DF', 'BA', 'AM', 'PE', 'GO', 'PA',
-                                      'SP', 'SP', 'MA', 'RJ', 'AL', 'RJ',
-                                      'MS', 'RN'),
-                        modo = c('todos', 'todos', 'todos', 'todos', 'todos', 'todos',
-                                 'ativo', 'ativo', 'ativo', 'todos', 'ativo', 'ativo',
-                                 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
-                                 'ativo', 'ativo'))
-
-munis_df_2020 <- data.table( code_muni= c(2304400, 3550308, 3304557, 4106902, 4314902, 3106200,
-                                     5300108, 2927408, 1302603, 2611606, 5208707, 1501402,
-                                     3518800, 3509502, 2111300, 3304904, 2704302, 3301702,
-                                     5002704, 2408102),
-                        abrev_muni=c('for', 'spo', 'rio', 'cur', 'poa', 'bho', 
-                                     'bsb', 'sal', 'man', 'rec', 'goi', 'bel',
-                                     'gua', 'cam', 'slz', 'sgo', 'mac', 'duq',
-                                     'cgr', 'nat'),
-                        name_muni=c('Fortaleza', 'Sao Paulo', 'Rio de Janeiro', 'Curitiba', 'Porto Alegre', 'Belo Horizonte',
-                                    'Brasilia', 'Salvador', 'Manaus', 'Recife', 'Goiania', 'Belem',
-                                    'Guarulhos', 'Campinas', 'Sao Luis', 'Sao Goncalo', 'Maceio', 'Duque de Caxias',
-                                    'Campo Grande', 'Natal'),
-                        abrev_estado=c('CE', 'SP', 'RJ', 'PR', 'RS', 'MG',
-                                      'DF', 'BA', 'AM', 'PE', 'GO', 'PA',
-                                      'SP', 'SP', 'MA', 'RJ', 'AL', 'RJ',
-                                      'MS', 'RN'),
-                        modo = c('todos', 'todos', 'todos', 'todos', 'todos', 'todos',
-                                 'ativo', 'ativo', 'ativo', 'todos', 'ativo', 'ativo',
-                                 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo',
-                                 'ativo', 'ativo'))
 
 
 # library(hrbrthemes)
@@ -107,6 +66,43 @@ options(datatable.optimize=Inf)
 
 # set number of threads used in data.table
 data.table::setDTthreads(percent = 100)
+
+
+
+
+munis_df <- tribble(
+  ~code_muni, ~abrev_muni, ~name_muni,        ~abrev_estado, ~modo_2017, ~modo_2018, ~modo_2019, ~modo_2020,
+  2304400,    "for",       "Fortaleza",       "CE",          "todos",    "todos",    "todos",    "todos",
+  3550308,    "spo",       "Sao Paulo",       "SP",          "todos",    "todos",    "todos",    "todos",
+  3304557,    "rio",       "Rio de Janeiro",  "RJ",          "ativo",    "todos",    "todos",    "todos",
+  4106902,    "cur",       "Curitiba",        "PR",          "todos",    "todos",    "todos",    "todos",
+  4314902,    "poa",       "Porto Alegre",    "RS",          "todos",    "todos",    "todos",    "todos",
+  3106200,    "bho",       "Belo Horizonte",  "MG",          "todos",    "todos",    "todos",    "todos",
+  5300108,    "bsb",       "Brasilia",        "DF",          "ativo",    "ativo",    "ativo",    "ativo",
+  2927408,    "sal",       "Salvador",        "BA",          "ativo",    "ativo",    "ativo",    "ativo",
+  1302603,    "man",       "Manaus",          "AM",          "ativo",    "ativo",    "ativo",    "ativo",
+  2611606,    "rec",       "Recife",          "PE",          "ativo",    "ativo",    "todos",    "todos",
+  5208707,    "goi",       "Goiania",         "GO",          "ativo",    "ativo",    "todos",    "ativo",
+  1501402,    "bel",       "Belem",           "PA",          "ativo",    "ativo",    "ativo",    "ativo",
+  3518800,    "gua",       "Guarulhos",       "SP",          "ativo",    "ativo",    "ativo",    "ativo",
+  3509502,    "cam",       "Campinas",        "SP",          "todos",    "todos",    "todos",    "ativo",
+  2111300,    "slz",       "Sao Luis",        "MA",          "ativo",    "ativo",    "ativo",    "ativo",
+  3304904,    "sgo",       "Sao Goncalo",     "RJ",          "ativo",    "ativo",    "ativo",    "ativo",
+  2704302,    "mac",       "Maceio",          "AL",          "ativo",    "ativo",    "ativo",    "ativo",
+  3301702,    "duq",       "Duque de Caxias", "RJ",          "ativo",    "ativo",    "ativo",    "ativo",
+  5002704,    "cgr",       "Campo Grande",    "MS",          "ativo",    "ativo",    "ativo",    "ativo",
+  2408102,    "nat",       "Natal",           "RN",          "ativo",    "ativo",    "ativo",    "ativo"
+  ) %>% setDT()
+
+
+
+
+
+
+
+
+
+
 
 to_spatial <- function(df1, coordenada = c("lon", "lat")) {
   x <- st_as_sf(df1, coords = coordenada, crs = 4326)
@@ -179,3 +175,26 @@ change_remotes <- function(remote, branch = "master") {
 
 
 options(scipen = 99999)
+
+
+
+# ggplot themes -------------------------------------------------------------------------------
+
+theme_aop_map <- function(base_size, ...) {
+  
+  # theme_void(base_family="Roboto Condensed") %+replace%
+  theme_void() %+replace%
+    
+    theme(
+      legend.position = "bottom",
+      plot.margin=unit(c(2,0,0,0),"mm"),
+      legend.key.width=unit(2,"line"),
+      legend.key.height = unit(0.2,"cm"),
+      legend.text=element_text(size=rel(0.5)),
+      legend.title=element_text(size=rel(0.5)),
+      # plot.title = element_text(hjust = 0, vjust = 4),
+      ...
+      
+      
+    )
+}

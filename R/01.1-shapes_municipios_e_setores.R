@@ -9,7 +9,8 @@ source('./R/fun/setup.R')
 download_muni_setores <- function(ano, munis = "all") {
   
   # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
+  # munis_df <- get(sprintf("munis_df_%s", ano))
+  munis_df <- munis_df_2019
   
   download_muni_setores_un <- function(sigla_muni) {
     
@@ -17,8 +18,8 @@ download_muni_setores <- function(ano, munis = "all") {
     
     
     # criar pasta do municipios
-    dir.create(sprintf("../data-raw/municipios/%s", ano))  
-    dir.create(sprintf("../data-raw/setores_censitarios/%s", ano))  
+    dir.create(sprintf("../../data-raw/municipios/%s", ano))  
+    dir.create(sprintf("../../data-raw/setores_censitarios/%s", ano))  
     
     
     # Download de arquivos
@@ -27,10 +28,10 @@ download_muni_setores <- function(ano, munis = "all") {
     
     
     # salvar municipios
-    readr::write_rds(muni_sf, sprintf("../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano))
+    readr::write_rds(muni_sf, sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano))
     
     # salvar setores censitarios
-    readr::write_rds(ct_sf, sprintf("../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla_muni, ano))
+    readr::write_rds(ct_sf, sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla_muni, ano))
   }
   
   # 2. Aplica funcao ------------------------------------------
@@ -46,3 +47,6 @@ download_muni_setores <- function(ano, munis = "all") {
   
 }
 
+
+download_muni_setores(ano = 2017)
+download_muni_setores(ano = 2018)

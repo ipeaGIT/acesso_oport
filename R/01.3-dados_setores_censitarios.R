@@ -25,7 +25,7 @@ vars <- c('Cod_UF', 'Cod_municipio', 'Cod_setor',
           'Pess3_V086')
 
 ## Leitura dos dados
-setores1 <- data.table::fread("../data-raw/setores_censitarios/dados_censo2010A.csv", 
+setores1 <- data.table::fread("../../data-raw/setores_censitarios/dados_censo2010A.csv", 
                               select= vars)
 names(setores1)
 
@@ -62,10 +62,11 @@ names(setores1)
 ### 2. Merge dos dados de renda com shapes dos setores censitarios --------------------------------------------------
 merge_renda_setores_all <- function(ano, munis = "all") {
   
-  dir.create(sprintf("../data/setores_agregados/%s", ano))
+  dir.create(sprintf("../../data/acesso_oport/setores_agregados/%s", ano))
   
   # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
+  munis_df <- munis_df_2019
+  # munis_df <- get(sprintf("munis_df_%s", ano))
   
   # filtra apenas municipio do projeto
   setores1 <- setores1[Cod_municipio %in% munis_df$code_muni,]
@@ -120,13 +121,13 @@ merge_renda_setores_all <- function(ano, munis = "all") {
     dados <- subset(setores_renda, cod_muni == code_muni)
     
     # leitura do shape dos setores
-    sf <- readr::read_rds( sprintf("../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla, ano) )
+    sf <- readr::read_rds( sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla, ano) )
     
     # merge
     sf2 <- dplyr::left_join(sf, dados, c('code_tract'='cod_setor'))
     
     # salvar
-    readr::write_rds(sf2,  sprintf("../data/setores_agregados/%s/setores_agregados_%s_%s.rds", ano, sigla, ano))
+    readr::write_rds(sf2,  sprintf("../../data/acesso_oport/setores_agregados/%s/setores_agregados_%s_%s.rds", ano, sigla, ano))
   }
   
   
@@ -142,4 +143,6 @@ merge_renda_setores_all <- function(ano, munis = "all") {
 }
 
 # Aplicar funcao
+merge_renda_setores_all(ano = 2017)
+merge_renda_setores_all(ano = 2018)
 merge_renda_setores_all(ano = 2019)

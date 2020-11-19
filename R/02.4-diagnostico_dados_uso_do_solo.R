@@ -38,14 +38,20 @@ escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
-empregos <- readr::read_rds("../data/rais/rais_2017_corrigido_latlon_censoEscolar.rds") # para 2017
-# empregos_etapa8 <- readr::read_rds("../data/rais/rais_2017_etapa8.rds") # para 2017
+empregos <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa9.rds") # para 2018
 
 # remove lat lon missing
 empregos <- empregos[!is.na(lat), ]
-# empregos_etapa8 <- empregos_etapa8[!is.na(lat), ]
+
+# filter only estabs with high wuality geocode
+empregos <- empregos[PrecisionDepth %in% c("4 Estrelas", "3 Estrelas", "street_number", "route")]
 
 
+# trazer razao social
+estabs <- fread("../../data-raw/rais/2018/rais_estabs_raw_2018.csv", select = c("id_estab", "razao_social"))
+estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+
+empregos <- merge(empregos, estabs, by = "id_estab", all.x = TRUE)
 
 
 
@@ -56,26 +62,80 @@ empregos <- empregos[!is.na(lat), ]
 source('./R/fun/diagnost_hex_uso_solo.R')
 
 # 1/2 Identificar quantidade de empregos por hexagono ( identifica hexagonos problema)
-fim <- diagnost_hex_uso_solo("ter", "trabalho", 2000)
-# fim8 <- diagnost_hex_uso_solo8("ter", "trabalho", 2000)
+fim <- diagnost_hex_uso_solo("for", "trabalho", 3000)
+
+table(fim$geocode_engine)
+table(fim$PrecisionDepth)
 
 
-View(fim)
-mapView(fim, zcol='empregos_total') + mapView(fim8, zcol='empregos_total')
+# mapView(fim, zcol='empregos_total')
+
+# maybe these rrepreents a too many hex problem
+fim %>%
+  st_set_geometry(NULL) %>%
+  group_by(id_hex, PrecisionDepth) %>%
+  summarise(n = n()) %>%
+  ungroup() %>%
+  group_by(id_hex) %>%
+  mutate(prop = n/sum(n)) %>%
+  filter(PrecisionDepth == "3 Estrelas", prop > 0.5)
+
+  
+
+# lista de hex problematicos p 2018
+hex_probS <- data.frame( hexs = c(
+  "8980104c07bffff",
+  "8980104c0b7ffff","8980104c1afffff","89a83136c4fffff","8980104c1afffff","89a90e93537ffff",
+  "89a8a06a40fffff","89a8a06a40fffff","89a810054b3ffff","89a81007357ffff","89a8100e8b3ffff",
+  "89a8103b0b7ffff","89a8c2481a3ffff","89a8c248b07ffff","89a8c248b0fffff","89a8c248b3bffff",
+  "89a8c248dbbffff","89a8c249d43ffff","89a8c249d57ffff","89a8c249d8fffff","89a8c249ddbffff",
+  "89a8c24aa7bffff","89a8c24e6d7ffff","89a8c24f6dbffff","898116b181bffff","89a8c0ce2cfffff",
+  "89a81070ad3ffff","89a81072d67ffff","89800882e27ffff","89a8a06f1a7ffff","89a8a3d666bffff",
+  "89819d2cc73ffff","89819d2cc97ffff"),
+  sigla_muni = c("for","for","for","cur","gua","poa","rio","rio","spo","spo", "spo","spo",
+                 "bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb",
+                 "sal","goi","gua","gua","slz","duq","duq","nat","nat")
+)
 
 
 
-# 2/2 Identifica quais empressas e enderecos estao em cada Hexagno ( identifica empresas/enderecos problema)
-oi <- fim %>% filter(id_hex == "89a8c0cea23ffff") %>% .$id_estab
+# maybe these rrepreents a cnpj problem
+fim %>%
+  st_set_geometry(NULL) %>%
+  group_by(id_hex) %>%
+  mutate(sum = sum(total_corrigido)) %>%
+  mutate(prop = total_corrigido/sum) %>%
+  filter(prop > 0.5) %>%
+  select(id_estab, razao_social, prop)
 
-empregos %>% 
-  filter(id_estab %in% oi) %>% 
-  View()
+02685728000120 # for
+05305430000135 # for
+01437408000198 # for
+04368898000106 # cur
+04370282000170 # cur
+19201128000141 # bho
+37162435000142 # bho
+08689024000101 # bho
+92966571000101 # poa
+88630413000796 # poa
+02539959000125 # rio
+31546484000100 # bsb
+33833880000136 # sal
+01616929000102 # goi
+14698658000123 # bel
+83367342000252 # bel
+04113174000111 # bel
+02295753000105 # bel
+50844182001208 # cam
+08848807000190 # cam
+06019070000178 # slz
+09347229000171 # slz
+12294708000181 # mac
+02773312000163 # nat
+07442731000136 # nat
+01602361000170 # nat
 
-
-
-
-# Lista de CNPJS problematicos
+# Lista de CNPJS problematicos (2017)
 
 01437408000198 # for - Nordeste Cidadania
 02137309000153 # spo - Icomon Tecnologia
@@ -88,7 +148,7 @@ empregos %>%
 SERVFAZ
 
 
-# Lista dos hexagonos problematicos
+# Lista dos hexagonos problematicos (2017)
 
 hex_prob <- 
 c("89a8c0cea23ffff", # goi - Ruas com nome de numero (e.g. "RUA T50, 71", ou "RUA 05, 715")
