@@ -16,7 +16,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # ABRIR ARQUIVOS COM AS OPORTUNIDADES -------------------------------------
   
   # Saude --------------------------------------
-  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_geocoded_%s.rds", ano, ano)) 
+  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_geocoded_pmaq_%s.rds", ano, ano)) 
   
   cnes <- cnes[!is.na(lat),] 
   
@@ -54,11 +54,13 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     empregos <- readr::read_rds("../../data/acesso_oport/rais/2017/rais_2017_etapa8.rds")
     
-  } else if (ano == 2018) {
+  } else if (ano %in% c(2018, 2019)) {
     
     empregos <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa10.rds")
     
   }
+    
+    
   
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
@@ -87,9 +89,16 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     # Gerar centroide da grade grade de cada municipio
     centroide_pop <- readr::read_rds(grade_file) %>%
-      dplyr::select(id_grade, pop_total, renda,  cor_branca, cor_amarela, cor_indigena, cor_negra,  
-                    idade_0a9, idade_10a14, idade_15a19, idade_20a29, 
-                    idade_30a39, idade_40a49, idade_50a59, idade_60a69, idade_70   ) %>%
+      dplyr::select(id_grade, pop_total, pop_homens, pop_mulheres,
+                    renda,  
+                    cor_branca, cor_amarela, cor_indigena, cor_negra,  
+                    idade_0a5,
+                    idade_6a14,
+                    idade_15a18,
+                    idade_19a24,
+                    idade_25a39,
+                    idade_40a69,
+                    idade_70   ) %>%
       st_centroid()
     
     # Qual o codigo do municipio em questao?
@@ -131,17 +140,17 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                                     cor_indigena = sum(round(cor_indigena,0), na.rm = TRUE),
                                     cor_negra    = sum(round(cor_negra,0), na.rm = TRUE),
                                     # age variables
-                                    idade_0a9   = sum(idade_0a9   , na.rm = TRUE),
-                                    idade_10a14 = sum(idade_10a14 , na.rm = TRUE),
-                                    idade_15a19 = sum(idade_15a19 , na.rm = TRUE),
-                                    idade_20a29 = sum(idade_20a29 , na.rm = TRUE),
-                                    idade_30a39 = sum(idade_30a39 , na.rm = TRUE),
-                                    idade_40a49 = sum(idade_40a49 , na.rm = TRUE),
-                                    idade_50a59 = sum(idade_50a59 , na.rm = TRUE),
-                                    idade_60a69 = sum(idade_60a69 , na.rm = TRUE),
-                                    idade_70    = sum(idade_70    , na.rm = TRUE),
+                                    idade_0a5   = sum(idade_0a5   , na.rm = TRUE),
+                                    idade_6a14 =  sum(idade_6a14 , na.rm = TRUE),
+                                    idade_15a18 = sum(idade_15a18 , na.rm = TRUE),
+                                    idade_19a24 = sum(idade_19a24 , na.rm = TRUE),
+                                    idade_25a39 = sum(idade_25a39 , na.rm = TRUE),
+                                    idade_40a69 = sum(idade_40a69 , na.rm = TRUE),
+                                    idade_70 =    sum(idade_70 , na.rm = TRUE),
                                     # total pop and income 
                                     pop_total    = sum(round(pop_total,0), na.rm = TRUE),
+                                    pop_homens    = sum(round(pop_homens,0), na.rm = TRUE),
+                                    pop_mulheres    = sum(round(pop_mulheres,0), na.rm = TRUE),
                                     renda_total  = sum(renda, na.rm = TRUE)), 
                                 by = id_hex ]
       
@@ -267,7 +276,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
 # aplicar funcao -----------------
 agrupar_variaveis_hex(ano = 2017)
 agrupar_variaveis_hex(ano = 2018)
-# agrupar_variaveis_hex(ano = 2019)
+agrupar_variaveis_hex(ano = 2019)
 
 
 

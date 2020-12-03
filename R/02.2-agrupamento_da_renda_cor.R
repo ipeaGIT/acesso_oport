@@ -11,19 +11,16 @@ source('./R/fun/setup.R')
 renda_de_setor_p_grade <- function(ano, munis = "all") {
   
   
-  # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
-  
   renda_de_setor_p_grade_muni <- function(sigla_muni) {
     
-    # sigla_muni <- 'for'
+    # sigla_muni <- 'for'; ano <- 2019
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
     
     # endereco dos arquivos
     path_setor <- sprintf("../../data/acesso_oport/setores_agregados/%s/setores_agregados_%s_%s.rds", ano, sigla_muni, ano)
-    path_grade <- sprintf("../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla_muni, ano)
+    path_grade <- sprintf("../../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla_muni, ano)
     
     # leitura de shapes de setores censitarios e grade estatistica
     setor <- readr::read_rds(path_setor)
@@ -42,6 +39,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       st_intersection(setor %>% dplyr::select(code_tract)) %>%
       group_by(id_grade) %>%
       summarise(pop_total = first(POP),
+                pop_homens = first(MASC),
+                pop_mulheres = first(FEM),
                 area_antes = first(area_antes))
     
     
@@ -49,12 +48,14 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     grade_corrigida <- grade_corrigida %>%    
       mutate(area_depois = as.numeric(st_area(.))) %>%
       mutate(prop = area_depois/area_antes) %>%
-      mutate(pop_total = prop * pop_total)
+      mutate(pop_total = prop * pop_total,
+             pop_homens = prop * pop_homens,
+             pop_mulheres = prop * pop_mulheres)
     
     # Criar id unico de cada grade e filtra colunas
     grade_corrigida <- grade_corrigida %>%
       rename(area_grade = area_depois) %>%
-      dplyr::select(id_grade, pop_total, area_grade)
+      dplyr::select(id_grade, pop_total, pop_homens, pop_mulheres, area_grade)
     
     # Criar id unico de cada setor e filtra colunas
     setor <- setor %>%
@@ -77,15 +78,13 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
                   cor_a_prop = cor_amarela/pop_total,
                   cor_i_prop = cor_indigena/pop_total,
                   cor_n_prop = cor_negra/pop_total,
-                  idade_1_prop = idade_0a9/pop_total,
-                  idade_2_prop = idade_10a14/pop_total,
-                  idade_3_prop = idade_15a19/pop_total,
-                  idade_4_prop = idade_20a29/pop_total,
-                  idade_5_prop = idade_30a39/pop_total,
-                  idade_6_prop = idade_40a49/pop_total,
-                  idade_7_prop = idade_50a59/pop_total,
-                  idade_8_prop = idade_60a69/pop_total,
-                  idade_9_prop = idade_70/pop_total
+                  idade_1_prop = idade_0a5/pop_total,
+                  idade_2_prop = idade_6a14/pop_total,
+                  idade_3_prop = idade_15a18/pop_total,
+                  idade_4_prop = idade_19a24/pop_total,
+                  idade_5_prop = idade_25a39/pop_total,
+                  idade_6_prop = idade_40a69/pop_total,
+                  idade_7_prop = idade_70/pop_total
                   ), 
           
           by=id_setor]
@@ -134,29 +133,25 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       dplyr::mutate(idade_4_pedaco = idade_4_prop * area_prop_grade * pop_total) %>%
       dplyr::mutate(idade_5_pedaco = idade_5_prop * area_prop_grade * pop_total) %>%
       dplyr::mutate(idade_6_pedaco = idade_6_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_7_pedaco = idade_7_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_8_pedaco = idade_8_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_9_pedaco = idade_9_prop * area_prop_grade * pop_total)
+      dplyr::mutate(idade_7_pedaco = idade_7_prop * area_prop_grade * pop_total)
     
     # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
     ui_fim <- ui %>%
       st_set_geometry(NULL) %>%
-      group_by(id_grade, pop_total) %>%
+      group_by(id_grade, pop_total, pop_homens, pop_mulheres) %>%
       dplyr::summarise(renda = sum(renda_pedaco, na.rm = TRUE),
                        cor_branca = as.numeric(sum(branca_pedaco, na.rm = TRUE)),
                        cor_amarela = as.numeric(sum(amarela_pedaco, na.rm = TRUE)),
                        cor_indigena = as.numeric(sum(indigena_pedaco, na.rm = TRUE)),
                        cor_negra = as.numeric(sum(negra_pedaco, na.rm = TRUE)),
                        # para idade
-                       idade_0a9   = as.numeric(sum(idade_1_pedaco, na.rm = TRUE)),
-                       idade_10a14 = as.numeric(sum(idade_2_pedaco, na.rm = TRUE)),
-                       idade_15a19 = as.numeric(sum(idade_3_pedaco, na.rm = TRUE)),
-                       idade_20a29 = as.numeric(sum(idade_4_pedaco, na.rm = TRUE)),
-                       idade_30a39 = as.numeric(sum(idade_5_pedaco, na.rm = TRUE)),
-                       idade_40a49 = as.numeric(sum(idade_6_pedaco, na.rm = TRUE)),
-                       idade_50a59 = as.numeric(sum(idade_7_pedaco, na.rm = TRUE)),
-                       idade_60a69 = as.numeric(sum(idade_8_pedaco, na.rm = TRUE)),
-                       idade_70    = as.numeric(sum(idade_9_pedaco, na.rm = TRUE))
+                       idade_0a5   = as.numeric(sum(idade_1_pedaco, na.rm = TRUE)),
+                       idade_6a14  = as.numeric(sum(idade_2_pedaco, na.rm = TRUE)),
+                       idade_15a18 = as.numeric(sum(idade_3_pedaco, na.rm = TRUE)),
+                       idade_19a24 = as.numeric(sum(idade_4_pedaco, na.rm = TRUE)),
+                       idade_25a39 = as.numeric(sum(idade_5_pedaco, na.rm = TRUE)),
+                       idade_40a69 = as.numeric(sum(idade_6_pedaco, na.rm = TRUE)),
+                       idade_70    = as.numeric(sum(idade_7_pedaco, na.rm = TRUE))
                        ) %>%
       dplyr::mutate(renda = as.numeric(renda)) %>%
       ungroup()
@@ -169,7 +164,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     
     # Salvar em disco
-    path_out <- sprintf("../data/grade_municipio_com_renda_cor/%s/grade_renda_cor_%s_%s.rds", ano, sigla_muni, ano)
+    path_out <- sprintf("../../data/acesso_oport/grade_municipio_com_renda_cor/%s/grade_renda_cor_%s_%s.rds", ano, sigla_muni, ano)
     readr::write_rds(ui_fim_sf, path_out)
     
   }
@@ -189,6 +184,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
+renda_de_setor_p_grade(ano = 2017)
+renda_de_setor_p_grade(ano = 2018)
 renda_de_setor_p_grade(ano = 2019)
 
 

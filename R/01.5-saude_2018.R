@@ -65,6 +65,7 @@ cnes_filter4 <- cnes_filter3[ instal_fisica_ambu=="X" | instal_fisica_hospt=="X"
 
 # 5.1 Delete prison hospitals, research centers, police hospitals etc
 to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR'
+# tirar hospitais veterinarios
 # PADI = Programa de Atenção Domiciliar ao Idoso
 # DE REGULACAO = gestora de servico
 # CAPS - CENTRO DE ATENCAO PSICOSSOCIAL - saude mental e drogas
@@ -379,3 +380,28 @@ cnes_filter5_2018_fim %>%
 
 
 
+# 7) bring pmaq data -----------------------------------------------------------------------------
+
+hospitais <- read_rds("../../data/acesso_oport/hospitais/2018/hospitais_geocoded_2018.rds") %>%
+  mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0))
+
+###### Usar dados de lat/lon quando eles existirem na PMAQ (estabelecimentos de baixa complexidade)
+# Read PMAQ data
+pmaq_df_coords_fixed <- fread('../../data-raw/hospitais/2019/PMAQ/pmaq_df_coords_fixed.csv', colClasses = 'character') %>%
+  select(code_muni, cnes = CNES_FINAL, lon, lat) %>%
+  mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0),
+         PrecisionDepth = "PMAQ",
+         geocode_engine = "PMAQ")
+
+# update 
+hospitais[pmaq_df_coords_fixed, on = "cnes",
+          c("PrecisionDepth", "lon", "lat", "geocode_engine") := 
+            list(i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]
+
+
+table(hospitais$geocode_engine, useNA = 'always')
+table(hospitais$PrecisionDepth, useNA = 'always')
+
+
+# save it
+readr::write_rds(hospitais, "../../data/acesso_oport/hospitais/2018/hospitais_geocoded_pmaq_2018.rds")
