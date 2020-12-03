@@ -30,7 +30,7 @@ munis_df <- tibble::tribble(
   2408102,    "nat",       "Natal",           "RN",          "ativo",    "ativo",    "ativo",    "ativo"
 ) %>% data.table::setDT()
 
-###### 1. Download arquivos originais -----------------
+###### 1. Download arquivos originais ###################
 
 setwd('L:/Proj_acess_oport/')
 
@@ -40,6 +40,22 @@ download.file("https://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfi
               destfile = "data-raw/CRAS/Censo_SUAS_2019_CRAS.zip")
 
 unzip("data-raw/CRAS/Censo_SUAS_2019_CRAS.zip", exdir = "data-raw/CRAS")
+
+# CRAS 2018 - download dos dados brutos
+
+download.file('https://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/CRAS(3).zip',
+              destfile = "data-raw/CRAS/Censo_SUAS_2018_CRAS.zip")
+
+unzip("data-raw/CRAS/Censo_SUAS_2018_CRAS.zip", exdir = "data-raw/CRAS")
+
+# CRAS 2017 - download dos dados brutos
+
+download.file('http://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/Censo_SUAS/2017/Censo_SUAS_2017_CRAS.zip',
+              destfile = "data-raw/CRAS/Censo_SUAS_2017_CRAS.zip")
+
+unzip("data-raw/CRAS/Censo_SUAS_2017_CRAS.zip", exdir = "data-raw/CRAS")
+
+######### 2. 2019 ###################
 
 # Read data and filter cities
 cras_2019 <- data.table::fread('data-raw/CRAS/CRAS/Censo_SUAS_2019_dados_gerais_RH_CRAS_divulga‡Æo.csv',
@@ -62,7 +78,7 @@ cras_2019 <- data.table::merge.data.table(cras_2019,
 cras_2019 <- cras_2019[, endereco := paste(paste(paste(paste(paste(logradouro,numero, sep = ", "), bairro,sep = " - "),name_muni, sep=", "),abrev_estado,sep=" - "),cep,sep=", ") ]
 cras_2019 <- cras_2019[,!c('logradouro','numero','bairro','cep')]
 
-############### NÃO RODAR NOVAMENTE ############################
+############### NÃO RODAR NOVAMENTE -- CHECK DAS COORDENADAS COM O API ############################
 
 # Geolocalização das agência com Google API
 
@@ -87,8 +103,10 @@ cras_2019 <- cras_2019[,!c('logradouro','numero','bairro','cep')]
 
 ###########################################################################
 
-# Merge com base original
+# Merge dos enderecos com base original
+
 library(magrittr)
+# lEITURA DA BASE COM TODOS OS CRAS GEOLOCALIZADOS
 enderecos <- readr::read_csv('data/acesso_oport/cras/geocode_cras.csv') %>% data.table::setDT()
 enderecos <- enderecos[,.(lat=mean(lat),lon=mean(lon)),by=endereco]
 
@@ -118,12 +136,9 @@ data.table::setDT(cras_2019,key = 'code_cras')[, cad_unico := ifelse(cad_unico =
 
 readr::write_csv(cras_2019,'data/acesso_oport/cras/cras_2019.csv')
 
-# CRAS 2018
-download.file('https://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/CRAS(3).zip',
-              destfile = "data-raw/CRAS/Censo_SUAS_2018_CRAS.zip")
+################ 2018 #########
 
-unzip("data-raw/CRAS/Censo_SUAS_2018_CRAS.zip", exdir = "data-raw/CRAS")
-
+# Leitura e limpeza
 cras_2018 <- data.table::fread('data-raw/CRAS/1.CRAS/Censo_SUAS_2018_CRAS_Dados_Gerais_divulgacao.csv',
                                select = c("NU_IDENTIFICADOR","ident_0_1","ident_0_3","ident_0_4","ident_0_6",
                                           "ident_0_8","ident_0_9","ident_0_10", "ident_0_11",
@@ -146,12 +161,7 @@ cras_2018 <- data.table::merge.data.table(cras_2018,
 cras_2018 <- cras_2018[, endereco := paste(paste(paste(paste(paste(logradouro,numero, sep = ", "), bairro,sep = " - "),name_muni, sep=", "),abrev_estado,sep=" - "),cep,sep=", ") ]
 cras_2018 <- cras_2018[,!c('logradouro','numero','bairro','cep')]
 
-### NÃO RODAR NOVAMENTE - ETAPA DE GEOCODE ##################
-
-#cras_2019 <- readr::read_csv(here::here('data','cras_2019.csv'))
-#cras_2019$code_cras <- bit64::as.integer64(cras_2019$code_cras)
-
-#data.table::setDT(cras_2019)
+# Etapa 0 do geocode: ver quais enderecos tem grafia diferente da base de 2019, mas são os mesmos
 
 cras_2018 <- data.table::merge.data.table(cras_2018, cras_2019[,.(code_cras,endereco)],
                                           all.x = TRUE, by = 'code_cras')
@@ -167,7 +177,7 @@ issues <- issues[check == FALSE| is.na(check)]
 cras_2018 <- cras_2018[, endereco := ifelse(code_cras %nin% issues$code_cras, endereco.y,endereco.x)]
 cras_2018 <- cras_2018[,!c('endereco.x','endereco.y', 'check')]
 
-#enderecos <- issues$endereco.x %>% unique()
+### NÃO RODAR NOVAMENTE - ETAPA DE GEOCODE ##################
 
 #library(ggmap)
 
@@ -187,6 +197,8 @@ cras_2018 <- cras_2018[,!c('endereco.x','endereco.y', 'check')]
 #geocode <- readr::read_csv(here::here('data','geocode_cras.csv'))
 
 ###########################################################################################################
+
+# Merge dos enderecos com a base
 
 cras_2018 <- data.table::merge.data.table(cras_2018,
                                           enderecos,
@@ -213,12 +225,9 @@ data.table::setDT(cras_2018,key = 'code_cras')[, cad_unico := stringr::str_sub(c
 # Salva em formato .csv
 readr::write_csv(cras_2018,'data/acesso_oport/cras/cras_2018.csv')
 
-# CRAS 2017
-download.file('http://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/Censo_SUAS/2017/Censo_SUAS_2017_CRAS.zip',
-              destfile = "data-raw/CRAS/Censo_SUAS_2017_CRAS.zip")
+#######3 4. 2017 #########################
 
-unzip("data-raw/CRAS/Censo_SUAS_2017_CRAS.zip", exdir = "data-raw/CRAS")
-
+# Leitura e limpeza
 cras_2017 <- data.table::fread('data-raw/CRAS/Censo_SUAS_2017_CRAS/Censo SUAS 2017_CRAS_divulgacao_Base de dados.csv',
                                select = c("NºIDENTIFICADOR","ident.1.Nome","ident.3.Endereço","ident.4.Núm",
                                           "ident.6.Bairro","ident.8.CEP","IBGE7","ident.10.UF", "ident.11.Email",
@@ -241,6 +250,8 @@ cras_2017 <- data.table::merge.data.table(cras_2017,
 cras_2017 <- cras_2017[, endereco := paste(paste(paste(paste(paste(logradouro,numero, sep = ", "), bairro,sep = " - "),name_muni, sep=", "),abrev_estado,sep=" - "),cep,sep=", ") ]
 cras_2017 <- cras_2017[,!c('logradouro','numero','bairro','cep')]
 
+# Checar enderecos com grafia distinta entre anos
+
 cras_2017 <- data.table::merge.data.table(cras_2017,
                                           dplyr::bind_rows(cras_2018[,.(code_cras,endereco)], 
                                                     cras_2019[,.(code_cras,endereco)]) %>% 
@@ -258,6 +269,8 @@ issues <- issues[check == FALSE| is.na(check)]
 
 cras_2017 <- cras_2017[, endereco := fifelse(code_cras %nin% issues$code_cras, endereco.y,endereco.x)]
 cras_2017 <- cras_2017[,!c('endereco.x','endereco.y', 'check')]
+
+### NÃO RODAR NOVAMENTE - ETAPA DE GEOCODE ##################
 
 #enderecos <- issues$endereco.x %>% unique()
 
@@ -278,7 +291,9 @@ cras_2017 <- cras_2017[,!c('endereco.x','endereco.y', 'check')]
 
 #geocode <- readr::read_csv(here::here('data','geocode_cras.csv'))
 
-##############################################################################################
+########################################################################
+
+# Merge com enderecos e salva
 
 cras_2017 <- data.table::merge.data.table(cras_2017,
                                           enderecos,
