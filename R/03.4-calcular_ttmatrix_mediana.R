@@ -14,7 +14,7 @@ source('./R/fun/setup.R')
 # As matrizes sao tratadas, agregadas nos periodos pico e fora-pico fazendo a mediana do tempo de viagme
 # Em seguida sao juntos todos os modos
 
-# sigla_muni <- 'for'; ano <- 2017
+# sigla_muni <- 'bel'; ano <- 2019
 
 gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
   
@@ -27,9 +27,9 @@ gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
                full.names = TRUE)
   
   # ler, empilhar e salvar arquivos
-  plan(multiprocess)
+  # plan(multiprocess)
   # furrr::future_map(files, data.table::fread) %>%
-  ttmatrix_allmodes <- furrr::future_map(files, fread, .progress = TRUE) %>%
+  ttmatrix_allmodes <- furrr::future_map(files, fread) %>%
     rbindlist(fill = TRUE)
   
   # 
@@ -75,13 +75,24 @@ gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
   
   write_rds(ttmatrix_median, path_out)
   
+  rm(ttmatrix_allmodes)
+  rm(ttmatrix_median)
+  gc(T)
+  
 }
 
 
 # aplicar funcao ------------------------------------------------------------------------------
 
 gerar_ttmatrix_mediana_muni("for", ano = 2017)
+gerar_ttmatrix_mediana_muni("cam", ano = 2019)
+gerar_ttmatrix_mediana_muni("sal", ano = 2019)
+gerar_ttmatrix_mediana_muni("spo", ano = 2019)
 
+plan(multiprocess)
+purrr::map(munis_df$abrev_muni[-2], gerar_ttmatrix_mediana_muni, ano = 2017)
+purrr::map(munis_df$abrev_muni[-2], gerar_ttmatrix_mediana_muni, ano = 2018)
+purrr::map(munis_df$abrev_muni[-2], gerar_ttmatrix_mediana_muni, ano = 2019)
 
 
 
@@ -269,4 +280,4 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-identificar_e_corrigir_extremos_acess_muni('for', ano = 2017)
+walk(munis_df$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)

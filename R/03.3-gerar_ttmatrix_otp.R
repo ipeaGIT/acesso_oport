@@ -9,7 +9,7 @@ source('./R/fun/setup.R')
 #### 1) Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem -----------------------
 gerar_tt_matrix_muni <- function(sigla_muni, ano) {
   
-  # sigla_muni <- "for"; ano <- 2017
+  # sigla_muni <- "for"; ano <- 2019
   
   # status message
   message('Woking on city ', sigla_muni, ' at year ', ano)
@@ -32,9 +32,9 @@ gerar_tt_matrix_muni <- function(sigla_muni, ano) {
 }
 
 # Aplica funcao para todas as cidades
-walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2017)
-walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2018)
-walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2019)
+purrr::walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2017)
+purrr::walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2018)
+purrr::walk(rev(munis_df$abrev_muni), gerar_tt_matrix_muni, ano = 2019)
 
 # tempo para as 20 cidades, 17 horarios de partida
 # 97635.94 sec elapsed

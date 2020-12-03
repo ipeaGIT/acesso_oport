@@ -48,6 +48,9 @@ lapply(munis_df$abrev_muni, construir_graph_muni, ano = 2018)
 lapply(munis_df$abrev_muni, construir_graph_muni, ano = 2019)
 
 construir_graph_muni('poa', 2018)
+construir_graph_muni('poa', 2017)
 construir_graph_muni('for', 2017)
+construir_graph_muni('spo', 2019)
+construir_graph_muni('cam', 2019)
 
 
