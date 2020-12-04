@@ -281,7 +281,13 @@ cnes_filter5_2018_fim %>%
 # 7) bring pmaq data -----------------------------------------------------------------------------
 
 hospitais <- read_rds("../../data/acesso_oport/hospitais/2019/hospitais_geocoded_2019.rds") %>%
-  mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0))
+  mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0)) %>% setDT()
+
+
+str(hospitais)
+
+attr(hospitais$cnes, "sorted") <- NULL
+
 
 ###### Usar dados de lat/lon quando eles existirem na PMAQ (estabelecimentos de baixa complexidade)
 # Read PMAQ data
@@ -289,7 +295,9 @@ pmaq_df_coords_fixed <- fread('../../data-raw/hospitais/2019/PMAQ/pmaq_df_coords
   select(code_muni, cnes = CNES_FINAL, lon, lat) %>%
   mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0),
          PrecisionDepth = "PMAQ",
-         geocode_engine = "PMAQ")
+         geocode_engine = "PMAQ") %>% 
+  mutate(lon = as.numeric(lon),
+         lat = as.numeric(lat)) %>% setDT()
 
 # update 
 hospitais[pmaq_df_coords_fixed, on = "cnes",
