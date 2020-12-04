@@ -54,7 +54,7 @@ cnes_filter2 <- cnes_filter1[ pessoa_fisica_ou_pessoa_juridi == 'PESSOA_JURÍDIC
 
 
 # filter 3: Only municipalities in the project
-cnes_filter3 <- cnes_filter2[ibge %in% substr(munis_df_2019$code_muni, 1,6)]
+cnes_filter3 <- cnes_filter2[ibge %in% substr(munis_df$code_muni, 1,6)]
 
 
 # filter 4: Only atendimento hospitalar ou ambulatorial
@@ -145,7 +145,7 @@ munis <- purrr::map_dfr(dir("../../data-raw/municipios/2017/", full.names = TRUE
 cnes19_df_digitos <- cnes_filter5_togeo %>%
   rename(code_muni = ibge) %>%
   # selecionar so os municipios do projeto
-  filter(code_muni %in% substr(munis_df_2019$code_muni, 1, 6)) %>%
+  filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
   mutate(code_muni = as.character(code_muni)) %>%
   left_join(munis, by = "code_muni")
 
@@ -316,8 +316,6 @@ hospitais_google_mal_geo <- estabs_problema_geocoded_dt %>%
   filter(is.na(name_muni)) %>%
   select(cnes, SearchedAddress)
 
-mapview(escolas_google_mal_geo)
-
 
 # identify these address as outside the city
 estabs_problema_geocoded_dt <- estabs_problema_geocoded_dt[cnes %in% hospitais_google_mal_geo$cnes,
@@ -344,6 +342,9 @@ cnes19_df_coords_fixed[estabs_problema_geocoded_dt, on = "cnes",
                        c("MatchedAddress", "PrecisionDepth", "lon", "lat", "geocode_engine") := 
                          list(i.MatchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]  
 
+# identify year
+cnes19_df_coords_fixed[, year_geocode := 2018]
+
 table(cnes19_df_coords_fixed$PrecisionDepth, useNA = 'always')
 table(cnes19_df_coords_fixed$geocode_engine, useNA = 'always')
 
@@ -351,7 +352,7 @@ table(cnes19_df_coords_fixed$geocode_engine, useNA = 'always')
 # bring new coordinates to 2018
 cnes_filter5_2018_fim <- merge(cnes_filter5,
                                cnes19_df_coords_fixed[, .(cnes, lat_digits, lon, lat, ndigitos, latlon,
-                                                          MatchedAddress, SearchedAddress, PrecisionDepth, geocode_engine)],
+                                                          MatchedAddress, SearchedAddress, PrecisionDepth, geocode_engine, year_geocode)],
                                by = "cnes",
                                all.x = TRUE)
 
@@ -368,6 +369,9 @@ cnes_filter5_2018_fim[cnes2017, on = "cnes",
 table(cnes_filter5_2018_fim$PrecisionDepth, useNA = 'always')
 table(cnes_filter5_2018_fim$geocode_engine, useNA = 'always')
 
+# cnes_filter5_2018_fim %>% filter(municipio == )
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 6) Salvar dados de saude ------------------------------------------------------------------
 
@@ -383,7 +387,13 @@ cnes_filter5_2018_fim %>%
 # 7) bring pmaq data -----------------------------------------------------------------------------
 
 hospitais <- read_rds("../../data/acesso_oport/hospitais/2018/hospitais_geocoded_2018.rds") %>%
-  mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0))
+  mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0)) %>% setDT()
+
+
+attr(hospitais$cnes, "sorted") <- NULL
+
+
+# table(hospitais$geocode_engine, useNA = 'always')
 
 ###### Usar dados de lat/lon quando eles existirem na PMAQ (estabelecimentos de baixa complexidade)
 # Read PMAQ data
@@ -391,9 +401,19 @@ pmaq_df_coords_fixed <- fread('../../data-raw/hospitais/2019/PMAQ/pmaq_df_coords
   select(code_muni, cnes = CNES_FINAL, lon, lat) %>%
   mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0),
          PrecisionDepth = "PMAQ",
-         geocode_engine = "PMAQ")
+         geocode_engine = "PMAQ") %>%
+  mutate(lon = as.numeric(lon),
+         lat = as.numeric(lat)) %>% setDT()
+
+# pmaq_df_coords_fixed %>% filter(cnes %in% hospitais$cnes) %>% distinct(cnes) %>% nrow()
 
 # update 
+
+# hospitais_teste <- left_join(hospitais, select(pmaq_df_coords_fixed, -code_muni),
+#                              by = "cnes", suffix = c("_normal", "_PMAQ"))
+# 
+# hospitais_teste %>% filter(!is.na(PrecisionDepth_PMAQ)) %>% View()
+
 hospitais[pmaq_df_coords_fixed, on = "cnes",
           c("PrecisionDepth", "lon", "lat", "geocode_engine") := 
             list(i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]

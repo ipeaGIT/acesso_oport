@@ -23,7 +23,7 @@ cnes19 <- janitor::clean_names(cnes19)
 colnames(cnes19)
 
 # filter year 
-cnes19 <- setDT(cnes19)[competencia %like% "2017"]
+cnes19 <- setDT(cnes19)[competencia %like% "2018"]
 
 # rename columns
 names(cnes19)[16:32] <- c("instal_fisica_ambu", "instal_fisica_hospt", "instal_fisica_urgencia",
@@ -54,7 +54,7 @@ cnes_filter2 <- cnes_filter1[ pessoa_fisica_ou_pessoa_juridi == 'PESSOA_JURÍDIC
 
 
 # filter 3: Only municipalities in the project
-cnes_filter3 <- cnes_filter2[ibge %in% substr(munis_df_2019$code_muni, 1,6)]
+cnes_filter3 <- cnes_filter2[ibge %in% substr(munis_df$code_muni, 1,6)]
 
 
 # filter 4: Only atendimento hospitalar ou ambulatorial
@@ -355,13 +355,20 @@ cnes19_df_coords_fixed %>%
 hospitais <- read_rds("../../data/acesso_oport/hospitais/2017/hospitais_geocoded_2017.rds") %>%
   mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0))
 
+
+str(hospitais)
+
+table(hospitais$geocode_engine, useNA = 'always')
+
 ###### Usar dados de lat/lon quando eles existirem na PMAQ (estabelecimentos de baixa complexidade)
 # Read PMAQ data
 pmaq_df_coords_fixed <- fread('../../data-raw/hospitais/2019/PMAQ/pmaq_df_coords_fixed.csv', colClasses = 'character') %>%
   select(code_muni, cnes = CNES_FINAL, lon, lat) %>%
   mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0),
          PrecisionDepth = "PMAQ",
-         geocode_engine = "PMAQ")
+         geocode_engine = "PMAQ") %>%
+  mutate(lon = as.numeric(lon),
+         lat = as.numeric(lat)) %>% setDT()
 
 # update 
 hospitais[pmaq_df_coords_fixed, on = "cnes",
