@@ -9,30 +9,30 @@ source('./R/fun/setup.R')
 
 
 
-##### 1) Filtrar Rais-2018 pessoas-------------------------------------------------------
+##### 1) Filtrar Rais-2019 pessoas-------------------------------------------------------
 
 
 # Leitura dos dados da RAIS pessoas com colunas que vamos usar
-rais_trabs <- data.table::fread("../../data-raw/rais/2018/rais_trabal_raw_2018.csv"
+rais_trabs <- data.table::fread("../../data-raw/rais/2019/rais_trabal_raw_2019.csv"
                                 , select = c("id_estab", "grau_instr", "emp_31dez", 'clas_cnae20', 'uf', 'codemun', 'nat_jur2018')
                                 , colClasses='character'
                                 # , nrows = 1000
 )
 
-unique(rais_trabs$id_estab) %>% length() # 3819807 estabs
+unique(rais_trabs$id_estab) %>% length() # 987175 estabs
 
-# Filtro 0: selecionar so municipios do projeto
+# Filtro 0: selecionar so municipios do projeto (ja feito)
 gc(reset=T)
-rais_filtro_0 <- rais_trabs[codemun %in% substr(munis_df_2019$code_muni, 1, 6) ]
+rais_filtro_0 <- rais_trabs[codemun %in% substr(munis_df$code_muni, 1, 6) ]
 
-unique(rais_filtro_0$id_estab) %>% length() # 1011069 estabs
+unique(rais_filtro_0$id_estab) %>% length() # 987175 estabs
 
 
 # Filtro 1: selecionar so vinculos ativos
 rais_filtro_1 <- rais_filtro_0[emp_31dez == 1]
 
 
-unique(rais_filtro_1$id_estab) %>% length() # 916370 estabs
+unique(rais_filtro_1$id_estab) %>% length() # 902049 estabs
 
 
 # Filtro 2 deletar todas as intituicoes com Natureza Juridica 'publica' (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
@@ -46,6 +46,7 @@ rais_filtro_1[, adm_pub := ifelse( substr(nat_jur2018, 1, 1)==1, 1, 0) ]
 rais_filtro_2 <- rais_filtro_1[ adm_pub != 1 ]
 
 # quantos vinculos de natureza juridica publica a gente perde? 22%
+unique(rais_filtro_2$id_estab) %>% length() # 899502 estabs
 nrow(rais_filtro_2) / nrow(rais_filtro_1)
 
 
@@ -91,7 +92,7 @@ rais_filtro_3 <- rais_filtro_2[nat_jur2018 != "2011"]
 
 
 # Salvar em formato rds para formato rapido
-write_rds(rais_filtro_3, "../../data/acesso_oport/rais/2018/rais_2018_ind_filtrada.rds")
+write_rds(rais_filtro_3, "../../data/acesso_oport/rais/2019/rais_2019_ind_filtrada.rds")
 
 
 
@@ -99,14 +100,14 @@ write_rds(rais_filtro_3, "../../data/acesso_oport/rais/2018/rais_2018_ind_filtra
 ####### 2) Categorizar trabalhadores por grau de instrucao  ----------------------------------------------------------------------------------
 
 # Abrir RAIS  em formato rapido rds
-rais_trabs <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_ind_filtrada.rds")
+rais_trabs <- read_rds("../../data/acesso_oport/rais/2019/rais_2019_ind_filtrada.rds")
 
 
 
 # Categorizar trabalhadores por grau de instrucao
-rais_cats <- rais_trabs[, instrucao := fifelse(grau_instr %in% c(1:6), "baixo",                                    # menor do que ensino medio (inclui ensino medio incompleto)
-                                               fifelse(grau_instr %in% c(7, 8), "medio",                           # ensino medio
-                                                       fifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))] # ensino superior
+rais_cats <- rais_trabs[, instrucao := fifelse(grau_instr %in% c("01", "02", "03", "04", "05", "06"), "baixo",                                    # menor do que ensino medio (inclui ensino medio incompleto)
+                                               fifelse(grau_instr %in% c("07", "08"), "medio",                           # ensino medio
+                                                       fifelse(grau_instr %in% c("09", "10", "11"), "alto", grau_instr)))] # ensino superior
 
 
 # Calcula quantidade de vinculo por grau de instrucao em cada estabelecimento
@@ -121,7 +122,7 @@ rais_fim_wide <- tidyr::spread(rais_fim, instrucao, vinculos, fill = 0)
 head(rais_fim_wide)
 
 # Salvar agregado do numero de trabalhadores por empresa
-write_rds(rais_fim_wide, "../../data/acesso_oport/rais/2018/rais_2018_vin_instrucao.rds")
+write_rds(rais_fim_wide, "../../data/acesso_oport/rais/2019/rais_2019_vin_instrucao.rds")
 
 
 
@@ -131,7 +132,7 @@ write_rds(rais_fim_wide, "../../data/acesso_oport/rais/2018/rais_2018_vin_instru
 ### 3) Limpar outliers (empresas que ainda declara muitos trabalhadores na mesma sede) -----------------------------------------------------
 
 # Abrir
-rais <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_vin_instrucao.rds")
+rais <- read_rds("../../data/acesso_oport/rais/2019/rais_2019_vin_instrucao.rds")
 
 
 # 1) Primeiro faz correcao do total de vinculos ouliers por CNAE
@@ -249,7 +250,7 @@ rais[, c('corte', 'prop_baixo', 'prop_medio',  'prop_alto') := NULL]
 
 
 # Salvar Rais de estabelecimentos com numero de vinculos corrigos e quant de pessoas por escolaridade
-write_rds(rais, "../../data/acesso_oport/rais/2018/rais_2018_corrigido.rds")
+write_rds(rais, "../../data/acesso_oport/rais/2019/rais_2019_corrigido.rds")
 
 
 
@@ -257,10 +258,10 @@ write_rds(rais, "../../data/acesso_oport/rais/2018/rais_2018_corrigido.rds")
 
 
 
-# 7) TRAZER GEOCODE DOS ESTABELECIMENTOS -----------------------------------------------------
+# 4) TRAZER GEOCODE DOS ESTABELECIMENTOS -----------------------------------------------------
 
-rais_estabs <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_corrigido.rds")
-rais_estabs_geocode <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_estabs_geocode_final.rds")
+rais_estabs <- read_rds("../../data/acesso_oport/rais/2019/rais_2019_corrigido.rds")
+rais_estabs_geocode <- read_rds("../../data/acesso_oport/rais/2019/rais_2019_estabs_geocode_final.rds")
 rais_estabs_geocode <- select(rais_estabs_geocode, -qt_vinc_ativos)
 rais_estabs_geocode <- distinct(rais_estabs_geocode, id_estab, .keep_all = TRUE)
 
@@ -294,18 +295,18 @@ table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
 
 
 # save it
-write_rds(rais_estabs_geocode_end, "../../data/acesso_oport/rais/2018/rais_estabs_2018_geocoded_all.rds")
+write_rds(rais_estabs_geocode_end, "../../data/acesso_oport/rais/2019/rais_estabs_2019_geocoded_all.rds")
 
 
 
 
 
-# 6) Trazer informacoes de funcionarios de escolas publicas do censo escolar --------------------------
+# 5) Trazer informacoes de funcionarios de escolas publicas do censo escolar --------------------------
 # (a partir do script 01.3-educacao)
 
 
-# abrir rais corrigida
-rais <- read_rds("../../data/acesso_oport/rais/2018/rais_estabs_2018_geocoded_all.rds")
+# abri rais corrigida
+rais <- read_rds("../../data/acesso_oport/rais/2019/rais_estabs_2019_geocoded_all.rds")
 
 
 table(rais$PrecisionDepth, useNA = 'always')
@@ -314,14 +315,12 @@ table(rais$type_input_galileo, useNA = 'always')
 
 
 # abrir censo escolar geo
-escolas <- read_rds("../../data/acesso_oport/censo_escolar/2018/educacao_inep_2018.rds") %>%
+escolas <- read_rds("../../data/acesso_oport/censo_escolar/2018/educacao_inep_final_2018.rds") %>%
   # Deletar escolas q nao foram localizadas
   dplyr::filter(!is.na(lat)) %>%
   # Selecionar variaveis
-  dplyr::select(id_estab = CO_ENTIDADE, codemun = CO_MUNICIPIO, lon, lat, total_corrigido = QT_FUNCIONARIOS) %>%
-  mutate(id_estab = paste0("inep_", id_estab))
+  dplyr::select(id_estab = co_entidade, codemun = code_muni, lon, lat, total_corrigido = qt_funcionarios)
 
-# count(escolas, id_estab, sort = TRUE)
 
 # pegar distribuicao de nivel des escolaridade da cidade
 rais_prop_escol <- rais %>%
@@ -340,6 +339,7 @@ escolas_prop <- escolas %>%
          medio = round(prop_medio * total_corrigido),
          baixo = round(prop_baixo * total_corrigido)) %>%
   select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido) %>%
+  mutate(id_estab = paste0("inep_", id_estab)) %>%
   setDT()
 
 escolas_prop[, geocode_engine := "galileo"]
@@ -349,20 +349,29 @@ escolas_prop[, type_input_galileo := "inep"]
 # juntar rais com escolas proporcionais
 rais2 <- rbind(rais, escolas_prop, fill = T)
 
-a <- rais2 %>% add_count(id_estab) %>% filter(n >= 2)
-
 
 
 table(rais2$PrecisionDepth, useNA = 'always')
 table(rais2$geocode_engine, useNA = 'always')
 table(rais2$type_input_galileo, useNA = 'always')
 
-# # remove duplicates
-# rais2 <- rais2 %>% distinct(id_estab, .keep_all = TRUE)
+
+# remove duplicates
+rais2 <- rais2 %>% distinct(id_estab, .keep_all = TRUE)
+
+
+# trazer razao social
+estabs <- fread("../../data-raw/rais/2019/rais_estabs_raw_2019.csv", select = c("id_estab", "razao_social"))
+estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+estabs <- distinct(estabs, id_estab, .keep_all = TRUE)
+
+rais2 <- merge(rais2, estabs, by = "id_estab", all.x = TRUE)
 
 
 # Salvar
-write_rds(rais2, "../../data/acesso_oport/rais/2018/rais_2018_corrigido_geocoded_censoEscolar.rds")
+write_rds(rais2, "../../data/acesso_oport/rais/2019/rais_2019_corrigido_geocoded_censoEscolar.rds")
+
+
 
 
 
