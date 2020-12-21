@@ -9,6 +9,46 @@ source('./R/fun/setup.R')
 
 
 
+
+### 0) get raw data ------------------------------------
+
+#### companies data
+# read raw data
+estabs2017 <- fread('//storage6/bases/DADOS/RESTRITO/RAIS/csv/estab2017.csv' 
+                    #, nrows = 5
+                    , colClasses='character')
+
+# subset municipalities
+estabs2017_mun <- estabs2017[ codemun %in% substring(munis_df$code_muni, 1,6)]
+
+# subset columns
+estabs2017_mun <- estabs2017_mun[, 1:33]
+
+# save
+fwrite(estabs2017_mun, '../../data-raw/rais/2017/rais_estabs_raw_2017.csv')
+
+
+rm(estabs2017_mun, estabs2017)
+gc(reset = T)
+
+#### workers data
+# read raw data
+trabal2017 <- fread('//storage6/bases/DADOS/RESTRITO/RAIS/csv/brasil2017.csv'
+                    # , nrows = 5
+                    , select = c("id_estab", "grau_instr","emp_31dez", 'clas_cnae20', 'uf', 'codemun', 'nat_jur2016')
+                    , colClasses='character')
+
+
+# subset municipalities
+nrow(trabal2017)
+trabal2017 <- trabal2017[ codemun %in% substring(munis_df$code_muni, 1,6)]
+nrow(trabal2017)
+
+
+# save
+fwrite(trabal2017, '../../data-raw/rais/2017/rais_trabal_raw_2017.csv')
+
+
 ##### 1) Filtrar Rais-2017 pessoas-------------------------------------------------------
 
 # Leitura dos dados da RAIS pessoas com colunas que vamos usar
