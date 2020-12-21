@@ -38,7 +38,7 @@ escolas <- read_rds("../data/censo_escolar/educacao_inep_2019.rds") %>%
 
 # Empregos ----------------------------------------------------------
 # Abrir rais geo
-empregos <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa9.rds") # para 2018
+empregos <- readr::read_rds("../../data/acesso_oport/rais/2017/rais_2017_etapa8.rds") # para 2018
 
 # remove lat lon missing
 empregos <- empregos[!is.na(lat), ]
@@ -62,7 +62,7 @@ empregos <- merge(empregos, estabs, by = "id_estab", all.x = TRUE)
 source('./R/fun/diagnost_hex_uso_solo.R')
 
 # 1/2 Identificar quantidade de empregos por hexagono ( identifica hexagonos problema)
-fim <- diagnost_hex_uso_solo("for", "trabalho", 3000)
+fim <- diagnost_hex_uso_solo("for", "trabalho", 3000, ano = 2019)
 
 table(fim$geocode_engine)
 table(fim$PrecisionDepth)
