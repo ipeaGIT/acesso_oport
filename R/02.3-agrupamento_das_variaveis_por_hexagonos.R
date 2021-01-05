@@ -52,11 +52,15 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # Abrir rais geo
   if (ano == 2017) {
     
-    empregos <- readr::read_rds("../../data/acesso_oport/rais/2017/rais_2017_etapa8.rds")
+    empregos <- readr::read_rds("../../data/acesso_oport/rais/2017/rais_2017_etapa9.rds")
     
-  } else if (ano %in% c(2018, 2019)) {
+  } else if (ano == 2018) {
     
-    empregos <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa10.rds")
+    empregos <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa9.rds")
+    
+  } else if (ano == 2019) {
+    
+    empregos <- readr::read_rds("../../data/acesso_oport/rais/2019/rais_2019_corrigido_geocoded_censoEscolar.rds")
     
   }
     
