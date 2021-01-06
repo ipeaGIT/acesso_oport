@@ -182,131 +182,74 @@ write_rds(rais_fim_wide, "../../data/acesso_oport/rais/2019/rais_2019_vin_instru
 
 ### 3) Limpar outliers (empresas que ainda declara muitos trabalhadores na mesma sede) -----------------------------------------------------
 
-# Abrir
+
 rais <- read_rds("../../data/acesso_oport/rais/2019/rais_2019_vin_instrucao.rds")
+setDT(rais)
 
 
-# 1) Primeiro faz correcao do total de vinculos ouliers por CNAE
-
-# Extrair o cnae do setor
-rais <- setDT(rais)[, cnae.setor := substr(clas_cnae20, 1, 2)]
-
-# Extrair os setores desejados
-# 35 eletricidade, gas e agua quente OK
-# 36 captacao, tratamento e distribuicao de agua OK
-# 49 transporte terrestre OK
-# 51 transporte aereo OK
-# 82 servicoes prestados principalmente a empresas
-# 38 limpeza urbana, esgoto e atividades relacionadas (COLETA, TRATAMENTO E DISPOSIÇÃO DE RESÍDUOS; RECUPERAÇÃO DE MATERIAIS 2.0)
-# 78 SELEÇÃO, AGENCIAMENTO E LOCAÇÃO DE MÃO-DE-OBRA
-# 80 ATIVIDADES DE VIGILÂNCIA, SEGURANÇA E INVESTIGAÇÃO
-# 41 CONSTRUÇÃO DE EDIFÍCIOS
-# 42 OBRAS DE INFRA-ESTRUTURA
-# 43 SERVIÇOS ESPECIALIZADOS PARA CONSTRUÇÃO
-# 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
-# 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
-
-# ? 65 seguradoras
-# ? 56.2 Serviços de catering, bufê e outros serviços de comida preparada
-
-cnaes_problema <- c("35","36","49","51","82","38", "78", "80", "41", "42", "43", "64", "81")
-
-rais.problema <- setDT(rais)[cnae.setor %in% cnaes_problema]
+# * 3a) Corrige total de vínculos de ouliers de setores problemáticos da CNAE ----
 
 
-# Funcoes para identificar ouliet
-# valor no percentil 90
-quanti<-function(x){quantile(x,probs = 0.9)}
-# quantidade acima do percentil 90
-quant<-function(x){sum(x>=quantile(x,probs = 0.9))}
-# interquantile range s?? dos acima do percentil 90
-IQa<-function(x){IQR(x[x>=quantile(x,probs = 0.90)])}
-IQb<-function(x){3}
-#O valor do percentil 90 somado a 3 vezes o valor do interquantile range
-IQe<-function(x){quantile(x,probs = 0.90)+IQR(x[x>=quantile(x,probs = 0.90)])*3}
-#quantidade de casos acima desse threshold
-IQf<-function(x){sum(x>quantile(x,probs = 0.90)+IQR(x[x>=quantile(x,probs = 0.90)])*3)}
+# Extrai o setor da CNAE
+rais[, cnae.setor := substr(clas_cnae20, 1, 2)]
 
-# Aplica funcoes a por setor
-iqa<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQa)
-q<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), quanti)
-qq<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), quant)
-iqb<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQb)
-iqe<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQe)
-iqf<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQf)
+# Setores considerados problemáticos:
+# * 35 ELETRICIDADE, GÁS E OUTRAS UTILIDADES
+# * 36 CAPTAÇÃO, TRATAMENTO E DISTRIBUIÇÃO DE ÁGUA
+# * 38 COLETA, TRATAMENTO E DISPOSIÇÃO DE RESÍDUOS; RECUPERAÇÃO DE MATERIAIS
+# * 41 CONSTRUÇÃO DE EDIFÍCIOS
+# * 42 OBRAS DE INFRA-ESTRUTURA
+# * 43 SERVIÇOS ESPECIALIZADOS PARA CONSTRUÇÃO
+# * 49 TRANSPORTE TERRESTRE
+# * 51 TRANSPORTE AÉREO
+# * 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
+# * 78 SELEÇÃO, AGENCIAMENTO E LOCAÇÃO DE MÃO-DE-OBRA
+# * 80 ATIVIDADES DE VIGILÂNCIA, SEGURANÇA E INVESTIGAÇÃO
+# * 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
+# * 82 SERVIÇOS DE ESCRITÓRIO, DE APOIO ADMINISTRATIVO E OUTROS SERVIÇOS PRESTADOS PRINCIPALMENTE ÀS EMPRESAS
+cnaes_problema <- c("35", "36", "38", "41", "42", "43", "49", "51", "64", "78", "80", "81", "82")
 
+# Definição de outlier: estabelecimentos de setores problemáticos cujo total de
+# vínculos fique acima do percentil 95 da distribuição de vínculos daquele setor
+rais[, p95_setor := round(quantile(total, probs = 0.95), 0), by = .(cnae.setor)]
 
-# rais.problema<-data.table(rais.problema)
-rais.problema[,p90:=quantile(total,0.90),by=cnae.setor]
-geral<-cbind.data.frame(q,qq[,2],iqa[,2],iqb[,2],iqe[,2],iqf[,2])
-names(geral)<-c("cnae.setor","quantil","freq","desviointerq","fator","corte","outliers")
+# Cria coluna total_corrigido com total de vínculos corrigidos
+# Caso o estabelecimento de um setor problemático tenha mais vínculos que o p95 
+# daquele setor, o total corrigido será igual ao p95 do setor. Caso não seja de 
+# um setor problemático, e caso não tenha mais vínculos que o p95, o total 
+# permanece igual
+rais[, total_corrigido := total]
+rais[
+  cnae.setor %chin% cnaes_problema, 
+  total_corrigido := fifelse(total_corrigido > p95_setor, p95_setor, total_corrigido)
+]
 
-rais.problema2 <- merge(rais.problema, setDT(geral), 
-                        all.x = TRUE)
+# Zera todos os empregos da administração pública
+# * 84 ADMINISTRAÇÃO PÚBLICA, DEFESA E SEGURIDADE SOCIAL
+rais[cnae.setor == "84", total_corrigido := 0]
 
-rais.problema2$diff<-rep(0,nrow(rais.problema2))
-
-rais.problema2$diff[rais.problema2$total>=rais.problema2$corte] <- 
-  rais.problema2$total[rais.problema2$total>=rais.problema2$corte] - rais.problema2$corte[rais.problema2$total>=rais.problema2$corte]
-
-dif<-aggregate(rais.problema2$diff, by=list(rais.problema2$cnae.setor), sum)
-
-geral2<-cbind.data.frame(q,qq[,2],iqa[,2],iqb[,2],iqe[,2],iqf[,2],dif[,2])
-
-names(geral2) <- c("cnae.setor","q","freq","desviointerq","fator","corte","outlier","perda")
-
-# criando nova variavel com valores de outliers corrigidos
-rais$total_corrigido <- rais$total
-
-#zerando empregos de administracao publica
-rais$total_corrigido <- ifelse(rais$cnae.setor=="84",0,rais$total_corrigido)
-
-#tabela com valor de corte por setor
-geral3 <- geral2[,c(1,6)]
-
-#colocando esse valor de corte na base
-rais <- merge(rais, geral3, 
-              by="cnae.setor",
-              sort = FALSE,
-              all.x = TRUE)
-
-#substituindo valores maiores que o corte pelo valor de corte
-rais$total_corrigido <- ifelse(rais$cnae.setor %in% cnaes_problema & rais$total_corrigido>rais$corte,rais$corte,rais$total_corrigido)
+# Remove a coluna que guarda o valor do p95
+rais[, p95_setor := NULL]
 
 
+# * 3b) Corrige vínculos de setores problemáticos por grau de escolaridade ----
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#### Corrigir quantidade de empregos por grau de escolaridade
+# Substitui a quantidade de vínculos por grau de escolaridade (apenas em setores 
+# que tiveram seu total de vínculos corrigidos) de forma a manter a mesma 
+# proporção anterior
+rais[
+  total_corrigido < total, 
+  ":="(
+    alto  = round(alto / total * total_corrigido, 0),
+    medio = round(medio / total * total_corrigido, 0),
+    baixo = round(baixo / total * total_corrigido, 0)
+  )
+]
 
-
-# 2) Aplica fatores de correcao para cada nivel de escolaridade em cada estabelecimento
-
-# Calcular a proporcao que cada um dos vinculos por escolaridade representa dos vinculos totais
-rais[,  ":="(prop_baixo = baixo/total,
-             prop_medio = medio/total,
-             prop_alto = alto/total)]
-
-# Substituir a quantidade de vinculos baixo, medio e alto somente se o estabelecimento recebeu corte
-rais[, ":="(alto = ifelse(total_corrigido < total, 
-                          round(prop_alto * total_corrigido, 0), alto),
-            medio = ifelse(total_corrigido < total,
-                           round(prop_medio * total_corrigido, 0), medio),
-            baixo = ifelse(total_corrigido < total, 
-                           round(prop_baixo * total_corrigido, 0), baixo))]
-
-# Drop colunas que nao vamos usar
-rais[, c('corte', 'prop_baixo', 'prop_medio',  'prop_alto') := NULL]
-
-
-
-# Salvar Rais de estabelecimentos com numero de vinculos corrigos e quant de pessoas por escolaridade
+# Salva RAIS de estabelecimentos com números de vínculos (totais e por grau de 
+# escolaridade) corrigidos
 write_rds(rais, "../../data/acesso_oport/rais/2019/rais_2019_corrigido.rds")
-
-
-
-
-
 
 
 # 4) TRAZER GEOCODE DOS ESTABELECIMENTOS -----------------------------------------------------
