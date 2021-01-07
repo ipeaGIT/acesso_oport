@@ -9,29 +9,31 @@ source('./R/fun/setup.R')
 
 
 
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### 2) Ler os dados do CNES ---------------------------------
 
 ## 2.1 Ler CNES ativos dos SUS - traz blueprint das intituicoes ativas em 2019
 
-cnes19 <- readxl::read_xlsx(path = '../../data-raw/hospitais/2017-2018/BANCO_BANCO_ESTAB_10_2017_E_10_2018_02_10_2020.xlsx',
+cnes_raw <- readxl::read_xlsx(path = '../../data-raw/hospitais/2017-2018/BANCO_BANCO_ESTAB_10_2017_E_10_2018_02_10_2020.xlsx',
                             sheet = 'BANCO', skip = 13, 
                             col_types = "text")
 
 # format column names
-cnes19 <- janitor::clean_names(cnes19)
-colnames(cnes19)
+cnes <- janitor::clean_names(cnes_raw)
+colnames(cnes)
 
 # filter year 
-cnes19 <- setDT(cnes19)[competencia %like% "2018"]
+cnes <- setDT(cnes)[competencia %like% "2017"]
 
 # rename columns
-names(cnes19)[16:32] <- c("instal_fisica_ambu", "instal_fisica_hospt", "instal_fisica_urgencia",
+names(cnes)[16:32] <- c("instal_fisica_ambu", "instal_fisica_hospt", "instal_fisica_urgencia",
                           "complex_alta_ambu_est", "complex_alta_ambu_mun", "complex_baix_ambu_est", "complex_baix_ambu_mun", "complex_medi_ambu_est", "complex_medi_ambu_mun", 
                           "complex_alta_hosp_est", "complex_alta_hosp_mun", "complex_baix_hosp_est", "complex_baix_hosp_mun", "complex_medi_hosp_est", "complex_medi_hosp_mun", 
                           "complex_nao_aplic_est", "complex_nao_aplic_mun")
-nrow(cnes19) # 340115 obs
-colnames(cnes19)
+nrow(cnes) # 340115 obs
+colnames(cnes)
 
 
 
@@ -41,7 +43,7 @@ colnames(cnes19)
 
 
 # Filter 0: healthcare nao aplica (pq nao tem servicos de alta/baixa complexidade, e.g. academias de saude, secretarias de saude etc)
-cnes_filter0 <- setDT(cnes19)[is.na(complex_nao_aplic_est)] 
+cnes_filter0 <- setDT(cnes)[is.na(complex_nao_aplic_est)] 
 cnes_filter0 <- cnes_filter0[is.na(complex_nao_aplic_mun)]
 
 
@@ -64,16 +66,16 @@ cnes_filter4 <- cnes_filter3[ instal_fisica_ambu=="X" | instal_fisica_hospt=="X"
 # filter 5. Remove special categories of facilities 
 
 # 5.1 Delete prison hospitals, research centers, police hospitals etc
-to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR'
+to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|PENITENCIARIO|SEDIT|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR|ARTES MARCIAIS|UBS IPAT|UBS CDPM II'
 # PADI = Programa de Atenção Domiciliar ao Idoso
 # DE REGULACAO = gestora de servico
 # CAPS - CENTRO DE ATENCAO PSICOSSOCIAL - saude mental e drogas
-
+# UBS IPAT e UBS CDPM II - vinculatos a policia
 
 
 
 # 5.2 Delete Home care, tele saude, unidades moveis de saude
-to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DISTRIB DE ORGAOS'
+to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DE ORGAOS'
 
 # apply filter 5
 cnes_filter5 <- cnes_filter4[ estabelecimento %nlike% to_remove1 ]
@@ -81,6 +83,7 @@ cnes_filter5 <- cnes_filter5[ tipo_unidade %nlike% to_remove2 ]
 # test >>> cnes_filter6[ CNES =='6771963']
 
 
+a <- cnes[ tipo_unidade %like% 'DE ORGAOS', .(tipo_unidade, estabelecimento) ]
 
 table(cnes_filter5$complex_baix_ambu_est, useNA = "always")
 table(cnes_filter5$complex_baix_hosp_mun, useNA = "always")
