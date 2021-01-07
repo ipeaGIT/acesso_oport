@@ -66,7 +66,7 @@ cnes_filter4 <- cnes_filter3[ instal_fisica_ambu=="X" | instal_fisica_hospt=="X"
 # filter 5. Remove special categories of facilities 
 
 # 5.1 Delete prison hospitals, research centers, police hospitals etc
-to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|PENITENCIARIO|SEDIT|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR|ARTES MARCIAIS|UBS IPAT|UBS CDPM II'
+to_remove1 <- 'ZOONOSES|CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|PENITENCIARIO|SEDIT|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR|ARTES MARCIAIS|UBS IPAT|UBS CDPM II'
 # PADI = Programa de Atenção Domiciliar ao Idoso
 # DE REGULACAO = gestora de servico
 # CAPS - CENTRO DE ATENCAO PSICOSSOCIAL - saude mental e drogas
@@ -83,7 +83,6 @@ cnes_filter5 <- cnes_filter5[ tipo_unidade %nlike% to_remove2 ]
 # test >>> cnes_filter6[ CNES =='6771963']
 
 
-a <- cnes[ tipo_unidade %like% 'DE ORGAOS', .(tipo_unidade, estabelecimento) ]
 
 table(cnes_filter5$complex_baix_ambu_est, useNA = "always")
 table(cnes_filter5$complex_baix_hosp_mun, useNA = "always")
