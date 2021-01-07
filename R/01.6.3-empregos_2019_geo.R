@@ -2,39 +2,44 @@
 source('./R/fun/setup.R')
 
 
-# CLEAN UP NEW RAIS ESTAB (2018) --------------------------------------------------------------
+# CLEAN UP NEW RAIS ESTAB (2019) --------------------------------------------------------------
 
 
 # get new rais
-rais_estabs_2018_raw <- fread("../../data-raw/rais/2018/rais_estabs_raw_2018.csv",
+rais_estabs_2019_raw <- fread("../../data-raw/rais/2019/rais_estabs_raw_2019.csv",
                               # nrows = 100,
                               select = c("id_estab", "qt_vinc_ativos", 'nat_jur2018',  "logradouro", "bairro", "codemun", "uf", "cep"),
                               colClasses = "character")
 
-unique(rais_estabs_2018_raw$id_estab) %>% length() # 8032064 estabs
+
+# essa base ja esta filtrada para os municipios do projeto, mas vamos aplicar os filtros mesmo assim por consistencia
+unique(rais_estabs_2019_raw$id_estab) %>% length() # 2305683 estabs
+
+table(rais_estabs_2019_raw$codemun)
 
 # somente empresas com vinc ativo
-rais_estab_2018_0 <- rais_estabs_2018_raw[as.numeric(qt_vinc_ativos) > 0]
+rais_estab_2019_0 <- rais_estabs_2019_raw[as.numeric(qt_vinc_ativos) > 0]
 
-unique(rais_estab_2018_0$id_estab) %>% length() # 3414255 estabs
+unique(rais_estab_2019_0$id_estab) %>% length() # 902049 estabs
 
 # filter municipalities
-rais_estab_2018_02 <- rais_estab_2018_01[codemun %in% substr(munis_df_2019$code_muni, 1, 6) ]
+rais_estab_2019_02 <- rais_estab_2019_0[codemun %in% substr(munis_df$code_muni, 1, 6) ]
 
-unique(rais_estab_2018_02$id_estab) %>% length() # 911128 estabs
+unique(rais_estab_2019_02$id_estab) %>% length() # 902049 estabs
 
+# trazer o nome do municipio e a UF
 muni_lookup <- geobr::lookup_muni(code_muni = "all")
 muni_lookup <- muni_lookup %>%
   select(codemun = code_muni, name_muni, abrev_state) %>%
   mutate(codemun = substr(codemun, 1, 6))
 
 # select and save
-rais_estab_2018_02 %>%
+rais_estab_2019_02 %>%
   # fix uf and codemun
   left_join(muni_lookup, by = "codemun") %>%
   select(id_estab, qt_vinc_ativos, logradouro, bairro, codemun, name_muni, uf = abrev_state, cep) %>% 
   # save it in rds b
-  fwrite("../../data/acesso_oport/rais/2018/rais_estabs_2018_filter.csv")
+  fwrite("../../data/acesso_oport/rais/2019/rais_estabs_2019_filter.csv")
 
 
 
@@ -42,48 +47,86 @@ rais_estab_2018_02 %>%
 # JOIN PREVIOUS GEOCODE TO NEW RAIS -----------------------------------------------------------
 
 # get new rais filter
-rais_2018_filter <- fread("../../data/acesso_oport/rais/2018/rais_estabs_2018_filter.csv",
+rais_2019_filter <- fread("../../data/acesso_oport/rais/2019/rais_estabs_2019_filter.csv",
                           colClasses = "character",
                           select = c("id_estab", "logradouro", "bairro", "codemun", "name_muni", "uf", "cep"),
                           encoding = "UTF-8")
 
-# get previous geocode (2017)
-rais_etapa8 <- read_rds("../../data/acesso_oport/rais/2017/check/rais_2017_check1.rds")
-rais_etapa8 <- rais_etapa8 %>% select(id_estab, logradouro, cep, lon, lat)
+table(nchar(rais_2019_filter$id_estab))
+
+rais_2019_filter[, id_estab := str_pad(id_estab, side = "left", width = 14, pad = 0)]
+
+# get previous geocode (2018)
+rais_etapa8 <- read_rds("../../data/acesso_oport/rais/2018/check/rais_2018_check1.rds")
+rais_etapa8 <- rais_etapa8 %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
+rais_etapa8[, id_estab := str_pad(id_estab, side = "left", width = 14, pad = 0)]
+
+table(nchar(rais_etapa8$id_estab))
+
+# quantos CNPJS estao em 2018 mas nao estao em 2019?
+setdiff(rais_etapa8$id_estab, rais_2019_filter$id_estab) %>% length() # 163177
+
+# quantos CNPJS estao em 2019 mas nao estao em 2018?
+setdiff(rais_2019_filter$id_estab, rais_etapa8$id_estab) %>% length() # 141481
+
 
 # filter only estabs that were not geocoded before
-rais_2018_geocode_new <- rais_2018_filter[id_estab %nin% rais_etapa8$id_estab]
+rais_2019_geocode_new <- rais_2019_filter[id_estab %nin% rais_etapa8$id_estab]
 # identify type
-rais_2018_geocode_new[, type_input_galileo := "new_estab_2018"]
+rais_2019_geocode_new[, type_input_galileo := "new_estab_2019"]
 
-# get eestabbss that changed cep from 2017 to 2018
-rais_2018_geocode_cep <- left_join(rais_2018_filter, select(rais_etapa8, id_estab, logradouro, cep),
+# get eestabbss that changed cep from 2018 to 2019
+rais_2019_geocode_cep <- left_join(rais_2019_filter, select(rais_etapa8, id_estab, logradouro, cep),
                                   by = "id_estab",
-                                  suffix = c("_2017", "_2018")) %>%
-  mutate(cep_2017 = str_pad(cep_2017, side = "left", width = 8, pad = 0)) %>%
+                                  suffix = c("_2018", "_2019")) %>%
   mutate(cep_2018 = str_pad(cep_2018, side = "left", width = 8, pad = 0)) %>%
-  mutate(cep_2017 = substr(cep_2017, 1, 6)) %>%
+  mutate(cep_2019 = str_pad(cep_2019, side = "left", width = 8, pad = 0)) %>%
   mutate(cep_2018 = substr(cep_2018, 1, 6)) %>%
-  mutate(cep_igual = ifelse(cep_2017 == cep_2018, "sim", "nao")) %>%
+  mutate(cep_2019 = substr(cep_2019, 1, 6)) %>%
+  mutate(cep_igual = ifelse(cep_2018 == cep_2019, "sim", "nao")) %>%
   filter(cep_igual == "nao") %>%
-  rename(cep = cep_2018, logradouro = logradouro_2018) %>%
-  select(-cep_2017, -logradouro_2017, -cep_igual) %>%
+  rename(cep = cep_2019, logradouro = logradouro_2019) %>%
+  select(-cep_2018, -logradouro_2018, -cep_igual) %>%
   # identify type
-  mutate(type_input_galileo = "cep_changed_2018")
+  mutate(type_input_galileo = "cep_changed_2019")
 
 
 
-rais_2018_filter_geocode <- rbind(rais_2018_geocode_new, rais_2018_geocode_cep)
+rais_2019_filter_geocode <- rbind(rais_2019_geocode_new, rais_2019_geocode_cep)
 
 # select columns and create input to galileo
-rais_2018_filter_geocode %>%
-  write_delim("../../data/acesso_oport/rais/2018/geocode/rais_2018_input_galileo.csv", delim = ";")
+rais_2019_filter_geocode %>%
+  write_delim("../../data/acesso_oport/rais/2019/geocode/rais_2019_input_galileo.csv", delim = ";")
 
 # open galileo output
-rais_galileo_output <- fread("../../data/acesso_oport/rais/2018/geocode/rais_2018_output_galileo.csv",
-                             colClasses = 'character')
+rais_galileo_output <- fread("../../data/acesso_oport/rais/2019/geocode/rais_2019_output_galileo.csv",
+                             colClasses = 'character', fill = TRUE)
 
 table(rais_galileo_output$PrecisionDepth, useNA = 'always')
+
+# fix one observation that galileo got wrong
+obs_problem <- data.frame(
+  PrecisionDepth = "4 Estrelas",
+  rais_galileo_output[65704,1],
+  rais_galileo_output[65704,2],
+  rais_galileo_output[65704,3],
+  rais_galileo_output[65704,4],
+  rais_galileo_output[65704,5],
+  rais_galileo_output[65704,6],
+  rais_galileo_output[65704,7],
+  rais_galileo_output[65704,8],
+  rais_galileo_output[65704,9],
+  rais_galileo_output[65704,10],
+  rais_galileo_output[65704,11]
+)
+
+colnames(obs_problem) <- colnames(rais_galileo_output)
+
+# delete rows with the wrong output
+rais_galileo_output <- rais_galileo_output[-c(65703:65704),]
+# bring fixed observation
+rais_galileo_output <- rbind(rais_galileo_output, obs_problem)
+
 
 # recode lat lon column names
 rais_galileo_output <- rais_galileo_output %>% rename(lat=Latitude , lon=Longitude)
@@ -104,15 +147,15 @@ rais_galileo_output[, ':='(lon = as.numeric(lon),
 
 # Estabs com baixa precisao do Galileo 1 e 2 estrelas
 estabs_problema <- rais_galileo_output[ PrecisionDepth %in% c('1 Estrela', '2 Estrelas'), ]
-nrow(estabs_problema) # 14061
-unique(estabs_problema$id_estab) %>% length # 13824
+nrow(estabs_problema) # 18920
+unique(estabs_problema$id_estab) %>% length # 18564
 
 # lista de enderecos com problema
 enderecos <- estabs_problema %>% mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
 
-# registrar Google API Key
+ä# registrar Google API Key
 my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-register_google(key = my_api$V1[2])
+register_google(key = my_api$V1[3])
 
 # geocode
 coordenadas_google1_1 <- lapply(X=enderecos[1:5000], ggmap::geocode, output = "all")
@@ -126,9 +169,8 @@ coordenadas_google1 <- c(coordenadas_google1_1, coordenadas_google1_2, coordenad
 names(coordenadas_google1) <- estabs_problema$id_estab
 
 # save
-write_rds(coordenadas_google1, "../../data/acesso_oport/rais/2018/geocode/rais_geocode_2018_output_google1.rds")
-coordenadas_google1 <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_geocode_2018_output_google1.rds")
-           
+write_rds(coordenadas_google1, "../../data/acesso_oport/rais/2019/geocode/rais_geocode_2019_output_google1.rds")
+coordenadas_google1 <- read_rds("../../data/acesso_oport/rais/2019/geocode/rais_geocode_2019_output_google1.rds")
            
 
 # build df with result from ggmap::geocode
@@ -235,10 +277,10 @@ rais_rodovias_tipo3 <- estabs_problema_3estrelas[logradouro %like% "(RODOVIA )|(
 rais_rodovias_tipo3 <- rais_rodovias_tipo3[id_estab %nin% c(rais_rodovias_tipo1$id_estab, rais_rodovias_tipo2$id_estab)]
 # juntar todas as rodovias
 rais_rodovias <- rbind(rais_rodovias_tipo1, rais_rodovias_tipo2, rais_rodovias_tipo3)
-nrow(rais_rodovias) # 1868 obs
+nrow(rais_rodovias) # 3675 obs
 
-fwrite(rais_rodovias, "../../data/acesso_oport/rais/2018/geocode/geocode_google2_rodovias.csv")
-rais_rodovias <- fread("../../data/acesso_oport/rais/2018/geocode/geocode_google2_rodovias.csv",
+fwrite(rais_rodovias, "../../data/acesso_oport/rais/2019/geocode/geocode_google2_rodovias.csv")
+rais_rodovias <- fread("../../data/acesso_oport/rais/2019/geocode/geocode_google2_rodovias.csv",
                        colClasses = "character")
 
 # lista de enderecos com problema
@@ -255,8 +297,8 @@ coordenadas_google_rodovias <- lapply(X=enderecos_rodovias, ggmap::geocode, outp
 names(coordenadas_google_rodovias) <- rais_rodovias$id_estab 
 
 # save
-write_rds(coordenadas_google_rodovias, "../../data/acesso_oport/rais/2018/geocode/rais_geocode_2018_output_google2.rds")
-coordenadas_google_rodovias <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_geocode_2018_output_google2.rds")
+write_rds(coordenadas_google_rodovias, "../../data/acesso_oport/rais/2019/geocode/rais_geocode_2019_output_google2.rds")
+coordenadas_google_rodovias <- read_rds("../../data/acesso_oport/rais/2019/geocode/rais_geocode_2019_output_google2.rds")
 
 # create dt 
 rodovias_problema_geocoded <- lapply(coordenadas_google_rodovias, create_dt)
@@ -271,8 +313,6 @@ searchedaddress_rodovias <- filter(rais_rodovias, id_estab %in% names(coordenada
   mutate(SearchedAddress = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% select(id_estab, SearchedAddress) %>%
   distinct(id_estab, .keep_all = TRUE)
 rodovias_problema_geocoded_dt <- left_join(rodovias_problema_geocoded_dt, searchedaddress_rodovias, by = "id_estab") %>% setDT()
-
-
 # identify problem
 rodovias_problema_geocoded_dt[, geocode_engine := 'gmaps_prob2']
 # identify quality
@@ -285,8 +325,8 @@ filter(rodovias_problema_geocoded_dt, is.na(lon)) %>% View()
 # join datasets from problemas 1 and 2 ----------------------------------------------
 rais_problema1e2_geocoded <- rbind(estabs_problema_geocoded_dt, rodovias_problema_geocoded_dt)
 
-write_rds(rais_problema1e2_geocoded, "../../data/acesso_oport/rais/2018/geocode/rais_problema1e2_geocoded.rds")
-rais_problema1e2_geocoded <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_problema1e2_geocoded.rds")
+write_rds(rais_problema1e2_geocoded, "../../data/acesso_oport/rais/2019/geocode/rais_problema1e2_geocoded.rds")
+rais_problema1e2_geocoded <- read_rds("../../data/acesso_oport/rais/2019/geocode/rais_problema1e2_geocoded.rds")
 
 
 
@@ -319,7 +359,7 @@ rais_google_mal_geo <- rais_problema1e2_geocoded %>%
 
 # Retorna somente os ceps dos que deram errado para jogar no google API
 somente_ceps <- paste0("CEP ", rais_google_mal_geo$cep, " - ", rais_google_mal_geo$name_muni, ", ", rais_google_mal_geo$uf)
-length(somente_ceps) # 2533 obs 
+length(unique(somente_ceps)) #  2387 obs 
 
 # consulta google api
 coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode, output = 'all')
@@ -328,8 +368,8 @@ coordenadas_google_cep <- lapply(X=somente_ceps, ggmap::geocode, output = 'all')
 names(coordenadas_google_cep) <- rais_google_mal_geo$id_estab
 
 # save it
-write_rds(coordenadas_google_cep, "../../data/acesso_oport/rais/2018/geocode/rais_geocode_2018_output_google3.rds")
-coordenadas_google_cep <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_geocode_2018_output_google3.rds")
+write_rds(coordenadas_google_cep, "../../data/acesso_oport/rais/2019/geocode/rais_geocode_2019_output_google3.rds")
+coordenadas_google_cep <- read_rds("../../data/acesso_oport/rais/2019/geocode/rais_geocode_2019_output_google3.rds")
 
 # create list with dt
 cep_problema_geocoded <- lapply(coordenadas_google_cep, create_dt)
@@ -338,7 +378,7 @@ cep_problema_geocoded <- lapply(coordenadas_google_cep, create_dt)
 cep_problema_geocoded_dt <- rbindlist(cep_problema_geocoded, idcol = "id_estab",
                                       fill = TRUE, use.names = TRUE)
 
-nrow(cep_problema_geocoded_dt) # 2533 obs
+nrow(cep_problema_geocoded_dt) # 1987 obs
 
 # identify searchedaddress
 searchedaddress_cep <- filter(rais_google_mal_geo, id_estab %in% names(coordenadas_google_cep)) %>%
@@ -412,39 +452,30 @@ filter(rais_problema1e2_geocoded, is.na(SearchedAddress)) %>% nrow()
 rais_galileo_output_fixed <- distinct(rais_galileo_output_fixed, id_estab, .keep_all = TRUE)
 
 # save it
-write_rds(rais_galileo_output_fixed, "../../data/acesso_oport/rais/2018/geocode/rais_2018_estabs_geocode_final.rds")
+write_rds(rais_galileo_output_fixed, "../../data/acesso_oport/rais/2019/geocode/rais_2019_estabs_geocode_final.rds")
 
 
 
 
 
-# merge with the complete base 2018 -----------------------------------------------------------
-rais_galileo_output_fixed <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_2018_estabs_geocode_final.rds")
-
-# refactor some stuff
-rais_galileo_output_fixed <- rais_galileo_output_fixed %>%
-  mutate(type_input_galileo = case_when(type_input_galileo == "cep_changed" ~ "cep_changed_2018",
-                                        type_input_galileo == "new_estab" ~ "new_estab_2018"))
+# merge with the complete base 2019 -----------------------------------------------------------
+rais_galileo_output_fixed <- read_rds("../../data/acesso_oport/rais/2019/geocode/rais_2019_estabs_geocode_final.rds")
 
 
-rais_2018_filter <- fread("../../data/acesso_oport/rais/2018/rais_estabs_2018_filter.csv",
+rais_2019_filter <- fread("../../data/acesso_oport/rais/2019/rais_estabs_2019_filter.csv",
                           colClasses = "character",
                           encoding = "UTF-8") 
 
 # pad everyone to 14 characters
 setDT(rais_galileo_output_fixed)[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
-rais_2018_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+rais_2019_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
 
 table(nchar(rais_galileo_output_fixed$id_estab))
-table(nchar(rais_2018_filter$id_estab))
-
-# make sure address are unique
-rais_2018_filter <- rais_2018_filter %>% distinct(id_estab, .keep_all = TRUE)
-rais_galileo_output_fixed <- rais_galileo_output_fixed %>% distinct(id_estab, .keep_all = TRUE)
+table(nchar(rais_2019_filter$id_estab))
 
 
-rais_2018_filter_geocode_end <- merge(
-  setDT(rais_2018_filter),
+rais_2019_filter_geocode_end <- merge(
+  setDT(rais_2019_filter),
   setDT(rais_galileo_output_fixed)[, .(id_estab, PrecisionDepth, SearchedAddress, MatchedAddress, 
                               lon, lat, type_input_galileo, geocode_engine)],
   by = "id_estab",
@@ -454,51 +485,48 @@ rais_2018_filter_geocode_end <- merge(
 )
 
 
-table(rais_2018_filter_geocode_end$type_input_galileo, useNA = 'always')
-table(rais_2018_filter_geocode_end$PrecisionDepth, useNA = 'always')
+table(rais_2019_filter_geocode_end$type_input_galileo, useNA = 'always')
+table(rais_2019_filter_geocode_end$PrecisionDepth, useNA = 'always')
 
 
 # get previous geocode
-rais_etapa8 <- read_rds("../../data/acesso_oport/rais/2017/check/rais_2017_check1.rds")
+rais_etapa8 <- read_rds("../../data/acesso_oport/rais/2018/check/rais_2018_check1.rds")
 rais_etapa8 <- rais_etapa8 %>% select(id_estab, lon, lat, 
                                       SearchedAddress, MatchedAddress,
                                       PrecisionDepth, type_input_galileo, geocode_engine)
-# filter only estabs that we will keep from 2017
+# filter only estabs that we will keep from 2018
 rais_etapa8 <- setDT(rais_etapa8)[id_estab %nin% rais_galileo_output_fixed$id_estab]
 # delete the ones that came from inep (we will add them later)
 rais_etapa8 <- rais_etapa8[type_input_galileo %nin% "inep"]
 
-table(rais_etapa8$type_input_galileo)
-table(rais_etapa8$PrecisionDepth)
-table(rais_etapa8$geocode_engine)
+table(rais_etapa8$type_input_galileo, useNA = 'always')
+filter(rais_etapa8, type_input_galileo == "inep") %>% View()
 table(nchar(rais_etapa8$id_estab))
 
-# make sure estabs are unique
-rais_etapa8 <- rais_etapa8 %>% distinct(id_estab, .keep_all = TRUE)
 
 
 # merge with the previous results
-rais_2018_filter_geocode_end[rais_etapa8, on = "id_estab",
+rais_2019_filter_geocode_end[rais_etapa8, on = "id_estab",
                              c('PrecisionDepth', 'SearchedAddress', 'MatchedAddress','lon', 'lat', 'type_input_galileo', 'geocode_engine') :=
                              list(i.PrecisionDepth, i.SearchedAddress, i.MatchedAddress, i.lon, i.lat, i.type_input_galileo, i.geocode_engine)]
 
-table(rais_2018_filter_geocode_end$PrecisionDepth, useNA = 'always')
-table(rais_2018_filter_geocode_end$geocode_engine, useNA = 'always')
-table(rais_2018_filter_geocode_end$type_input_galileo, useNA = 'always')
-colnames(rais_2018_filter_geocode_end)
-summary(as.numeric(rais_2018_filter_geocode_end$qt_vinc_ativos))
+table(rais_2019_filter_geocode_end$PrecisionDepth, useNA = 'always')
+table(rais_2019_filter_geocode_end$geocode_engine, useNA = 'always')
+table(rais_2019_filter_geocode_end$type_input_galileo, useNA = 'always')
+colnames(rais_2019_filter_geocode_end)
+summary(as.numeric(rais_2019_filter_geocode_end$qt_vinc_ativos))
 
-filter(rais_2018_filter_geocode_end, is.na(MatchedAddress)) %>% nrow()
-filter(rais_2018_filter_geocode_end, is.na(SearchedAddress)) %>% nrow()
+filter(rais_2019_filter_geocode_end, is.na(MatchedAddress)) %>% nrow()
+filter(rais_2019_filter_geocode_end, is.na(SearchedAddress)) %>% nrow()
 
 
-# filter(rais_2018_filter_geocode_end, PrecisionDepth == "2 Estrelas") %>% 
+# filter(rais_2019_filter_geocode_end, PrecisionDepth == "2 Estrelas") %>% 
 #   select(PrecisionDepth, type_input_galileo) %>% View()
 # 
-# filter(rais_2018_filter_geocode_end, type_input_galileo == "rais_2017") %>% 
+# filter(rais_2019_filter_geocode_end, type_input_galileo == "rais_2018") %>% 
 #   select(PrecisionDepth, type_input_galileo) %>% View()
 
 
 
-write_rds(rais_2018_filter_geocode_end, "../../data/acesso_oport/rais/2018/rais_2018_estabs_geocode_final.rds")
+write_rds(rais_2019_filter_geocode_end, "../../data/acesso_oport/rais/2019/rais_2019_estabs_geocode_final.rds")
 

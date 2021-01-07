@@ -130,134 +130,78 @@ write_rds(rais_fim_wide, "../../data/acesso_oport/rais/2018/rais_2018_vin_instru
 
 ### 3) Limpar outliers (empresas que ainda declara muitos trabalhadores na mesma sede) -----------------------------------------------------
 
-# Abrir
+
 rais <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_vin_instrucao.rds")
+setDT(rais)
 
 
-# 1) Primeiro faz correcao do total de vinculos ouliers por CNAE
-
-# Extrair o cnae do setor
-rais <- setDT(rais)[, cnae.setor := substr(clas_cnae20, 1, 2)]
-
-# Extrair os setores desejados
-# 35 eletricidade, gas e agua quente OK
-# 36 captacao, tratamento e distribuicao de agua OK
-# 49 transporte terrestre OK
-# 51 transporte aereo OK
-# 82 servicoes prestados principalmente a empresas
-# 38 limpeza urbana, esgoto e atividades relacionadas (COLETA, TRATAMENTO E DISPOSIÇÃO DE RESÍDUOS; RECUPERAÇÃO DE MATERIAIS 2.0)
-# 78 SELEÇÃO, AGENCIAMENTO E LOCAÇÃO DE MÃO-DE-OBRA
-# 80 ATIVIDADES DE VIGILÂNCIA, SEGURANÇA E INVESTIGAÇÃO
-# 41 CONSTRUÇÃO DE EDIFÍCIOS
-# 42 OBRAS DE INFRA-ESTRUTURA
-# 43 SERVIÇOS ESPECIALIZADOS PARA CONSTRUÇÃO
-# 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
-# 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
-
-# ? 65 seguradoras
-# ? 56.2 Serviços de catering, bufê e outros serviços de comida preparada
-
-cnaes_problema <- c("35","36","49","51","82","38", "78", "80", "41", "42", "43", "64", "81")
-
-rais.problema <- setDT(rais)[cnae.setor %in% cnaes_problema]
+# * 3a) Corrige total de vínculos de ouliers de setores problemáticos da CNAE ----
 
 
-# Funcoes para identificar ouliet
-# valor no percentil 90
-quanti<-function(x){quantile(x,probs = 0.9)}
-# quantidade acima do percentil 90
-quant<-function(x){sum(x>=quantile(x,probs = 0.9))}
-# interquantile range s?? dos acima do percentil 90
-IQa<-function(x){IQR(x[x>=quantile(x,probs = 0.90)])}
-IQb<-function(x){3}
-#O valor do percentil 90 somado a 3 vezes o valor do interquantile range
-IQe<-function(x){quantile(x,probs = 0.90)+IQR(x[x>=quantile(x,probs = 0.90)])*3}
-#quantidade de casos acima desse threshold
-IQf<-function(x){sum(x>quantile(x,probs = 0.90)+IQR(x[x>=quantile(x,probs = 0.90)])*3)}
+# Extrai o setor da CNAE
+rais[, cnae.setor := substr(clas_cnae20, 1, 2)]
 
-# Aplica funcoes a por setor
-iqa<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQa)
-q<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), quanti)
-qq<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), quant)
-iqb<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQb)
-iqe<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQe)
-iqf<-aggregate(rais.problema$total, by=list(rais.problema$cnae.setor), IQf)
+# Setores considerados problemáticos:
+# * 35 ELETRICIDADE, GÁS E OUTRAS UTILIDADES
+# * 36 CAPTAÇÃO, TRATAMENTO E DISTRIBUIÇÃO DE ÁGUA
+# * 38 COLETA, TRATAMENTO E DISPOSIÇÃO DE RESÍDUOS; RECUPERAÇÃO DE MATERIAIS
+# * 41 CONSTRUÇÃO DE EDIFÍCIOS
+# * 42 OBRAS DE INFRA-ESTRUTURA
+# * 43 SERVIÇOS ESPECIALIZADOS PARA CONSTRUÇÃO
+# * 49 TRANSPORTE TERRESTRE
+# * 51 TRANSPORTE AÉREO
+# * 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
+# * 78 SELEÇÃO, AGENCIAMENTO E LOCAÇÃO DE MÃO-DE-OBRA
+# * 80 ATIVIDADES DE VIGILÂNCIA, SEGURANÇA E INVESTIGAÇÃO
+# * 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
+# * 82 SERVIÇOS DE ESCRITÓRIO, DE APOIO ADMINISTRATIVO E OUTROS SERVIÇOS PRESTADOS PRINCIPALMENTE ÀS EMPRESAS
+cnaes_problema <- c("35", "36", "38", "41", "42", "43", "49", "51", "64", "78", "80", "81", "82")
 
+# Definição de outlier: estabelecimentos de setores problemáticos cujo total de
+# vínculos fique acima do percentil 95 da distribuição de vínculos daquele setor
+rais[, p95_setor := round(quantile(total, probs = 0.95), 0), by = .(cnae.setor)]
 
-# rais.problema<-data.table(rais.problema)
-rais.problema[,p90:=quantile(total,0.90),by=cnae.setor]
-geral<-cbind.data.frame(q,qq[,2],iqa[,2],iqb[,2],iqe[,2],iqf[,2])
-names(geral)<-c("cnae.setor","quantil","freq","desviointerq","fator","corte","outliers")
+# Cria coluna total_corrigido com total de vínculos corrigidos
+# Caso o estabelecimento de um setor problemático tenha mais vínculos que o p95 
+# daquele setor, o total corrigido será igual ao p95 do setor. Caso não seja de 
+# um setor problemático, e caso não tenha mais vínculos que o p95, o total 
+# permanece igual
+rais[, total_corrigido := total]
+rais[
+  cnae.setor %chin% cnaes_problema, 
+  total_corrigido := fifelse(total_corrigido > p95_setor, p95_setor, total_corrigido)
+]
 
-rais.problema2 <- merge(rais.problema, setDT(geral), 
-                        all.x = TRUE)
+# Zera todos os empregos da administração pública
+# * 84 ADMINISTRAÇÃO PÚBLICA, DEFESA E SEGURIDADE SOCIAL
+rais[cnae.setor == "84", total_corrigido := 0]
 
-rais.problema2$diff<-rep(0,nrow(rais.problema2))
-
-rais.problema2$diff[rais.problema2$total>=rais.problema2$corte] <- 
-  rais.problema2$total[rais.problema2$total>=rais.problema2$corte] - rais.problema2$corte[rais.problema2$total>=rais.problema2$corte]
-
-dif<-aggregate(rais.problema2$diff, by=list(rais.problema2$cnae.setor), sum)
-
-geral2<-cbind.data.frame(q,qq[,2],iqa[,2],iqb[,2],iqe[,2],iqf[,2],dif[,2])
-
-names(geral2) <- c("cnae.setor","q","freq","desviointerq","fator","corte","outlier","perda")
-
-# criando nova variavel com valores de outliers corrigidos
-rais$total_corrigido <- rais$total
-
-#zerando empregos de administracao publica
-rais$total_corrigido <- ifelse(rais$cnae.setor=="84",0,rais$total_corrigido)
-
-#tabela com valor de corte por setor
-geral3 <- geral2[,c(1,6)]
-
-#colocando esse valor de corte na base
-rais <- merge(rais, geral3, 
-              by="cnae.setor",
-              sort = FALSE,
-              all.x = TRUE)
-
-#substituindo valores maiores que o corte pelo valor de corte
-rais$total_corrigido <- ifelse(rais$cnae.setor %in% cnaes_problema & rais$total_corrigido>rais$corte,rais$corte,rais$total_corrigido)
+# Remove a coluna que guarda o valor do p95
+rais[, p95_setor := NULL]
 
 
+# * 3b) Corrige vínculos de setores problemáticos por grau de escolaridade ----
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#### Corrigir quantidade de empregos por grau de escolaridade
+# Substitui a quantidade de vínculos por grau de escolaridade (apenas em setores 
+# que tiveram seu total de vínculos corrigidos) de forma a manter a mesma 
+# proporção anterior
+rais[
+  total_corrigido < total, 
+  ":="(
+    alto  = round(alto / total * total_corrigido, 0),
+    medio = round(medio / total * total_corrigido, 0),
+    baixo = round(baixo / total * total_corrigido, 0)
+  )
+]
 
-
-# 2) Aplica fatores de correcao para cada nivel de escolaridade em cada estabelecimento
-
-# Calcular a proporcao que cada um dos vinculos por escolaridade representa dos vinculos totais
-rais[,  ":="(prop_baixo = baixo/total,
-             prop_medio = medio/total,
-             prop_alto = alto/total)]
-
-# Substituir a quantidade de vinculos baixo, medio e alto somente se o estabelecimento recebeu corte
-rais[, ":="(alto = ifelse(total_corrigido < total, 
-                          round(prop_alto * total_corrigido, 0), alto),
-            medio = ifelse(total_corrigido < total,
-                           round(prop_medio * total_corrigido, 0), medio),
-            baixo = ifelse(total_corrigido < total, 
-                           round(prop_baixo * total_corrigido, 0), baixo))]
-
-# Drop colunas que nao vamos usar
-rais[, c('corte', 'prop_baixo', 'prop_medio',  'prop_alto') := NULL]
-
-
-
-# Salvar Rais de estabelecimentos com numero de vinculos corrigos e quant de pessoas por escolaridade
+# Salva RAIS de estabelecimentos com números de vínculos (totais e por grau de 
+# escolaridade) corrigidos
 write_rds(rais, "../../data/acesso_oport/rais/2018/rais_2018_corrigido.rds")
 
 
-
-
-
-
-
 # 7) TRAZER GEOCODE DOS ESTABELECIMENTOS -----------------------------------------------------
+
 
 rais_estabs <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_corrigido.rds")
 rais_estabs_geocode <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_estabs_geocode_final.rds")
@@ -304,7 +248,7 @@ write_rds(rais_estabs_geocode_end, "../../data/acesso_oport/rais/2018/rais_estab
 # (a partir do script 01.3-educacao)
 
 
-# abri rais corrigida
+# abrir rais corrigida
 rais <- read_rds("../../data/acesso_oport/rais/2018/rais_estabs_2018_geocoded_all.rds")
 
 
@@ -318,8 +262,10 @@ escolas <- read_rds("../../data/acesso_oport/censo_escolar/2018/educacao_inep_20
   # Deletar escolas q nao foram localizadas
   dplyr::filter(!is.na(lat)) %>%
   # Selecionar variaveis
-  dplyr::select(id_estab = CO_ENTIDADE, codemun = CO_MUNICIPIO, lon, lat, total_corrigido = QT_FUNCIONARIOS)
+  dplyr::select(id_estab = CO_ENTIDADE, codemun = CO_MUNICIPIO, lon, lat, total_corrigido = QT_FUNCIONARIOS) %>%
+  mutate(id_estab = paste0("inep_", id_estab))
 
+# count(escolas, id_estab, sort = TRUE)
 
 # pegar distribuicao de nivel des escolaridade da cidade
 rais_prop_escol <- rais %>%
@@ -337,20 +283,26 @@ escolas_prop <- escolas %>%
   mutate(alto = round(prop_alto * total_corrigido),
          medio = round(prop_medio * total_corrigido),
          baixo = round(prop_baixo * total_corrigido)) %>%
-  select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido)
+  select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido) %>%
+  setDT()
 
-setDT(escolas_prop)[, geocode_engine := "galileo"]
+escolas_prop[, geocode_engine := "galileo"]
 escolas_prop[, PrecisionDepth := "4 Estrelas"]
 escolas_prop[, type_input_galileo := "inep"]
 
 # juntar rais com escolas proporcionais
 rais2 <- rbind(rais, escolas_prop, fill = T)
 
+a <- rais2 %>% add_count(id_estab) %>% filter(n >= 2)
+
 
 
 table(rais2$PrecisionDepth, useNA = 'always')
 table(rais2$geocode_engine, useNA = 'always')
 table(rais2$type_input_galileo, useNA = 'always')
+
+# # remove duplicates
+# rais2 <- rais2 %>% distinct(id_estab, .keep_all = TRUE)
 
 
 # Salvar
@@ -359,431 +311,3 @@ write_rds(rais2, "../../data/acesso_oport/rais/2018/rais_2018_corrigido_geocoded
 
 
 
-
-
-# 7) Corrigir a posteriori falhas no geocode do Galileo --------------------------
-
-# abrir rais
-rais <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_corrigido_geocoded_censoEscolar.rds")
-
-
-
-# lista dos hexagonos problematicos
-
-hex_probs <- data.frame( hexs = c(
-  "8980104c07bffff",
-  "8980104c0b7ffff","8980104c1afffff","89a83136c4fffff","8980104c1afffff","89a90e93537ffff",
-  "89a8a06a40fffff","89a8a06a40fffff","89a810054b3ffff","89a81007357ffff","89a8100e8b3ffff",
-  "89a8103b0b7ffff","89a8c2481a3ffff","89a8c248b07ffff","89a8c248b0fffff","89a8c248b3bffff",
-  "89a8c248dbbffff","89a8c249d43ffff","89a8c249d57ffff","89a8c249d8fffff","89a8c249ddbffff",
-  "89a8c24aa7bffff","89a8c24e6d7ffff","89a8c24f6dbffff","898116b181bffff","89a8c0ce2cfffff",
-  "89a81070ad3ffff","89a81072d67ffff","89800882e27ffff","89a8a06f1a7ffff","89a8a3d666bffff",
-  "89819d2cc73ffff","89819d2cc97ffff"),
-  sigla_muni = c("for","for","for","cur","gua","poa","rio","rio","spo","spo", "spo","spo",
-                 "bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb","bsb",
-                 "sal","goi","gua","gua","slz","duq","duq","nat","nat")
-)
-
-
-# ler hex agregados e juntar
-hex <- lapply(sprintf("../../data/acesso_oport/hex_agregados/2019/hex_agregado_%s_09_2019.rds", unique(hex_probs$sigla_muni)), read_rds) %>%
-  rbindlist() %>%
-  st_sf() %>%
-  select(id_hex) %>%
-  # filtra hex ids problematicos
-  filter(id_hex %in% hex_probS$hexs)
-
-# Qual o codigo dos municipio em questao?
-cod_mun_ok <- munis_df_2019[abrev_muni %in% unique(hex_probs$sigla_muni)]$code_muni
-
-# Carrega somente os dados da rais estabes nestes municipios
-base <- rais %>%
-  filter(!is.na(lon)) %>%
-  filter(codemun %in% substr(cod_mun_ok, 1, 6)) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  select(codemun, id_estab)
-
-# Intersecao do hex ids problema com base de uso do solo
-fim <- st_join(base, hex) %>%
-  filter(!is.na(id_hex))
-
-# Extrair os estabs 'problematicos' concentrados em hexagonos
-oi <- fim %>% st_set_geometry(NULL) %>% distinct(id_estab) %>% .$id_estab
-
-# Filtrar estabs
-rais_prob <- rais %>%
-  filter(id_estab %in% oi)
-
-# lista de enderecos com problema
-enderecos_etapa7 <- rais_prob %>% 
-  mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% 
-  .$fim
-
-
-# registrar Google API Key
-my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-register_google(key = my_api$V1[4])
-
-# geocode
-coordenadas_google_etapa7 <- lapply(X=enderecos_etapa7, ggmap::geocode, output = 'all')
-
-# identify list names as id_estab
-names(coordenadas_google_etapa7) <- rais_prob$id_estab 
-
-# save
-write_rds(coordenadas_google_etapa7, "../../data/acesso_oport/rais/2018/geocode/rais_2018_output_google_manyhex.rds")
-
-
-create_dt <- function(x) {
-  
-  precision_depth0 <- ifelse(length(x[["results"]][[1]][["address_components"]]) > 0, 
-                             x[["results"]][[1]][["address_components"]], 
-                             NA)
-  
-  # check length from precision depth
-  precision_depth <- ifelse(is.na(precision_depth0), NA,
-                            ifelse(length(precision_depth0[[1]]$types) > 0,
-                                   precision_depth0[[1]]$types[[1]], 
-                                   NA))
-  
-  a <- data.table(
-    MatchedAddress = ifelse(!is.null(x[["results"]][[1]][["formatted_address"]]), x[["results"]][[1]][["formatted_address"]], NA),
-    # PrecisionDepth = ifelse(!is.null(x[["results"]][[1]][["address_components"]][[1]]$types[[1]]), x[["results"]][[1]][["address_components"]][[1]]$types[[1]], NA),
-    PrecisionDepth = precision_depth,
-    lon = ifelse(!is.null(x[["results"]][[1]][["geometry"]][["location"]][["lng"]]), x[["results"]][[1]][["geometry"]][["location"]][["lng"]], NA),
-    lat = ifelse(!is.null(x[["results"]][[1]][["geometry"]][["location"]][["lat"]]), x[["results"]][[1]][["geometry"]][["location"]][["lat"]], NA)
-  )
-  
-}
-
-# create dt 
-enderecos_google_etapa7 <- lapply(coordenadas_google_etapa7, create_dt)
-
-
-# rbind as data.table
-enderecos_google_etapa7_dt <- rbindlist(enderecos_google_etapa7, idcol = "id_estab",
-                                        use.names = TRUE)
-
-# identify searchedaddress
-enderecos_google_etapa7_dt[, SearchedAddress := enderecos_etapa7]
-# identify problem
-enderecos_google_etapa7_dt[, geocode_engine := 'gmaps_toomany_hex']
-# identify quality
-enderecos_google_etapa7_dt[is.na(lon), ':='(PrecisionDepth = "address_not_found")]
-
-
-
-# bring tot he original dataset
-rais[enderecos_google_etapa7_dt, on = "id_estab",
-     c("MatchedAddress", "SearchedAddress", "PrecisionDepth", "lon", "lat", "geocode_engine") := 
-       list(i.MatchedAddress, i.SearchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]
-
-
-table(rais$PrecisionDepth, useNA = 'always')
-table(rais$geocode_engine, useNA = 'always')
-table(rais$type_input_galileo, useNA = 'always')
-
-
-# Salvar
-write_rds(rais, "../../data/acesso_oport/rais/2018/rais_2018_etapa7.rds")
-
-
-
-
-
-
-
-
-# 8) Excluir CNPJ's problematicos --------------------------
-
-# Esse CPNJ foram identificados a partir da inspecao de hexagonos em cada cidade com uma quantidade
-# maior que 3000 empregos
-
-# Abrir rais da etapa 7
-rais <- read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa7.rds")
-
-# Trazer CNPJs problematicos
-# Lista de CNPJS problematicos
-cnpjs_prob <- c("02685728000120","05305430000135", "01437408000198", "04368898000106","04370282000170","19201128000141",
-                "37162435000142","08689024000101","92966571000101","88630413000796","02539959000125",
-                "31546484000100","33833880000136","01616929000102","14698658000123","83367342000252",
-                "04113174000111","02295753000105","50844182001208","08848807000190","06019070000178",
-                "09347229000171","12294708000181","02773312000163","07442731000136","01602361000170")
-
-# Excluir esses CNPJs da rais
-rais_etapa8 <- rais[id_estab %nin% cnpjs_prob]
-
-# Salvar RAIS etapa 8 
-write_rds(rais_etapa8, "../../data/acesso_oport/rais/2018/rais_2018_etapa8.rds")
-
-
-
-
-
-
-
-# 9) Corrigir a posteriori hex que apresentaram grande diferença pro ano anterior --------------------------
-# Nesse caso, aqui sao os hex que apresentaram um valor muito maior (>1000 vinculos) pra 2017 do que para 2018
-
-# abrir rais
-rais <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa8.rds")
-
-# sigla_munii <- 'for'
-
-# function by city
-compare_jobs_distribution <- function(sigla_munii) {
-  
-  # open hex files
-  hex_jobs_2017 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2017/hex_agregado_%s_09_2017.rds",
-                                    sigla_munii)) %>%
-    mutate(ano_jobs = 2017)
-  
-  hex_jobs_2018 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2018/hex_agregado_%s_09_2018.rds",
-                                    sigla_munii)) %>%
-    mutate(ano_jobs = 2018)
-  
-  hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018)
-  hex_jobs <- select(hex_jobs, id_hex, sigla_muni, empregos_total, ano_jobs, geometry) %>% setDT()
-  
-  hex_jobs_wide <- pivot_wider(hex_jobs, names_from = ano_jobs, values_from = empregos_total,
-                               names_prefix = "jobs_")
-  
-  # compare!
-  hex_jobs_wide <- hex_jobs_wide %>%
-    mutate(dif1_abs = jobs_2018 - jobs_2017) %>%
-    mutate(dif1_log = log(jobs_2018/jobs_2017)) %>%
-    # truncate
-    mutate(dif1_abs_tc = case_when(dif1_abs < -500 ~ -500,
-                                   dif1_abs > 500 ~ 500,
-                                   TRUE ~ dif1_abs)) %>%
-    mutate(dif1_log_tc = case_when(dif1_log < -1 ~ -1,
-                                   dif1_log > 1 ~ 1,
-                                   TRUE ~ dif1_log))
-  
-  
-  hex_jobs_wide <- hex_jobs_wide %>%
-    filter(!(jobs_2017 == 0 & jobs_2018 == 0))
-  
-  # filter hex with a diffrence of more than 1000 vinc
-  hex_probs <- filter(hex_jobs_wide, dif1_abs > 1000) %>%
-    select(sigla_muni, id_hex, dif1_abs)
-  
-}
-
-hex_probs9 <- lapply(munis_df_2019$abrev_muni, compare_jobs_distribution)
-hex_probs9_dt <- do.call(rbind, hex_probs9) 
-
-
-# ler hex agregados e juntar
-hex <- lapply(sprintf("../../data/acesso_oport/hex_agregados/2019/hex_agregado_%s_09_2019.rds", unique(hex_probs9_dt$sigla_muni)), read_rds) %>%
-  rbindlist() %>%
-  st_sf() %>%
-  select(id_hex) %>%
-  # filtra hex ids problematicos
-  filter(id_hex %in% hex_probs9_dt$id_hex)
-
-# Qual o codigo dos municipio em questao?
-cod_mun_ok <- munis_df_2019[abrev_muni %in% unique(hex_probs9_dt$sigla_muni)]$code_muni
-
-# Carrega somente os dados da rais estabes nestes municipios
-base <- rais %>%
-  filter(!is.na(lon)) %>%
-  filter(codemun %in% substr(cod_mun_ok, 1, 6)) %>%
-  filter(PrecisionDepth %in% c("4 Estrelas", "3 Estrelas", "street_number", "route")) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  select(codemun, id_estab)
-
-# Intersecao do hex ids problema com base de uso do solo
-fim <- st_join(base, hex) %>%
-  filter(!is.na(id_hex))
-
-# Extrair os estabs 'problematicos' concentrados em hexagonos
-oi <- fim %>% st_set_geometry(NULL) %>% distinct(id_estab) %>% .$id_estab
-
-# Filtrar estabs
-rais_prob <- rais %>%
-  filter(id_estab %in% oi)
-
-# lista de enderecos com problema
-enderecos_etapa9 <- rais_prob %>% 
-  mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% 
-  .$fim
-
-
-# registrar Google API Key
-my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-register_google(key = my_api$V1[2])
-
-# geocode
-coordenadas_google_etapa9 <- lapply(X=enderecos_etapa9, ggmap::geocode, output = 'all')
-
-# identify list names as id_estab
-names(coordenadas_google_etapa9) <- rais_prob$id_estab 
-
-# save
-write_rds(coordenadas_google_etapa9, "../../data/acesso_oport/rais/2018/geocode/rais_2018_output_google_etapa9.rds")
-coordenadas_google_etapa9 <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_2018_output_google_etapa9.rds")
-
-create_dt <- function(x) {
-  
-  precision_depth0 <- ifelse(length(x[["results"]][[1]][["address_components"]]) > 0, 
-                             x[["results"]][[1]][["address_components"]], 
-                             NA)
-  
-  # check length from precision depth
-  precision_depth <- ifelse(is.na(precision_depth0), NA,
-                            ifelse(length(precision_depth0[[1]]$types) > 0,
-                                   precision_depth0[[1]]$types[[1]], 
-                                   NA))
-  
-  a <- data.table(
-    MatchedAddress = ifelse(!is.null(x[["results"]][[1]][["formatted_address"]]), x[["results"]][[1]][["formatted_address"]], NA),
-    # PrecisionDepth = ifelse(!is.null(x[["results"]][[1]][["address_components"]][[1]]$types[[1]]), x[["results"]][[1]][["address_components"]][[1]]$types[[1]], NA),
-    PrecisionDepth = precision_depth,
-    lon = ifelse(!is.null(x[["results"]][[1]][["geometry"]][["location"]][["lng"]]), x[["results"]][[1]][["geometry"]][["location"]][["lng"]], NA),
-    lat = ifelse(!is.null(x[["results"]][[1]][["geometry"]][["location"]][["lat"]]), x[["results"]][[1]][["geometry"]][["location"]][["lat"]], NA)
-  )
-  
-}
-
-# create dt 
-enderecos_google_etapa9 <- lapply(coordenadas_google_etapa9, create_dt)
-
-
-# rbind as data.table
-enderecos_google_etapa9_dt <- rbindlist(enderecos_google_etapa9, idcol = "id_estab",
-                                        use.names = TRUE)
-
-# identify searchedaddress
-enderecos_google_etapa9_dt[, SearchedAddress := enderecos_etapa9]
-# identify problem
-enderecos_google_etapa9_dt[, geocode_engine := 'gmaps_etapa9']
-# identify quality
-enderecos_google_etapa9_dt[is.na(lon), ':='(PrecisionDepth = "address_not_found")]
-
-
-
-# bring tot he original dataset
-rais[enderecos_google_etapa9_dt, on = "id_estab",
-     c("MatchedAddress", "SearchedAddress", "PrecisionDepth", "lon", "lat", "geocode_engine") := 
-       list(i.MatchedAddress, i.SearchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]
-
-
-table(rais$PrecisionDepth, useNA = 'always')
-table(rais$geocode_engine, useNA = 'always')
-table(rais$type_input_galileo, useNA = 'always')
-
-
-# Salvar
-write_rds(rais, "../../data/acesso_oport/rais/2018/rais_2018_etapa9.rds")
-
-
-
-
-
-
-
-
-# 10) Analisar CNPJ de hex problematicos das comparacaoes com o ano anterior -----------------------
-
-
-# abrir rais
-rais <- readr::read_rds("../../data/acesso_oport/rais/2018/rais_2018_etapa9.rds")
-
-# remove lat lon missing
-rais <- rais[!is.na(lat), ]
-
-# filter only estabs with high wuality geocode
-rais <- rais[PrecisionDepth %in% c("4 Estrelas", "3 Estrelas", "street_number", "route")]
-
-# trazer razao social
-estabs <- fread("../../data-raw/rais/2018/rais_estabs_raw_2018.csv", select = c("id_estab", "razao_social"))
-estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
-
-rais <- merge(rais, estabs, by = "id_estab", all.x = TRUE)
-
-# sigla_munii <- 'spo'
-
-# function by city
-compare_jobs_distribution <- function(sigla_munii) {
-  
-  # open hex files
-  hex_jobs_2017 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2017/hex_agregado_%s_09_2017.rds",
-                                    sigla_munii)) %>%
-    mutate(ano_jobs = 2017)
-  
-  hex_jobs_2018 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2018/hex_agregado_%s_09_2018.rds",
-                                    sigla_munii)) %>%
-    mutate(ano_jobs = 2018)
-  
-  hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018)
-  hex_jobs <- select(hex_jobs, id_hex, sigla_muni, empregos_total, ano_jobs, geometry) %>% setDT()
-  
-  hex_jobs_wide <- pivot_wider(hex_jobs, names_from = ano_jobs, values_from = empregos_total,
-                               names_prefix = "jobs_")
-  
-  # compare!
-  hex_jobs_wide <- hex_jobs_wide %>%
-    mutate(dif1_abs = jobs_2018 - jobs_2017) %>%
-    mutate(dif1_log = log(jobs_2018/jobs_2017)) %>%
-    # truncate
-    mutate(dif1_abs_tc = case_when(dif1_abs < -500 ~ -500,
-                                   dif1_abs > 500 ~ 500,
-                                   TRUE ~ dif1_abs)) %>%
-    mutate(dif1_log_tc = case_when(dif1_log < -1 ~ -1,
-                                   dif1_log > 1 ~ 1,
-                                   TRUE ~ dif1_log))
-  
-  
-  hex_jobs_wide <- hex_jobs_wide %>%
-    filter(!(jobs_2017 == 0 & jobs_2018 == 0))
-  
-  # filter hex with a diffrence of more than 1000 vinc
-  hex_probs <- filter(hex_jobs_wide, dif1_abs > 1000) %>%
-    select(sigla_muni, id_hex, dif1_abs)
-  
-}
-
-hex_probs9 <- lapply(munis_df_2019$abrev_muni, compare_jobs_distribution)
-hex_probs9_dt <- do.call(rbind, hex_probs9) 
-
-
-# ler hex agregados e juntar
-hex <- lapply(sprintf("../../data/acesso_oport/hex_agregados/2019/hex_agregado_%s_09_2019.rds", unique(hex_probs9_dt$sigla_muni)), read_rds) %>%
-  rbindlist() %>%
-  st_sf() %>%
-  select(id_hex) %>%
-  # filtra hex ids problematicos
-  filter(id_hex %in% hex_probs9_dt$id_hex)
-
-# Qual o codigo dos municipio em questao?
-cod_mun_ok <- munis_df_2019[abrev_muni %in% unique(hex_probs9_dt$sigla_muni)]$code_muni
-
-# Carrega somente os dados da rais estabes nestes municipios
-base <- rais %>%
-  filter(!is.na(lon)) %>%
-  filter(codemun %in% substr(cod_mun_ok, 1, 6)) %>%
-  filter(PrecisionDepth %in% c("4 Estrelas", "3 Estrelas", "street_number", "route")) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) 
-  # select(codemun, id_estab)
-
-# Intersecao do hex ids problema com base de uso do solo
-fim <- st_join(base, hex) %>%
-  filter(!is.na(id_hex))
-
-# maybe these rrepreents a cnpj problem
-fim1 <- fim %>%
-  st_set_geometry(NULL) %>%
-  group_by(name_muni, id_hex) %>%
-  mutate(sum = sum(total_corrigido)) %>%
-  mutate(prop = total_corrigido/sum) %>%
-  ungroup() %>%
-  filter(prop > 0.5) %>%
-  select(id_estab, razao_social, total_corrigido, prop)
-
-
-# tirar esses cnpjs
-rais_fim <- rais[id_estab %nin% fim1$id_estab]
-
-# salvar
-write_rds(rais_fim, "../../data/acesso_oport/rais/2018/rais_2018_etapa10.rds")
