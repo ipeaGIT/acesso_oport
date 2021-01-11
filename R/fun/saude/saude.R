@@ -92,17 +92,16 @@ health_filter_estabs <- function(ano) {
   # filter 5. Remove special categories of facilities 
   
   # 5.1 Delete prison hospitals, research centers, police hospitals etc
-  to_remove1 <- 'CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR'
-  # tirar hospitais veterinarios
+  to_remove1 <- 'ZOONOSES|CENTRO DE ESTUDOS|PSIQUIAT|PRESIDIO|PENAL|JUDICIARIO|PENITENCIARIA|PENITENCIARIO|SEDIT|DETENCAO|PROVISORIA|SANATORIO|POLICIA| PADI|DE REGULACAO|VIGILANCIA|SAMU |ACADEMIA|DEPEND QUIMICO|REEDUCACAO SOCIAL|CAPS|CENTRO DE ATENCAO PSICOSSOCIAL|DISTRIB DE ORGAOS|MILITAR|CADEIA PUBLICA|DOMICILIAR|ARTES MARCIAIS|UBS IPAT|UBS CDPM II'
   # PADI = Programa de Atenção Domiciliar ao Idoso
   # DE REGULACAO = gestora de servico
   # CAPS - CENTRO DE ATENCAO PSICOSSOCIAL - saude mental e drogas
-  
+  # UBS IPAT e UBS CDPM II - vinculatos a policia
   
   
   
   # 5.2 Delete Home care, tele saude, unidades moveis de saude
-  to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DISTRIB DE ORGAOS'
+  to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DE ORGAOS'
   
   # apply filter 5
   cnes_filter5 <- cnes_filter4[ estabelecimento %nlike% to_remove1 ]
@@ -141,6 +140,10 @@ health_filter_estabs <- function(ano) {
   
   # nrow(cnes_filter5) # 4872 obs
   
+  
+  cnes_filter5[, cnes := str_pad(cnes, width = 7, side = "left", pad = 0)]
+  
+  
   # save it
   write_rds(cnes_filter5, sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_%s.rds", ano, ano))
   
@@ -157,11 +160,15 @@ health_filter_estabs <- function(ano) {
 
 
 
+
+
 health_geocode <- function(ano, run_gmaps = FALSE) {
   
   ### Open filtered data -----------------------------
   
   cnes_filtered <- read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_%s.rds", ano, ano))
+  
+  # table(nchar(cnes_filtered$cnes))
   
   
   if (ano != 2017) {
@@ -435,9 +442,6 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # Bring PMAQ data ---------------------------------
-  cnes_filtered_fim <- cnes_filtered_fim %>%
-    mutate(cnes = str_pad(cnes, width = 7, side = "left", pad = 0)) %>% setDT()
-  
   
   attr(cnes_filtered_fim$cnes, "sorted") <- NULL
   
