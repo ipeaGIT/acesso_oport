@@ -92,11 +92,28 @@ escolas_filter <- function(ano) {
                                 in_esp_exclusiva_eja_prof ==1 |
                                 in_comum_prof ==1 |
                                 in_esp_exclusiva_prof ==1, 1, 0)) %>%
-    # Selecionar variaveis
-    select(co_entidade, code_muni = co_municipio, no_entidade, mat_infantil, mat_fundamental, mat_medio, 
-           in_local_func_unid_prisional, in_local_func_prisional_socio, nu_funcionarios,
-           endereco, lon, lat) %>%
     mutate(co_entidade = as.character(co_entidade))
+    # Selecionar variaveis
+    
+  
+  # after 2019, variable 'nu_funcionarios' was descontinued
+  if (ano %in% c(2017, 2018)) {
+    
+    escolas_geo <- escolas_geo %>%
+      select(co_entidade, code_muni = co_municipio, no_entidade, mat_infantil, mat_fundamental, mat_medio, 
+             in_local_func_unid_prisional, in_local_func_prisional_socio, nu_funcionarios,
+             endereco, lon, lat)
+      
+    
+  } else {
+    
+    
+    escolas_geo <- escolas_geo %>%
+      select(co_entidade, code_muni = co_municipio, no_entidade, mat_infantil, mat_fundamental, mat_medio, 
+             in_local_func_unid_prisional, in_local_func_prisional_socio,
+             endereco, lon, lat)
+    
+  }
   
   
   # Identifica escolas priosionais
@@ -247,7 +264,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   munis_problema_enderecos <- munis_problema %>% filter(!is.na(endereco))
   
   # lista de enderecos com problema
-  enderecos <- munis_problema_enderecos$endereco # 724 obs
+  enderecos <- munis_problema_enderecos$endereco
   
   # registrar Google API Key
   my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
