@@ -82,7 +82,7 @@ munis_df <- tribble(
   2927408,    "sal",       "Salvador",        "BA",          "ativo",    "ativo",    "todos",    "todos",
   1302603,    "man",       "Manaus",          "AM",          "ativo",    "ativo",    "ativo",    "ativo",
   2611606,    "rec",       "Recife",          "PE",          "ativo",    "ativo",    "todos",    "todos",
-  5208707,    "goi",       "Goiania",         "GO",          "ativo",    "ativo",    "todos",    "ativo",
+  5208707,    "goi",       "Goiania",         "GO",          "ativo",    "ativo",    "todos",    "todos",
   1501402,    "bel",       "Belem",           "PA",          "ativo",    "ativo",    "ativo",    "ativo",
   3518800,    "gua",       "Guarulhos",       "SP",          "ativo",    "ativo",    "ativo",    "ativo",
   3509502,    "cam",       "Campinas",        "SP",          "todos",    "todos",    "todos",    "todos",
