@@ -1,14 +1,15 @@
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.1.5 Download dos dados geolocalizados dos estabelecimentos de saude
-##info
-# fonte: Cadastro Nacionl dos Estabelecimentos de Saude (CNES) - DataSus
 
 
+#' A funcao 'saude_filter':
+#' 1) Lê os dados da base do CNES (que foram foi disponibilizada pelo MSaude) e faz filtros selecionando o ano,
+#' e as colunas de interessa
+#' 2) Faz filtros selecionando os municipios de interesse, hospitais publicos, faz refactor dos niveis de atendimento,
+#' retira hospitais indesejados
 
-health_filter_estabs <- function(ano) {
+saude_filter <- function(ano) {
   
   
-  ### 1) Ler os dados do CNES ---------------------------------
+  # 1) Ler os dados da base do CNES que foi disponibilizada pelo MSaude ---------------------------------
   
   
   if(ano %in% c("2017", "2018")) {
@@ -64,7 +65,7 @@ health_filter_estabs <- function(ano) {
     
 
   
-  ### 2) Limpar os dados do CNES ---------------------------------
+  # 2) Limpar os dados do CNES ---------------------------------
   
   
   # Filter 0: healthcare nao aplica (pq nao tem servicos de alta/baixa complexidade, e.g. academias de saude, secretarias de saude etc)
@@ -144,7 +145,7 @@ health_filter_estabs <- function(ano) {
   cnes_filter5[, cnes := str_pad(cnes, width = 7, side = "left", pad = 0)]
   
   
-  # save it
+  # 3) Salvar ---------
   write_rds(cnes_filter5, sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_%s.rds", ano, ano))
   
   
@@ -157,19 +158,35 @@ health_filter_estabs <- function(ano) {
 
 
 
+#' A funcao saude_geocode' faz o geocode de hospitais com coordenadas problematicas e tem como output
+#' a base final do ano ja com as coordenadas corrigidas e pronta
+#' Etapas:
+#' 1) Abre os hospitais do ano que foram filtrados na etapa anterior
+#' 2) Separa somente os hospitais para geocode que nao forem geocoded no ano anterior (isso so serve a partir de 2018)
+#' 3) Corrigi problemas de formatacao nas coordenadas
+#' 4) Identifica hospitais com lat/long problematicos a partir dos quatro criterios estabelecidos
+#' 5) Faz geocode dos hospitais problematicos usando google maps. Se a opcao 'run_gmaps = FALSE', vai fazer uso
+#' dos dados que ja foram rodados no gmaps
+#' 6) Recodifica hospitais que estao fora da cidade: alguns hospitais persistem em ficar fora da cidade, oq pode indicar
+#' que esses estabs estao com a localizacao correta, so que foram registrados numa cidade da RM
+#' 7) Traz as coordenadas corrigidas para a base do novo ano
+#' 8) Traz as coordenadas do ano anterior para a base do novo ano
+#' 9) Traz as coordenadas dos dados da PMAQ
 
 
 
 
 
-health_geocode <- function(ano, run_gmaps = FALSE) {
+saude_geocode <- function(ano, run_gmaps = FALSE) {
   
-  ### Open filtered data -----------------------------
+  # 1) Abrir a base filtrada -----------------------------
   
   cnes_filtered <- read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_%s.rds", ano, ano))
   
   # table(nchar(cnes_filtered$cnes))
   
+  
+  # 2) Separar somente os hospitais para geocode que nao forem geocoded no ano anterior ----------
   
   if (ano != 2017) {
     
@@ -182,7 +199,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
     } else {cnes_filtered_togeo <- cnes_filtered}
   
   
-  ### Corrigir latitude e  longitude  ---------------------------------
+  # 3) Corrigir latitude e  longitude  ---------------------------------
   
   # identificar cidades do projeto com dois digitos de latitude
   munis <- purrr::map_dfr(dir("../../data-raw/municipios/2017/", full.names = TRUE), read_rds) %>%
@@ -232,7 +249,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   
-  ###### Identificar CNES com lat/long problematicos
+  # 4) Identificar hospitais com lat/long problematicos ----------------------
   
   # A - poucos digitos
   # B - fora dos limites do municipio
@@ -290,6 +307,8 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   munis_problema <- rbind(munis_problemaA, munis_problemaB, munis_problemaC, munis_problemaD)
   munis_problema <- dplyr::distinct(munis_problema, cnes, .keep_all=T) # remove duplicates
+  
+  # 5) Fazer geocode dos hospitais problematicas usando google maps -----------------------------------------
   
   # lista de enderecos com problema
   enderecos <- munis_problema %>% mutate(fim = paste0(logradouro, ", ", numero, " - ", municipio, ", ", uf, " - CEP ", cep)) %>% .$fim
@@ -372,7 +391,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   
-  #### GOOGLE 2, so ceps ------------------------
+  # 6) Recodificar hospitais que estao fora da cidade ---------------------------
   
   # ainda ha escolas mal georreferenciadas!
   # identificar essas escolas e separa-las
@@ -418,7 +437,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   # table(cnes19_df_coords_fixed$geocode_engine, useNA = 'always')
   
   
-  # bring new geocoded coordinates to the year
+  # 7) Trazer coordenadas corrigidas para os novos hospitais --------------------------
   cnes_filtered_fim <- merge(cnes_filtered,
                                  cnes19_df_coords_fixed[, .(cnes, lat_digits, lon, lat, ndigitos, latlon,
                                                             MatchedAddress, SearchedAddress, PrecisionDepth, geocode_engine, year_geocode)],
@@ -427,7 +446,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   # table(cnes_filtered_2018_fim$PrecisionDepth, useNA = 'always')
   
-  
+  # 8) Trazer coordenadas do ano anterior para os novos hospitais --------------------------
   if (ano != "2017") {
     
   # bring old coordinates from preivous year
@@ -441,7 +460,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   
-  # Bring PMAQ data ---------------------------------
+  # 9) Trazer dados da  PMAQ ---------------------------------
   
   attr(cnes_filtered_fim$cnes, "sorted") <- NULL
   
@@ -466,7 +485,7 @@ health_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   
-  # 6) Salvar dados de saude ------------------------------------------------------------------
+  # 10) Salvar  ------------------------------------------------------------------
   
   cnes_filtered_fim %>%
     rename(code_muni = ibge) %>%

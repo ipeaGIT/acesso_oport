@@ -1,10 +1,10 @@
 # carregar bibliotecas
-source('./R/fun/setup.R')
+# source('./R/fun/setup.R')
 
 
 # CLEAN UP RAIS ESTAB --------------------------------------------------------------
 
-clean_rais_estabs_raw <- function(ano) {
+rais_clean_estabs_raw <- function(ano) {
   
   # get colnames
   colnames <- fread(sprintf("../../data-raw/rais/%s/rais_estabs_raw_%s.csv", ano, ano),
@@ -28,18 +28,16 @@ clean_rais_estabs_raw <- function(ano) {
   
   message("Total number of active estabs: ", unique(rais_estabs_raw_0$id_estab) %>% length())
   
-  # filter municipalities
-  rais_estabs_raw_02 <- rais_estabs_raw_0[codemun %in% substr(munis_df$code_muni, 1, 6) ]
-  
-  message("Total number of active estabs on top 20 cities: ", unique(rais_estabs_raw_02$id_estab) %>% length())
-  
   muni_lookup <- geobr::lookup_muni(code_muni = "all")
   muni_lookup <- muni_lookup %>%
     select(codemun = code_muni, name_muni, abrev_state) %>%
     mutate(codemun = substr(codemun, 1, 6))
   
+  rais_estabs_raw_0[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+  
+  
   # select and save
-  rais_estabs_raw_02 %>%
+  rais_estabs_raw_0 %>%
     # fix uf and codemun
     left_join(muni_lookup, by = "codemun") %>%
     select(id_estab, qt_vinc_ativos, logradouro, bairro, codemun, name_muni, uf = abrev_state, cep) %>% 
@@ -55,54 +53,58 @@ clean_rais_estabs_raw <- function(ano) {
 
 rais_export_data_to_galileo <- function(ano) {
   
-  # get new rais filter
-  rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
-                       colClasses = "character",
-                       select = c("id_estab", "logradouro", "bairro", "codemun", "name_muni", "uf", "cep"),
-                       encoding = "UTF-8")
-  
   # get previous geocode
   if (ano != 2017) {
     
-  }
-  year_previous <- ano -  1
-  rais_etapa8 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/check/rais_%s_check1.rds", year_previous, year_previous))
-  rais_etapa8 <- rais_etapa8 %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
-  
-  # filter only estabs that were not geocoded before
-  rais_geocode_new <- rais_filter[id_estab %nin% rais_etapa8$id_estab]
-  # identify type
-  rais_geocode_new[, type_input_galileo := paste0("new_estab_", ano)]
-  
-  message("Total of new estabs compared to previous year: ", nrow(rais_geocode_new))
-  
-  # get eestabbss that changed cep from ano and preious year
-  rais_geocode_cep <- left_join(rais_filter, select(rais_etapa8, id_estab, logradouro, cep),
-                                by = "id_estab",
-                                suffix = c("_anterior", "_atual")) %>%
-    mutate(cep_anterior = str_pad(cep_anterior, side = "left", width = 8, pad = 0)) %>%
-    mutate(cep_atual = str_pad(cep_atual, side = "left", width = 8, pad = 0)) %>%
-    mutate(cep_anterior = substr(cep_anterior, 1, 6)) %>%
-    mutate(cep_atual = substr(cep_atual, 1, 6)) %>%
-    mutate(cep_igual = ifelse(cep_anterior == cep_atual, "sim", "nao")) %>%
-    filter(cep_igual == "nao") %>%
-    rename(cep = cep_atual, logradouro = logradouro_atual) %>%
-    select(-cep_anterior, -logradouro_anterior, -cep_igual) %>%
+    # get new rais filter
+    rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
+                         colClasses = "character",
+                         select = c("id_estab", "logradouro", "bairro", "codemun", "name_muni", "uf", "cep"),
+                         encoding = "UTF-8")
+    
+    
+    # table(nchar(rais_filter$id_estab))
+    
+    year_previous <- ano -  1
+    rais_etapa8 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano))
+    rais_etapa8 <- rais_etapa8 %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
+    rais_etapa8[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+    
+    # filter only estabs that were not geocoded before
+    rais_geocode_new <- rais_filter[id_estab %nin% rais_etapa8$id_estab]
     # identify type
-    mutate(type_input_galileo = paste0("cep_changed_", ano))
-  
-  
-  message("Total of estabs that changed CEP: ", nrow(rais_geocode_cep))
-  
-  rais_filter_geocode <- rbind(rais_geocode_new, rais_geocode_cep)
-  
-  message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
-  
-  # select columns and create input to galileo
-  rais_filter_geocode %>%
-    write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano), delim = ";")
-  
-  message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano))
+    rais_geocode_new[, type_input_galileo := paste0("new_estab_", ano)]
+    
+    message("Total of new estabs compared to previous year: ", nrow(rais_geocode_new))
+    
+    # get eestabbss that changed cep from ano and preious year
+    rais_geocode_cep <- left_join(rais_filter, select(rais_etapa8, id_estab, logradouro, cep),
+                                  by = "id_estab",
+                                  suffix = c("_anterior", "_atual")) %>%
+      mutate(cep_anterior = str_pad(cep_anterior, side = "left", width = 8, pad = 0)) %>%
+      mutate(cep_atual = str_pad(cep_atual, side = "left", width = 8, pad = 0)) %>%
+      mutate(cep_anterior = substr(cep_anterior, 1, 6)) %>%
+      mutate(cep_atual = substr(cep_atual, 1, 6)) %>%
+      mutate(cep_igual = ifelse(cep_anterior == cep_atual, "sim", "nao")) %>%
+      filter(cep_igual == "nao") %>%
+      rename(cep = cep_atual, logradouro = logradouro_atual) %>%
+      select(-cep_anterior, -logradouro_anterior, -cep_igual) %>%
+      # identify type
+      mutate(type_input_galileo = paste0("cep_changed_", ano))
+    
+    
+    message("Total of estabs that changed CEP: ", nrow(rais_geocode_cep))
+    
+    rais_filter_geocode <- rbind(rais_geocode_new, rais_geocode_cep)
+    
+    message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
+    
+    # select columns and create input to galileo
+    rais_filter_geocode %>%
+      write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano), delim = ";")
+    
+    message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano))
+  }
   
   
   
@@ -112,11 +114,37 @@ rais_export_data_to_galileo <- function(ano) {
 
 # RUN GMAPS GEOCODE ---------------------------------------------------------------------------
 
-run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
+rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
-  # open galileo output
-  rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_output_galileo.csv", ano, ano),
-                               colClasses = 'character')
+  if (ano == 2017) {
+    
+    # leitura da RAIS geocodificada ( output do galileo )
+    rais_galileo_output <- fread("../../data-raw/rais/2017/rais_2017_georef.csv"
+                      , select = c("id_estab", "codemun", "qt_vinc_ativos",
+                                   "latitude", 'longitude', 'precisiondepth', 'matchedaddress',
+                                   'logradouro', 'cep', 'uf', 'BA_Nome_do_municipio')
+                      , colClasses='character'
+                      # , nrows = 10
+    )
+    
+    # rename vars
+    colnames(rais_galileo_output) <- c("id_estab", "codemun", "qt_vinc_ativos",
+                                       "Latitude", 'Longitude', 'PrecisionDepth', 'MatchedAddress',
+                                       'logradouro', 'cep', 'uf', 'name_muni')
+    
+    # somente empresas com vinc ativo
+    rais_galileo_output <- rais_galileo_output[as.numeric(qt_vinc_ativos) > 0]
+    
+    rais_galileo_output <- rais_galileo_output[codemun %in% substr(munis_df$code_muni, 1, 6) ]
+    
+  } else {
+    
+    
+    # open galileo output
+    rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_output_galileo.csv", ano, ano),
+                                 colClasses = 'character')
+    
+  }
   
   # table(rais_galileo_output$PrecisionDepth, useNA = 'always')
   
@@ -208,7 +236,7 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # unique(estabs_problema_geocoded_dt$id_estab) %>% length()
   
   
-  # MAKE SURE WE ARE ONLY TREATING PROBLEMATIC SCHOOLS
+  # MAKE SURE WE ARE ONLY TREATING PROBLEMATIC estabs
   estabs_problema_geocoded_dt <- estabs_problema_geocoded_dt[id_estab %in% estabs_problema$id_estab]
   
   # identify searchedaddress
@@ -305,6 +333,10 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   rodovias_problema_geocoded_dt <- rbindlist(rodovias_problema_geocoded, idcol = "id_estab",
                                              use.names = TRUE)
   
+  
+  # MAKE SURE WE ARE ONLY TREATING PROBLEMATIC estabs
+  rodovias_problema_geocoded_dt <- rodovias_problema_geocoded_dt[id_estab %in% rais_rodovias$id_estab]
+  
   # identify searchedaddress
   searchedaddress_rodovias <- filter(rais_rodovias, id_estab %in% names(coordenadas_google_rodovias)) %>%
     mutate(SearchedAddress = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% select(id_estab, SearchedAddress) %>%
@@ -368,12 +400,12 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     
     # save it
     write_rds(coordenadas_google_cep, sprintf("../../data/acesso_oport/rais/%s/geocode/rais_geocode_%s_output_google3.rds", ano, ano))
-  
+    
   } else {
-      
+    
     coordenadas_google_cep <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_geocode_%s_output_google3.rds", ano, ano))
     
-    }
+  }
   
   # create list with dt
   cep_problema_geocoded <- lapply(coordenadas_google_cep, create_dt)
@@ -381,6 +413,10 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # rbind as data.table
   cep_problema_geocoded_dt <- rbindlist(cep_problema_geocoded, idcol = "id_estab",
                                         fill = TRUE, use.names = TRUE)
+  
+  
+  # MAKE SURE WE ARE ONLY TREATING PROBLEMATIC estabs
+  cep_problema_geocoded_dt <- cep_problema_geocoded_dt[id_estab %in% rais_google_mal_geo$id_estab]
   
   # identify searchedaddress
   searchedaddress_cep <- filter(rais_google_mal_geo, id_estab %in% names(coordenadas_google_cep)) %>%
@@ -451,32 +487,35 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # merge with the complete base -----------------------------------------------------------
   # rais_galileo_output_fixed <- read_rds("../../data/acesso_oport/rais/2018/geocode/rais_2018_estabs_geocode_final.rds")
   
-  # refactor some stuff
-  rais_galileo_output_fixed <- rais_galileo_output_fixed %>%
-    mutate(type_input_galileo = case_when(type_input_galileo == "cep_changed" ~ paste0("cep_changed_", ano),
-                                          type_input_galileo == "new_estab" ~ paste0("new_estab_", ano)))
+  if (ano == 2017) {
+    
+    rais_galileo_output_fixed <- rais_galileo_output_fixed %>%
+      mutate(type_input_galileo = "rais_2017")
+    
+  }
+  
   
   # open original rais from the year
-  rais_2018_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
+  rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
                             colClasses = "character",
                             encoding = "UTF-8") 
   
   # pad everyone to 14 characters
   setDT(rais_galileo_output_fixed)[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
-  rais_2018_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+  rais_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
   # table(nchar(rais_galileo_output_fixed$id_estab))
   # table(nchar(rais_2018_filter$id_estab))
   
   # make sure address are unique
-  rais_2018_filter <- rais_2018_filter %>% distinct(id_estab, .keep_all = TRUE)
+  rais_filter <- rais_filter %>% distinct(id_estab, .keep_all = TRUE)
   rais_galileo_output_fixed <- rais_galileo_output_fixed %>% distinct(id_estab, .keep_all = TRUE)
   
   
   message("Joining the geocoded dataset to the completed dataset ... ")
   
-  rais_2018_filter_geocode_end <- merge(
-    setDT(rais_2018_filter),
+  rais_filter_geocode_end <- merge(
+    setDT(rais_filter),
     setDT(rais_galileo_output_fixed)[, .(id_estab, PrecisionDepth, SearchedAddress, MatchedAddress, 
                                          lon, lat, type_input_galileo, geocode_engine)],
     by = "id_estab",
@@ -486,44 +525,48 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   )
   
   
-  # table(rais_2018_filter_geocode_end$type_input_galileo, useNA = 'always')
-  # table(rais_2018_filter_geocode_end$PrecisionDepth, useNA = 'always')
+  # table(rais_filter_geocode_end$type_input_galileo, useNA = 'always')
+  # table(rais_filter_geocode_end$PrecisionDepth, useNA = 'always')
   
   
-  # get previous geocode
-  rais_etapa8 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/check/rais_%s_check1.rds", ano, ano))
-  rais_etapa8 <- rais_etapa8 %>% select(id_estab, lon, lat, 
-                                        SearchedAddress, MatchedAddress,
-                                        PrecisionDepth, type_input_galileo, geocode_engine)
-  # filter only estabs that we will keep from 2017
-  rais_etapa8 <- setDT(rais_etapa8)[id_estab %nin% rais_galileo_output_fixed$id_estab]
-  # delete the ones that came from inep (we will add them later)
-  rais_etapa8 <- rais_etapa8[type_input_galileo %nin% "inep"]
+  if (ano != 2017) {
+    
+    # get previous geocode
+    rais_etapa8 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/check/rais_%s_check1.rds", ano, ano))
+    rais_etapa8 <- rais_etapa8 %>% select(id_estab, lon, lat, 
+                                          SearchedAddress, MatchedAddress,
+                                          PrecisionDepth, type_input_galileo, geocode_engine)
+    # filter only estabs that we will keep from 2017
+    rais_etapa8 <- setDT(rais_etapa8)[id_estab %nin% rais_galileo_output_fixed$id_estab]
+    # delete the ones that came from inep (we will add them later)
+    rais_etapa8 <- rais_etapa8[type_input_galileo %nin% "inep"]
+    
+    # table(rais_etapa8$type_input_galileo)
+    # table(rais_etapa8$PrecisionDepth)
+    # table(rais_etapa8$geocode_engine)
+    # table(nchar(rais_etapa8$id_estab))
+    
+    # make sure estabs are unique
+    rais_etapa8 <- rais_etapa8 %>% distinct(id_estab, .keep_all = TRUE)
+    
+    message("Joining the completed year geocoded dataset to the previous geocoded year ... ")
+    
+    # merge with the previous results
+    rais_filter_geocode_end[rais_etapa8, on = "id_estab",
+                            c('PrecisionDepth', 'SearchedAddress', 'MatchedAddress','lon', 'lat', 'type_input_galileo', 'geocode_engine') :=
+                              list(i.PrecisionDepth, i.SearchedAddress, i.MatchedAddress, i.lon, i.lat, i.type_input_galileo, i.geocode_engine)]
+    
+    # table(rais_2018_filter_geocode_end$PrecisionDepth, useNA = 'always')
+    # table(rais_2018_filter_geocode_end$geocode_engine, useNA = 'always')
+    # table(rais_2018_filter_geocode_end$type_input_galileo, useNA = 'always')
+    # colnames(rais_2018_filter_geocode_end)
+    # summary(as.numeric(rais_2018_filter_geocode_end$qt_vinc_ativos))
+    
+  } 
   
-  # table(rais_etapa8$type_input_galileo)
-  # table(rais_etapa8$PrecisionDepth)
-  # table(rais_etapa8$geocode_engine)
-  # table(nchar(rais_etapa8$id_estab))
-  
-  # make sure estabs are unique
-  rais_etapa8 <- rais_etapa8 %>% distinct(id_estab, .keep_all = TRUE)
-  
-  message("Joining the completed year geocoded dataset to the previous geocoded year ... ")
-  
-  # merge with the previous results
-  rais_2018_filter_geocode_end[rais_etapa8, on = "id_estab",
-                               c('PrecisionDepth', 'SearchedAddress', 'MatchedAddress','lon', 'lat', 'type_input_galileo', 'geocode_engine') :=
-                                 list(i.PrecisionDepth, i.SearchedAddress, i.MatchedAddress, i.lon, i.lat, i.type_input_galileo, i.geocode_engine)]
-  
-  # table(rais_2018_filter_geocode_end$PrecisionDepth, useNA = 'always')
-  # table(rais_2018_filter_geocode_end$geocode_engine, useNA = 'always')
-  # table(rais_2018_filter_geocode_end$type_input_galileo, useNA = 'always')
-  # colnames(rais_2018_filter_geocode_end)
-  # summary(as.numeric(rais_2018_filter_geocode_end$qt_vinc_ativos))
   
   
-  
-  write_rds(rais_2018_filter_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", ano, ano))
+  write_rds(rais_filter_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", ano, ano))
   
 }
 
