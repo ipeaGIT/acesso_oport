@@ -8,10 +8,7 @@ source('./R/fun/setup.R')
 # 1. Funcao para download de shape file dos municipios e setores censitarios ------------------
 download_muni_setores <- function(ano, munis = "all") {
   
-  # Select the corerspondent munis_df
-  # munis_df <- get(sprintf("munis_df_%s", ano))
-  munis_df <- munis_df_2019
-  
+
   download_muni_setores_un <- function(sigla_muni) {
     
     code <- munis_df[abrev_muni == sigla_muni]$code_muni
@@ -23,15 +20,15 @@ download_muni_setores <- function(ano, munis = "all") {
     
     
     # Download de arquivos
-    muni_sf <- geobr::read_municipality(code_muni= code, year=2010)
-    ct_sf <- geobr::read_census_tract(code_tract = code, year=2010)
+    muni_sf <- geobr::read_municipality(code_muni= code, year=2010, simplified = F)
+    ct_sf <- geobr::read_census_tract(code_tract = code, year=2010, simplified = F)
     
     
     # salvar municipios
-    readr::write_rds(muni_sf, sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano))
+    readr::write_rds(muni_sf, sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano), compress = 'gz')
     
     # salvar setores censitarios
-    readr::write_rds(ct_sf, sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla_muni, ano))
+    readr::write_rds(ct_sf, sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla_muni, ano), compress = 'gz')
   }
   
   # 2. Aplica funcao ------------------------------------------
@@ -50,3 +47,5 @@ download_muni_setores <- function(ano, munis = "all") {
 
 download_muni_setores(ano = 2017)
 download_muni_setores(ano = 2018)
+download_muni_setores(ano = 2019)
+download_muni_setores(ano = 2020)
