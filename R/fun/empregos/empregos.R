@@ -247,8 +247,8 @@ rais_bring_geocode <- function(ano) {
   rais_estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   rais_estabs_geocode[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
-  unique(rais_estabs$id_estab) %>% length()
-  unique(rais_estabs_geocode$id_estab) %>% length()
+  # unique(rais_estabs$id_estab) %>% length()
+  # unique(rais_estabs_geocode$id_estab) %>% length()
   
   
   # join them!
@@ -265,7 +265,7 @@ rais_bring_geocode <- function(ano) {
   # table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
   
   
-  filter(rais_estabs_geocode_end, is.na(geocode_engine)) %>% View()
+  # filter(rais_estabs_geocode_end, is.na(geocode_engine)) %>% View()
   
   # save it
   write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
@@ -322,6 +322,10 @@ rais_bring_schools <- function(ano) {
   
   # juntar rais com escolas proporcionais
   rais2 <- rbind(rais, escolas_prop, fill = T)
+  
+  
+  # pad everyone to 14 characters
+  rais2[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
   
   
