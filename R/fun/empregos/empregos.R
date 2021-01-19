@@ -41,11 +41,14 @@ rais_filter_raw_data <- function(ano) {
                   , select = columns
                   , colClasses='character')
   
+  # rename nat_jur
+  colnames(trabal) <- c("id_estab", "grau_instr", "nat_jur", "emp_31dez", 'clas_cnae20', 'uf', 'codemun')
+  
   
   # subset municipalities
-  nrow(trabal)
+  # nrow(trabal)
   trabal <- trabal[ codemun %in% substring(munis_df$code_muni, 1,6)]
-  nrow(trabal)
+  # nrow(trabal)
   
   
   # save
@@ -74,7 +77,7 @@ rais_filter_pessoas <- function(ano) {
   # Filtro 1: selecionar so vinculos ativos
   rais_filtro_1 <- rais_trabs[emp_31dez == 1]
   
-  unique(rais_filtro_1$id_estab) %>% length()
+  # unique(rais_filtro_1$id_estab) %>% length()
   
   
   # Filtro 2 deletar todas as intituicoes com Natureza Juridica 'publica' (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
@@ -82,16 +85,16 @@ rais_filter_pessoas <- function(ano) {
   
   
   # identifica natureza de adm publica
-  rais_filtro_1[, adm_pub := ifelse( substr(nat_jur2016, 1, 1)==1, 1, 0) ]
+  rais_filtro_1[, adm_pub := ifelse( substr(nat_jur, 1, 1)==1, 1, 0)]
   
   # fica apenas com adm publica
   rais_filtro_2 <- rais_filtro_1[ adm_pub != 1 ]
   
   # quantos vinculos de natureza juridica publica a gente perde? 23.7%
-  nrow(rais_filtro_2) / nrow(rais_filtro_1)
+  # nrow(rais_filtro_2) / nrow(rais_filtro_1)
   
   # Filtro 3 deletar todas as empresas publicas (a entidade 2011 eh empresa publica)
-  rais_filtro_3 <- rais_filtro_2[nat_jur2016 != "2011"]
+  rais_filtro_3 <- rais_filtro_2[nat_jur != "2011"]
   
   
   # Salvar em formato rds para formato rapido
@@ -113,7 +116,8 @@ rais_categorize_inst <- function(ano) {
   # Abrir RAIS  em formato rapido rds
   rais_trabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_ind_filtrada.rds", ano, ano))
   
-  
+  # str(rais_trabs)
+  rais_trabs[, grau_instr := str_replace(grau_instr, "0", "")]
   
   # Categorizar trabalhadores por grau de instrucao
   rais_cats <- rais_trabs[, instrucao := fifelse(grau_instr %in% c(1:6), "baixo",                                    # menor do que ensino medio (inclui ensino medio incompleto)
@@ -126,11 +130,11 @@ rais_categorize_inst <- function(ano) {
   
   # soma quantidade total de empregados em cada empresa
   rais_fim <- rais_fim[, total := sum(vinculos), by = .(id_estab, clas_cnae20)]
-  head(rais_fim)
+  # head(rais_fim)
   
   # Reshape da base de formato long para wide
   rais_fim_wide <- tidyr::spread(rais_fim, instrucao, vinculos, fill = 0)
-  head(rais_fim_wide)
+  # head(rais_fim_wide)
   
   # Salvar agregado do numero de trabalhadores por empresa
   write_rds(rais_fim_wide, sprintf("../../data/acesso_oport/rais/%s/rais_%s_vin_instrucao.rds", ano, ano))
@@ -222,6 +226,8 @@ rais_treat_outliers <- function(ano) {
 
 
 
+# check size of each year
+# map(sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", 2017:2019, 2017:2019), file.info)
 
 
 
@@ -254,9 +260,9 @@ rais_bring_geocode <- function(ano) {
     all.x = TRUE
   )
   
-  table(rais_estabs_geocode_end$PrecisionDepth, useNA = 'always')
-  table(rais_estabs_geocode_end$geocode_engine, useNA = 'always')
-  table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
+  # table(rais_estabs_geocode_end$PrecisionDepth, useNA = 'always')
+  # table(rais_estabs_geocode_end$geocode_engine, useNA = 'always')
+  # table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
   
   
   filter(rais_estabs_geocode_end, is.na(geocode_engine)) %>% View()

@@ -19,6 +19,8 @@ clean_rais_estabs_raw <- function(ano) {
   rais_estabs_raw <- fread(sprintf("../../data-raw/rais/%s/rais_estabs_raw_%s.csv", ano, ano),
                            select = columns,
                            colClasses = "character")
+  # rename columns
+  colnames(rais_estabs_raw) <- c("id_estab", "qt_vinc_ativos", "nat_jur", "logradouro", "bairro", "codemun", "uf", "cep")
   
   
   # somente empresas com vinc ativo
@@ -50,9 +52,8 @@ clean_rais_estabs_raw <- function(ano) {
 
 
 
-# JOIN PREVIOUS GEOCODE TO NEW RAIS -----------------------------------------------------------
 
-import_data_to_galileo <- function(ano) {
+rais_export_data_to_galileo <- function(ano) {
   
   # get new rais filter
   rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
@@ -61,6 +62,9 @@ import_data_to_galileo <- function(ano) {
                        encoding = "UTF-8")
   
   # get previous geocode
+  if (ano != 2017) {
+    
+  }
   year_previous <- ano -  1
   rais_etapa8 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/check/rais_%s_check1.rds", year_previous, year_previous))
   rais_etapa8 <- rais_etapa8 %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
@@ -202,6 +206,10 @@ run_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
                                            use.names = TRUE)
   
   # unique(estabs_problema_geocoded_dt$id_estab) %>% length()
+  
+  
+  # MAKE SURE WE ARE ONLY TREATING PROBLEMATIC SCHOOLS
+  estabs_problema_geocoded_dt <- estabs_problema_geocoded_dt[id_estab %in% estabs_problema$id_estab]
   
   # identify searchedaddress
   searchedaddress <- filter(estabs_problema, id_estab %in% names(coordenadas_google1)) %>%
