@@ -54,7 +54,7 @@ criar_hexagonos <- function(ano, munis = "all") {
       hex_ids <- polyfill(muni, res = resolution, simple = TRUE)
       
       # pass the h3 ids to return the hexagonal grid
-      hex_grid <- hex_ids[[1]] %>% 
+      hex_grid <- hex_ids %>%  # hex_ids[[1]] %>%  # change necessary to accommodate multiple municipalities
         h3_to_polygon(simple = FALSE) %>%
         rename(id_hex = h3_address) %>%
         as_tibble() %>% 
