@@ -4,7 +4,7 @@
 
 # CLEAN UP RAIS ESTAB --------------------------------------------------------------
 
-rais_clean_estabs_raw(201) <- function(ano) {
+rais_clean_estabs_raw <- function(ano) {
   
   # get colnames
   colnames <- fread(sprintf("../../data-raw/rais/%s/rais_estabs_raw_%s.csv", ano, ano),
@@ -53,15 +53,15 @@ rais_clean_estabs_raw(201) <- function(ano) {
 
 rais_export_data_to_galileo <- function(ano) {
   
+  # get new rais filter
+  rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
+                       colClasses = "character",
+                       select = c("id_estab", "logradouro", "bairro", "codemun", "name_muni", "uf", "cep"),
+                       encoding = "UTF-8")
+  
+  
   # get previous geocode
   if (ano != 2017) {
-    
-    # get new rais filter
-    rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
-                         colClasses = "character",
-                         select = c("id_estab", "logradouro", "bairro", "codemun", "name_muni", "uf", "cep"),
-                         encoding = "UTF-8")
-    
     
     # table(nchar(rais_filter$id_estab))
     
@@ -103,6 +103,20 @@ rais_export_data_to_galileo <- function(ano) {
       write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano), delim = ";")
     
     message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano))
+    
+  } else if (ano == 2017) {
+    
+    rais_filter_geocode <- rais_filter %>%
+      mutate(type_input_galileo = paste0("rais_", "2017"))
+    
+    message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
+    
+    # save input to galileo
+    rais_filter_geocode %>%
+      write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano), delim = ";")
+    
+    message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano))
+    
   }
   
   
@@ -119,11 +133,11 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     
     # leitura da RAIS geocodificada ( output do galileo )
     rais_galileo_output <- fread("../../data-raw/rais/2017/rais_2017_georef.csv"
-                      , select = c("id_estab", "codemun", "qt_vinc_ativos",
-                                   "latitude", 'longitude', 'precisiondepth', 'matchedaddress',
-                                   'logradouro', 'cep', 'uf', 'BA_Nome_do_municipio')
-                      , colClasses='character'
-                      # , nrows = 10
+                                 , select = c("id_estab", "codemun", "qt_vinc_ativos",
+                                              "latitude", 'longitude', 'precisiondepth', 'matchedaddress',
+                                              'logradouro', 'cep', 'uf', 'BA_Nome_do_municipio')
+                                 , colClasses='character'
+                                 # , nrows = 10
     )
     
     # rename vars
@@ -176,7 +190,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   # registrar Google API Key
   my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-  register_google(key = my_api$V1[2])
+  register_google(key = my_api$V1[3])
   
   # geocode
   if (run_gmaps) {
@@ -201,7 +215,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     
     coordenadas_google1 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_geocode_%s_output_google1.rds", ano, ano))
   }
-
+  
   
   # function to create data.frame from gmaps output
   create_dt <- function(x) {
@@ -303,10 +317,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # lista de enderecos com problema
   enderecos_rodovias <- rais_rodovias %>% mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
   
-  # registrar Google API Key
-  my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-  register_google(key = my_api$V1[2])
-  
+  # run gmaps
   
   if(run_gmaps) {
     
@@ -351,7 +362,8 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # join datasets from problemas 1 and 2 ----------------------------------------------
-  rais_problema1e2_geocoded <- rbind(estabs_problema_geocoded_dt, rodovias_problema_geocoded_dt)
+  rais_problema1e2_geocoded <- rbind(estabs_problema_geocoded_dt, rodovias_problema_geocoded_dt,
+                                     fill = TRUE)
   
   write_rds(rais_problema1e2_geocoded, sprintf("../../data/acesso_oport/rais/%s/geocode/rais_problema1e2_geocoded.rds", ano))
   rais_problema1e2_geocoded <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_problema1e2_geocoded.rds", ano))
@@ -456,7 +468,46 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # table(rais_problema1e2_geocoded$geocode_engine, useNA = 'always')
   # filter(rais_problema1e2_geocoded, is.na(MatchedAddress)) %>% View()
   
-
+  # check if there are missing address ---------------------
+  if (nrow(rais_problema1e2_geocoded[is.na(PrecisionDepth)]) > 0) {
+    
+    estabs_missing <- rais_problema1e2_geocoded[is.na(PrecisionDepth)]
+    
+    enderecos_estabs_missing <- rais_galileo_output %>%
+      filter(id_estab %in% estabs_missing$id_estab) %>%
+      mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
+    
+    # geocode
+    coordenadas_google_missing <- lapply(X=enderecos_estabs_missing, ggmap::geocode, output = "all")
+    
+    # identify list names as id_estab
+    names(coordenadas_google_missing) <- estabs_missing$id_estab 
+    
+    # create dt 
+    estabs_missing_geocoded <- lapply(coordenadas_google_missing, create_dt)
+    
+    # rbind as data.table
+    estabs_missing_geocoded_dt <- rbindlist(estabs_missing_geocoded, idcol = "id_estab",
+                                            use.names = TRUE)
+    
+    # identify searchedaddress
+    estabs_missing_geocoded_dt$SearchedAddress <- enderecos_estabs_missing
+    
+    # identify quality when no address was found
+    estabs_missing_geocoded_dt[is.na(lon), ':='(PrecisionDepth = "address_not_found")]
+    estabs_missing_geocoded_dt[is.na(PrecisionDepth), ':='(lon = NA,
+                                                           lat = NA,
+                                                           PrecisionDepth = "address_not_found")]
+    
+    # join to the dataset
+    rais_problema1e2_geocoded[estabs_missing_geocoded_dt, on = "id_estab",
+                              c("MatchedAddress", "SearchedAddress", "PrecisionDepth", "lon", "lat") := 
+                                list(i.MatchedAddress, i.SearchedAddress,  i.PrecisionDepth, i.lon, i.lat)]
+    
+    
+  }
+  
+  
   
   
   # join the dataset with the fixed coordinates to the original output from galileo
@@ -470,15 +521,6 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
                               list(i.MatchedAddress, i.PrecisionDepth, i.lon, i.lat, i.SearchedAddress, i.geocode_engine)]
   
   
-  # check if there are missing address
-  if (length(setdiff(estabs_problema$id_estab, names(rais_galileo_output_fixed))) > 0) {
-    
-    estabs_missing <- estabs_problema[id_estab %nin% names(rais_galileo_output_fixed)]
-    
-    enderecos_estabs_missing <- estabs_missing %>% mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
-    
-  }
-  
   
   # table(rais_galileo_output_fixed$PrecisionDepth, useNA = 'always')
   # table(rais_galileo_output_fixed$geocode_engine, useNA = 'always')
@@ -486,7 +528,6 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # unique addresses
-  # rais_galileo_output_fixed %>% add_count(id_estab) %>% filter(n>=2) %>% View()
   rais_galileo_output_fixed <- distinct(rais_galileo_output_fixed, id_estab, .keep_all = TRUE)
   
   # save it
@@ -496,13 +537,9 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   
-  # merge with the complete base -----------------------------------------------------------
+  # merge the geocoded estabs with the complete base ---------------------------
   rais_galileo_output_fixed <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_final.rds", ano, ano))
   
-  # refactor some stuff
-  rais_galileo_output_fixed <- rais_galileo_output_fixed %>%
-    mutate(type_input_galileo = case_when(type_input_galileo == "cep_changed" ~ paste0("cep_changed_", ano),
-                                          type_input_galileo == "new_estab" ~ paste0("new_estab_", ano)))
   
   if (ano == 2017) {
     
@@ -511,36 +548,41 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     
   }
   
-  
-  # open original rais from the year
-  rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
-                            colClasses = "character",
-                            encoding = "UTF-8") 
-  
-  # pad everyone to 14 characters
-  setDT(rais_galileo_output_fixed)[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
-  rais_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
-  
-  # table(nchar(rais_galileo_output_fixed$id_estab))
-  # table(nchar(rais_2018_filter$id_estab))
-  
-  # make sure address are unique
-  rais_filter <- rais_filter %>% distinct(id_estab, .keep_all = TRUE)
-  rais_galileo_output_fixed <- rais_galileo_output_fixed %>% distinct(id_estab, .keep_all = TRUE)
+  # refactor some stuff
+  rais_galileo_output_fixed <- rais_galileo_output_fixed %>%
+    mutate(type_input_galileo = case_when(type_input_galileo == "cep_changed" ~ paste0("cep_changed_", ano),
+                                          type_input_galileo == "new_estab" ~ paste0("new_estab_", ano)))
   
   
-  message("Joining the geocoded dataset to the completed dataset ... ")
-  
-  rais_filter_geocode_end <- merge(
-    setDT(rais_filter),
-    setDT(rais_galileo_output_fixed)[, .(id_estab, PrecisionDepth, SearchedAddress, MatchedAddress, 
-                                         lon, lat, type_input_galileo, geocode_engine)],
-    by = "id_estab",
-    all.x = TRUE,
-    sort = FALSE
-    
-  )
-  
+  # # open original rais from the year
+  # rais_filter <- fread(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano),
+  #                      colClasses = "character",
+  #                      encoding = "UTF-8") 
+  # 
+  # # pad everyone to 14 characters
+  # setDT(rais_galileo_output_fixed)[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+  # rais_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+  # 
+  # # table(nchar(rais_galileo_output_fixed$id_estab))
+  # # table(nchar(rais_2018_filter$id_estab))
+  # 
+  # # make sure address are unique
+  # rais_filter <- rais_filter %>% distinct(id_estab, .keep_all = TRUE)
+  # rais_galileo_output_fixed <- rais_galileo_output_fixed %>% distinct(id_estab, .keep_all = TRUE)
+  # 
+  # 
+  # message("Joining the geocoded dataset to the completed dataset ... ")
+  # 
+  # rais_filter_geocode_end <- merge(
+  #   setDT(rais_filter),
+  #   setDT(rais_galileo_output_fixed)[, .(id_estab, PrecisionDepth, SearchedAddress, MatchedAddress, 
+  #                                        lon, lat, type_input_galileo, geocode_engine)],
+  #   by = "id_estab",
+  #   all.x = TRUE,
+  #   sort = FALSE
+  #   
+  # )
+  # 
   
   # table(rais_filter_geocode_end$type_input_galileo, useNA = 'always')
   # table(rais_filter_geocode_end$PrecisionDepth, useNA = 'always')
@@ -583,7 +625,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   
-  write_rds(rais_filter_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", ano, ano))
+  write_rds(rais_galileo_output_fixed, sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", ano, ano))
   
 }
 
