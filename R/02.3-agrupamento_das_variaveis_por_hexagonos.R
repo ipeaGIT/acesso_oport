@@ -1,23 +1,21 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.2.2 Agrega informacoes demograficas e uso do solo nos hexagonos
+# Agrega informacoes demograficas e uso do solo nos hexagonos
 
 # carregar bibliotecas -----------------------------------------------------------------------------
 source('./R/fun/setup.R')
 
 # ano <- 2018
 
+#' A funcao `agrupar_variaveis_hex` agrega as variaveis de emprego, educacao, saude
+#' e demograficas das grades estisticas para os hexagonos de cada cidade
+
 agrupar_variaveis_hex <- function(ano, munis = "all") {
   
+  # 1) Abrir arquivos com as oportunidades -------------------------------------
   
-  # Select the corerspondent munis_df
-  # munis_df <- munis_df_2019
-  # munis_df <- get(sprintf("munis_df_%s", ano))
-  
-  # ABRIR ARQUIVOS COM AS OPORTUNIDADES -------------------------------------
-  
-  # Saude --------------------------------------
+  # 1.1) Saude
   cnes <- readr::read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_geocoded_pmaq_%s.rds", ano, ano)) 
   
+  # remove lat lon missing
   cnes <- cnes[!is.na(lat),] 
   
   # filter only estabs with high wuality geocode
@@ -31,12 +29,10 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   cnes <- cnes %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
   
-  
-  
-  # Escolas  -------------------------------------
-  # abrir censo escolar geo
+  # 1.2) Escolas
   escolas <- read_rds(sprintf("../../data/acesso_oport/censo_escolar/%s/educacao_inep_final_%s.rds", ano, ano))
   
+  # remove lat lon missing
   escolas <- escolas[!is.na(lat),] 
   
   # filter only estabs with high wuality geocode
@@ -48,14 +44,9 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                    lon, lat)]
   
   
-  # Empregos ----------------------------------------------------------
-  # Abrir rais geo
-    
+  # 1.3) Empregos
   empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano))
     
-    
-    
-  
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
   
@@ -65,9 +56,9 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # select columns
   empregos <- empregos[, .(codemun, id_estab, baixo, medio, alto, lon, lat)]
   
-  # FUNCAO PARA REALIZAR EM CADA MUNICIPIO ----------------------------------
+  #' A funcao `agrupar_variaveis` agrupa as variaveis acima nos hexagonos de
+  #' cada um dos municipios
   
-  # Funcao para agregar dados de uso do solo na grade de hexagonos
   agrupar_variaveis <- function(sigla_muni) { 
     
     # sigla_muni <- "for"
@@ -112,7 +103,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     
     
-    # FUNCAO PARA REALIZAR PARA TODAS AS RESOLUCOES ------------------------------
+    # FUNCAO PARA REALIZAR PARA TODAS AS RESOLUCOES
     
     por_resolucao <- function(muni_res) {
       # muni_res <- '09'
@@ -122,7 +113,6 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       
       # Ler arquivo de hexagono  
       hex_muni <- readr::read_rds(hexf)
-      
       
       # Agrupar populacao, cor e renda
       # join espacial 

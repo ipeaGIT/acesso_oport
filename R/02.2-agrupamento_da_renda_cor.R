@@ -1,12 +1,12 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.2.2 Agrega informacao de renda dos setores censitários para a grade do censo
+# Agrega informacao de renda dos setores censitários para a grade do censo
   
   
 
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
-## Funcao para inputar renda do setor censitario para grade estatistica  -------------------------------------------
+#' A funcao `renda_de_setor_p_grade` passa todas as variaveis que foram coletadas
+#' dos setores censitarios para as grades estatisticas  
 
 renda_de_setor_p_grade <- function(ano, munis = "all") {
   
