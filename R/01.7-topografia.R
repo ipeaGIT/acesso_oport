@@ -1,5 +1,8 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.1.7 Leitura e filtro de elevacao/topografia
+
+# ATENCAO: dados de topografia ja cortados para os municipios foram baixados manualmente
+# e estao na pasta data/topografia3
   
 ## info:
 #' Os dados brutos de elevação são retirados manualmente do [Earth Explorer](https://earthexplorer.usgs.gov/). 
