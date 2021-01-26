@@ -1,4 +1,4 @@
-# Agrega informacao de renda dos setores censitários para a grade do censo
+# Agrega informacao ddos setores censitários (renda, idade) para a grade estatistica
   
   
 
