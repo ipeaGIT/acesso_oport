@@ -19,14 +19,39 @@ names(setores1)
 
 setores1 <- setores1 %>% select(Cod_UF, Cod_municipio, Cod_setor, 
                                 DomRend_V003, Dom2_V002, 
+                                # income brackets
+                                PessRendaV001:PessRendaV010,
+                                # raca, cor
                                 Pess3_V002, Pess3_V003, Pess3_V004, 
                                 Pess3_V005, Pess3_V006,
                                 # idade
                                 Pess13_V023:Pess13_V134
-                                )
+)
 
 # Dom2_V002 # Moradores em domicílios particulares permanentes
 # DomRen_V003 # Total do rendimento nominal mensal dos domicílios particulares permanentes 
+
+# Income brackets: PessoaRenda
+# V001 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# até ½ salário mínimo
+# V002 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de ½ a 1 salário mínimo
+# V003 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 1 a 2 salários mínimos
+# V004 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 2 a 3 salários mínimos
+# V005 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 3 a 5 salários mínimos
+# V006 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 5 a 10 salários mínimos
+# V007 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 10 a 15 salários mínimos
+# V008 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 15 a 20 salários mínimos
+# V009 Pessoas de 10 anos ou mais de idade com rendimento nominal mensal de
+# mais de 20 salários mínimos
+# V010 Pessoas de 10 anos ou mais de idade sem rendimento nominal mensal 
+
 
 # Raca/cor
 # Pess3_V002 # Pessoas Residentes e cor ou raça - branca
@@ -68,35 +93,43 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   
   dir.create(sprintf("../../data/acesso_oport/setores_agregados/%s", ano))
   
-
+  
   # agrupar variaveis de idade e soma-las
   setores2 <- setores1 %>% mutate(idade_0a5 = rowSums(across(Pess13_V023:Pess13_V039), na.rm = TRUE),
-                                     
-                                     idade_6a14 = rowSums(across(Pess13_V040:Pess13_V048), na.rm = TRUE),
-
-                                     idade_15a18 = rowSums(across(Pess13_V049:Pess13_V052), na.rm = TRUE),
-
-                                     idade_19a24 = rowSums(across(Pess13_V053:Pess13_V058), na.rm = TRUE),
-
-                                     idade_25a39 = rowSums(across(Pess13_V059:Pess13_V073), na.rm = TRUE),
-
-                                     idade_40a69 = rowSums(across(Pess13_V074:Pess13_V103), na.rm = TRUE),
-
-                                     idade_70 = rowSums(across(Pess13_V104:Pess13_V134), na.rm = TRUE)
-                                     
-                                     )
+                                  
+                                  idade_6a14 = rowSums(across(Pess13_V040:Pess13_V048), na.rm = TRUE),
+                                  
+                                  idade_15a18 = rowSums(across(Pess13_V049:Pess13_V052), na.rm = TRUE),
+                                  
+                                  idade_19a24 = rowSums(across(Pess13_V053:Pess13_V058), na.rm = TRUE),
+                                  
+                                  idade_25a39 = rowSums(across(Pess13_V059:Pess13_V073), na.rm = TRUE),
+                                  
+                                  idade_40a69 = rowSums(across(Pess13_V074:Pess13_V103), na.rm = TRUE),
+                                  
+                                  idade_70 = rowSums(across(Pess13_V104:Pess13_V134), na.rm = TRUE)
+                                  
+  )
   
   
   ## Renomeia variaveis
   # Renda 6.19 - variavel escolhida: V003 = Total do rendimento nominal mensal dos domicílios particulares permanentes
   setores_renda <-  setores2 %>% 
-                      dplyr::select(cod_uf = Cod_UF, cod_muni = Cod_municipio, cod_setor = Cod_setor, 
-                      renda_total = DomRend_V003, moradores_total = Dom2_V002, 
-                      cor_branca=Pess3_V002, cor_preta=Pess3_V003, 
-                      cor_amarela=Pess3_V004, cor_parda=Pess3_V005, cor_indigena=Pess3_V006,
-                      # age variables
-                      matches("idade"))
-    
+    dplyr::select(cod_uf = Cod_UF, cod_muni = Cod_municipio, cod_setor = Cod_setor, 
+                  renda_total = DomRend_V003, moradores_total = Dom2_V002, 
+                  # income brackets
+                  pessoas_SM_0        = PessRendaV010,
+                  pessoas_SM_0_1M  = PessRendaV001, pessoas_SM_1M_1  = PessRendaV002,
+                  pessoas_SM_1_2   = PessRendaV003, pessoas_SM_2_3   = PessRendaV004,
+                  pessoas_SM_3_5   = PessRendaV005, pessoas_SM_5_10  = PessRendaV006,
+                  pessoas_SM_10_15 = PessRendaV007, pessoas_SM_15_20 = PessRendaV008,
+                  pessoas_SM_20    = PessRendaV009,
+                  # raca, cor
+                  cor_branca=Pess3_V002, cor_preta=Pess3_V003, 
+                  cor_amarela=Pess3_V004, cor_parda=Pess3_V005, cor_indigena=Pess3_V006,
+                  # age variables
+                  matches("idade"))
+  
   # convert NAs para zero
   setores_renda[is.na(setores_renda)] <- 0
   
@@ -104,15 +137,15 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   # dado de pop total (domicilios part permanentes) é menor do que soma de pop por idade.
   # esse trecho do codigo faz correção pelas proporções de cada idade e cor/raca
   setores_renda_corrigido <- setores_renda %>%
-                                # corrigir idade
-                                mutate(age_total = rowSums(across(idade_0a5:idade_70), na.rm = TRUE)) %>%
-                                mutate_at(vars(matches("idade")), ~ .x / age_total) %>%
-                                mutate_at(vars(matches("idade")), ~ round(.x * moradores_total)) %>%
-                                # corrigir cor/raca
-                                mutate(race_total = rowSums(across(cor_branca:cor_indigena), na.rm = TRUE)) %>%
-                                mutate_at(vars(matches("cor")), ~ .x / race_total) %>%
-                                mutate_at(vars(matches("cor")), ~ round(.x * moradores_total)) %>%
-                                select(-age_total, -race_total)
+    # corrigir idade
+    mutate(age_total = rowSums(across(idade_0a5:idade_70), na.rm = TRUE)) %>%
+    mutate_at(vars(matches("idade")), ~ .x / age_total) %>%
+    mutate_at(vars(matches("idade")), ~ round(.x * moradores_total)) %>%
+    # corrigir cor/raca
+    mutate(race_total = rowSums(across(cor_branca:cor_indigena), na.rm = TRUE)) %>%
+    mutate_at(vars(matches("cor")), ~ .x / race_total) %>%
+    mutate_at(vars(matches("cor")), ~ round(.x * moradores_total)) %>%
+    select(-age_total, -race_total)
   
   # convert NAs para zero
   setDT(setores_renda_corrigido)
