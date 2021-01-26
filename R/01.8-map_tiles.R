@@ -1,3 +1,7 @@
+### Este script faz download e edicao dos tiles que serao utilizados como fundo
+## dos mapas do projeto
+
+
 # carregar bibliotecas
 source('./R/fun/setup.R')
 source("R/fun/crop_ggmap.R")
