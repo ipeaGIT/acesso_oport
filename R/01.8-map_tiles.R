@@ -17,9 +17,6 @@ register_google(key = my_api$V1)
 
 baixar_map_tile <- function(ano, munis = "all") {
   
-  # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
-  
   # Criar pasta para salvar arquivos
   dir.create(sprintf("../data-raw/maptiles/gmaps/%s", ano), recursive = TRUE)
   
@@ -58,7 +55,7 @@ baixar_map_tile <- function(ano, munis = "all") {
     
   }
   
-  # aplicar funcao ------------------------
+  # aplicar funcao
   
   if (munis == "all") {
     
@@ -71,16 +68,13 @@ baixar_map_tile <- function(ano, munis = "all") {
 }
 
 
-
+baixar_map_tile(2019)
 
 
 # 1.2) Fazer bounding box e transformar para data.frame RGB xy (easier to plot) ---------------------
 
 
 crop_e_converter_maps <- function(ano, munis = "all") {
-  
-  # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
   
   # Criar pasta para salvar arquivos
   dir.create(sprintf("../data/maptiles_crop/gmaps/%s", ano), recursive = TRUE)
@@ -104,7 +98,7 @@ crop_e_converter_maps <- function(ano, munis = "all") {
   }
   
   
-  # aplicar funcao ------------------------
+  # aplicar funcao 
   
   if (munis == "all") {
     
@@ -116,15 +110,11 @@ crop_e_converter_maps <- function(ano, munis = "all") {
   
 }
 
-# aplicar funcao ------------------------
+# aplicar funcao
 crop_e_converter_maps(ano = 2019)
 
 
 
-####################################################################################
-####################################################################################
-####################################################################################
-####################################################################################
 
 
 # 2) MAPBOX MAP TILES --------------------------------
@@ -144,9 +134,6 @@ Sys.setenv(MAPBOX_API_KEY = my_api$V1)
 baixar_map_tile_ceramic <- function(ano, munis = "all") {
   
   
-  # Select the corerspondent munis_df
-  munis_df <- get(sprintf("munis_df_%s", ano))
-  
   # Criar pasta para salvar arquivos
   dir.create(sprintf("../data/maptiles_crop/%s/mapbox", ano), recursive = TRUE)
   
@@ -157,7 +144,7 @@ baixar_map_tile_ceramic <- function(ano, munis = "all") {
     # read shape
     temp_sf <- read_rds(sprintf("../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano))
     
-    
+    # download tile based on custom template (style)
     tile_for <- cc_location(temp_sf, 
                             type = "styles/v1/kauebraga/ck34n83gd0dli1cnvtnrlgber/tiles" 
                             # , debug = TRUE
@@ -177,7 +164,7 @@ baixar_map_tile_ceramic <- function(ano, munis = "all") {
     
   }
   
-  # aplicar funcao ------------
+  # aplicar funcao
   
   if (munis == "all") {
     
@@ -185,7 +172,7 @@ baixar_map_tile_ceramic <- function(ano, munis = "all") {
     
   } else (x = munis)
   
-  lapply(munis_df_2019$abrev_muni, baixar_map_tile_ceramic_muni)
+  lapply(munis_df$abrev_muni, baixar_map_tile_ceramic_muni)
     
 }
 

@@ -269,161 +269,161 @@ agrupar_variaveis_hex(ano = 2019)
 
 
 
-# compare years -------------------------------------------------------------------------------
-
-
-
-
-# sigla_munii <- 'for'
-
-compare_jobs_distribution <- function(sigla_munii) {
-  
-  # open hex files
-  hex_jobs_2017 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2017/hex_agregado_%s_09_2017.rds",
-                                    sigla_munii)) %>%
-    mutate(ano_jobs = 2017)
-  
-  hex_jobs_2018 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2018/hex_agregado_%s_09_2018.rds",
-                                    sigla_munii)) %>%
-    mutate(ano_jobs = 2018)
-  
-  # hex_jobs_2017_old <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2019/hex_agregado_%s_09_2019.rds",
-  #                                       sigla_munii)) %>%
-  #   mutate(ano_jobs = "2017_old")
-  
-  hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018)
-  # hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018, hex_jobs_2017_old)
-  hex_jobs <- select(hex_jobs, id_hex, sigla_muni, empregos_total, ano_jobs, geometry) %>% setDT()
-  
-  hex_jobs_wide <- pivot_wider(hex_jobs, names_from = ano_jobs, values_from = empregos_total,
-                               names_prefix = "jobs_")
-  
-  # compare!
-  hex_jobs_wide <- hex_jobs_wide %>%
-    mutate(dif1_abs = jobs_2018 - jobs_2017) %>%
-    mutate(dif1_log = log(jobs_2018/jobs_2017)) %>%
-    # truncate
-    mutate(dif1_abs_tc = case_when(dif1_abs < -500 ~ -500,
-                                   dif1_abs > 500 ~ 500,
-                                   TRUE ~ dif1_abs)) %>%
-    mutate(dif1_log_tc = case_when(dif1_log < -1 ~ -1,
-                                   dif1_log > 1 ~ 1,
-                                   TRUE ~ dif1_log)) %>%
-    st_sf()
-  
-  
-  hex_jobs_wide <- hex_jobs_wide %>%
-    filter(!(jobs_2017 == 0 & jobs_2018 == 0))
-  
-  map1 <- ggplot()+
-    geom_sf(data = hex_jobs_wide, aes(fill = dif1_log_tc), color = NA)+
-    scale_fill_distiller(palette = "RdBu"
-                         , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_log_tc))
-    )+
-    labs(title = "Diferença relativa de empregos entre 2017 e 2018",
-         subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
-    theme_aop_map()
-  
-  # ggplot()+
-  #   geom_sf(data = hex_jobs_wide, aes(fill = dif1_abs), color = NA)+
-  #   scale_fill_distiller(palette = "RdBu"
-  #                        , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_abs))
-  #   )+
-  #   labs(title = "Diferença relativa de empregos entre 2017 e 2018",
-  #        subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
-  #   theme_for_CMA()
-  
-  plot1 <- ggplot()+
-    geom_boxplot(data = hex_jobs_wide, aes(x = 1, y = dif1_log))+
-    labs(title = "Diferença relativa de empregos entre 2017 e 2018",
-         subtitle = "Maior que zero: Jobs 2018 > Jobs 2017")+
-    # theme_ipsum()+
-    theme_bw()+
-    ggforce::facet_zoom(ylim = c(-0.5, 0.5))
-  
-  map2 <- ggplot()+
-    geom_sf(data = hex_jobs_wide, aes(fill = dif1_abs_tc), color = NA)+
-    scale_fill_distiller(palette = "RdBu"
-                         , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_abs_tc))
-    )+
-    labs(title = "Diferença absoluta de empregos entre 2017 e 2018",
-         subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
-    theme_aop_map()
-  
-  plot2 <- ggplot()+
-    geom_boxplot(data = hex_jobs_wide, aes(x = 1, y = dif1_abs))+
-    # labs(title = "Diferença absoluta empregos entre 2017 e 2018",
-    #      subtitle = "Maior que zero: Jobs 2018 > Jobs 2017")+
-    # theme_ipsum()+
-    theme_bw()+
-    theme(axis.text.x = element_blank())
-    # ggforce::facet_zoom(ylim = c(-100, 100))
-  
-  summary(hex_jobs_wide$dif1_abs)
-  
-  library(patchwork)
-  figure2 <- map2 + plot2 + plot_layout(widths = c(3, 1)) 
-  
-  ggsave(filename = sprintf("reports/comparacao_distribuicao_anos/comp_jobs_%s.png", sigla_munii),
-         plot = figure2,
-         device = "png",
-         width = 16,
-         units = "cm")
-  
-  
-  # ggsave(filename = sprintf("reports/%s_teste2.png", sigla_munii), plot = plot2)
-  # ggsave(filename = sprintf("reports/%s_teste3.png", sigla_munii), plot = plot3)
-  
-  
-  
-}
-
-
-
-lapply(munis_df_2019$abrev_muni, compare_jobs_distribution)
-
-
-
-
-# Checagem de resultados ---------------------------------------------------------------------------
-
-# Fun para criar mapas interativos (html) de distribuicao espacial de uso do solo
-salva_mapas <- function(sigla_muni, ano) {
-  
-  # sigla_muni <- "bsb"; ano <- 2019
-  # sigla_muni <- "for"; ano <- 2018
-  
-  
-  # trazer dados de uso do solo
-  us <- readr::read_rds(sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, sigla_muni, ano))
-  
-  
-  # # saude
-  # map_saude <- mapview(subset(us, saude_total>0), zcol = "saude_total")
-  # 
-  # # empregos
-  # map_empregos <- mapview(subset(us, empregos_total>0), zcol = "empregos_total")
-  # 
-  # # educacao
-  # map_edu <- mapview(subset(us, edu_total>0), zcol = "edu_total")
-  # 
-  # 
-  # single_map <- mapview(subset(us, saude_total>0), zcol = "saude_total") +  
-  #   mapview(subset(us, empregos_total>0), zcol = "empregos_total") + 
-  #   mapview(subset(us, edu_total>0), zcol = "edu_total")
-  
-  # save
-  # mapview::mapshot(single_map, debug=T, remove_controls=NULL, url = sprintf("reports/distribuicao_us/us_%s_%s.html", sigla_muni, ano))
-  
-  maxs <- data.frame(sigla_muni = sigla_muni,
-                     max_saude = max(us$saude_total),
-                     max_edu = max(us$edu_total))
-  
-}  
-
-# Aplica funcao para cada municipio
-
-# Parallel processing using future.apply
-maxs <- lapply(X = munis_df_2019$abrev_muni, FUN=salva_mapas, ano = 2018)
-
-maxs_dt <- rbindlist(maxs)
+# # compare years -------------------------------------------------------------------------------
+# 
+# 
+# 
+# 
+# # sigla_munii <- 'for'
+# 
+# compare_jobs_distribution <- function(sigla_munii) {
+#   
+#   # open hex files
+#   hex_jobs_2017 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2017/hex_agregado_%s_09_2017.rds",
+#                                     sigla_munii)) %>%
+#     mutate(ano_jobs = 2017)
+#   
+#   hex_jobs_2018 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2018/hex_agregado_%s_09_2018.rds",
+#                                     sigla_munii)) %>%
+#     mutate(ano_jobs = 2018)
+#   
+#   # hex_jobs_2017_old <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2019/hex_agregado_%s_09_2019.rds",
+#   #                                       sigla_munii)) %>%
+#   #   mutate(ano_jobs = "2017_old")
+#   
+#   hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018)
+#   # hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018, hex_jobs_2017_old)
+#   hex_jobs <- select(hex_jobs, id_hex, sigla_muni, empregos_total, ano_jobs, geometry) %>% setDT()
+#   
+#   hex_jobs_wide <- pivot_wider(hex_jobs, names_from = ano_jobs, values_from = empregos_total,
+#                                names_prefix = "jobs_")
+#   
+#   # compare!
+#   hex_jobs_wide <- hex_jobs_wide %>%
+#     mutate(dif1_abs = jobs_2018 - jobs_2017) %>%
+#     mutate(dif1_log = log(jobs_2018/jobs_2017)) %>%
+#     # truncate
+#     mutate(dif1_abs_tc = case_when(dif1_abs < -500 ~ -500,
+#                                    dif1_abs > 500 ~ 500,
+#                                    TRUE ~ dif1_abs)) %>%
+#     mutate(dif1_log_tc = case_when(dif1_log < -1 ~ -1,
+#                                    dif1_log > 1 ~ 1,
+#                                    TRUE ~ dif1_log)) %>%
+#     st_sf()
+#   
+#   
+#   hex_jobs_wide <- hex_jobs_wide %>%
+#     filter(!(jobs_2017 == 0 & jobs_2018 == 0))
+#   
+#   map1 <- ggplot()+
+#     geom_sf(data = hex_jobs_wide, aes(fill = dif1_log_tc), color = NA)+
+#     scale_fill_distiller(palette = "RdBu"
+#                          , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_log_tc))
+#     )+
+#     labs(title = "Diferença relativa de empregos entre 2017 e 2018",
+#          subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
+#     theme_aop_map()
+#   
+#   # ggplot()+
+#   #   geom_sf(data = hex_jobs_wide, aes(fill = dif1_abs), color = NA)+
+#   #   scale_fill_distiller(palette = "RdBu"
+#   #                        , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_abs))
+#   #   )+
+#   #   labs(title = "Diferença relativa de empregos entre 2017 e 2018",
+#   #        subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
+#   #   theme_for_CMA()
+#   
+#   plot1 <- ggplot()+
+#     geom_boxplot(data = hex_jobs_wide, aes(x = 1, y = dif1_log))+
+#     labs(title = "Diferença relativa de empregos entre 2017 e 2018",
+#          subtitle = "Maior que zero: Jobs 2018 > Jobs 2017")+
+#     # theme_ipsum()+
+#     theme_bw()+
+#     ggforce::facet_zoom(ylim = c(-0.5, 0.5))
+#   
+#   map2 <- ggplot()+
+#     geom_sf(data = hex_jobs_wide, aes(fill = dif1_abs_tc), color = NA)+
+#     scale_fill_distiller(palette = "RdBu"
+#                          , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_abs_tc))
+#     )+
+#     labs(title = "Diferença absoluta de empregos entre 2017 e 2018",
+#          subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
+#     theme_aop_map()
+#   
+#   plot2 <- ggplot()+
+#     geom_boxplot(data = hex_jobs_wide, aes(x = 1, y = dif1_abs))+
+#     # labs(title = "Diferença absoluta empregos entre 2017 e 2018",
+#     #      subtitle = "Maior que zero: Jobs 2018 > Jobs 2017")+
+#     # theme_ipsum()+
+#     theme_bw()+
+#     theme(axis.text.x = element_blank())
+#     # ggforce::facet_zoom(ylim = c(-100, 100))
+#   
+#   summary(hex_jobs_wide$dif1_abs)
+#   
+#   library(patchwork)
+#   figure2 <- map2 + plot2 + plot_layout(widths = c(3, 1)) 
+#   
+#   ggsave(filename = sprintf("reports/comparacao_distribuicao_anos/comp_jobs_%s.png", sigla_munii),
+#          plot = figure2,
+#          device = "png",
+#          width = 16,
+#          units = "cm")
+#   
+#   
+#   # ggsave(filename = sprintf("reports/%s_teste2.png", sigla_munii), plot = plot2)
+#   # ggsave(filename = sprintf("reports/%s_teste3.png", sigla_munii), plot = plot3)
+#   
+#   
+#   
+# }
+# 
+# 
+# 
+# lapply(munis_df_2019$abrev_muni, compare_jobs_distribution)
+# 
+# 
+# 
+# 
+# # Checagem de resultados ---------------------------------------------------------------------------
+# 
+# # Fun para criar mapas interativos (html) de distribuicao espacial de uso do solo
+# salva_mapas <- function(sigla_muni, ano) {
+#   
+#   # sigla_muni <- "bsb"; ano <- 2019
+#   # sigla_muni <- "for"; ano <- 2018
+#   
+#   
+#   # trazer dados de uso do solo
+#   us <- readr::read_rds(sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, sigla_muni, ano))
+#   
+#   
+#   # # saude
+#   # map_saude <- mapview(subset(us, saude_total>0), zcol = "saude_total")
+#   # 
+#   # # empregos
+#   # map_empregos <- mapview(subset(us, empregos_total>0), zcol = "empregos_total")
+#   # 
+#   # # educacao
+#   # map_edu <- mapview(subset(us, edu_total>0), zcol = "edu_total")
+#   # 
+#   # 
+#   # single_map <- mapview(subset(us, saude_total>0), zcol = "saude_total") +  
+#   #   mapview(subset(us, empregos_total>0), zcol = "empregos_total") + 
+#   #   mapview(subset(us, edu_total>0), zcol = "edu_total")
+#   
+#   # save
+#   # mapview::mapshot(single_map, debug=T, remove_controls=NULL, url = sprintf("reports/distribuicao_us/us_%s_%s.html", sigla_muni, ano))
+#   
+#   maxs <- data.frame(sigla_muni = sigla_muni,
+#                      max_saude = max(us$saude_total),
+#                      max_edu = max(us$edu_total))
+#   
+# }  
+# 
+# # Aplica funcao para cada municipio
+# 
+# # Parallel processing using future.apply
+# maxs <- lapply(X = munis_df_2019$abrev_muni, FUN=salva_mapas, ano = 2018)
+# 
+# maxs_dt <- rbindlist(maxs)
