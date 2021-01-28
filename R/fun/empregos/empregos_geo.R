@@ -37,7 +37,6 @@ rais_clean_estabs_raw <- function(ano) {
   # (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
   # todos que comecam com o numeral 1 sao de administracao publica
   
-  
   # 3.1) Identificar natureza de adm publica
   rais_estabs_raw_0[, adm_pub := ifelse( substr(nat_jur, 1, 1)==1, 1, 0)]
   
@@ -138,9 +137,9 @@ rais_export_data_to_galileo <- function(ano) {
     
     # 2.5) Selecionar colunas e salvar input para galileo
     rais_filter_geocode %>%
-      write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano), delim = ";")
+      write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_input_galileo.csv", ano, ano), delim = ";")
     
-    message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano))
+    message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_input_galileo.csv", ano, ano))
     
   } else if (ano == 2017) {
     
@@ -151,9 +150,9 @@ rais_export_data_to_galileo <- function(ano) {
     
     # 2.5) Selecionar colunas e salvar input para galileo
     rais_filter_geocode %>%
-      write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano), delim = ";")
+      write_delim(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_input_galileo.csv", ano, ano), delim = ";")
     
-    message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_input_galileo.csv", ano, ano))
+    message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_input_galileo.csv", ano, ano))
     
   }
   
@@ -161,7 +160,61 @@ rais_export_data_to_galileo <- function(ano) {
   
 }
 
+#' Eventually, new cities may be added to the project and we need to run their geocode
+#' after all the main geocode way already done
+#' This function gets the galileo output, check if all estabs are within the galileo input
+#' If TRUE, it moves on
+#' If FALSE, it creates a new input to galileo with the new coords
+#' Then it binds the new output from galileo to the old output
 
+rais_check_new_estabs <- function(ano) {
+  
+  # open galileo input
+  rais_galileo_input <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_input_galileo.csv", ano, ano),
+                              colClasses = 'character')
+    # rbind(data.frame(id_estab = "aaaaa"), fill = TRUE)
+    
+  
+  # open galileo output
+  rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_output_galileo.csv", ano, ano),
+                               colClasses = 'character')
+  rais_galileo_output[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+
+  # test if there is any estab behind
+  if (length(setdiff(rais_galileo_input$id_estab, rais_galileo_output$id_estab)) > 0) {
+    
+    # get the new estabs
+    rais_galileo_new_input <- rais_galileo_input[id_estab %nin% rais_galileo_output$id_estab]
+    
+    Message("You have ", nrow(rais_galileo_new_input), "new estabs to geocode")
+    
+    # export them
+    write_delim(rais_galileo_new_input, sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_new_input_galileo.csv", ano, ano), delim = ";")
+    
+    
+    # mywait()
+    
+    invisible(readline(prompt="\nPlease run the new input in Galileo and save the output\nPress [enter] to continue"))
+    
+    rais_galileo_new_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_new_output_galileo.csv", ano, ano),
+                                     colClasses = 'character')
+    
+    rais_galileo_new_output[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+    
+    # bind to the old galileo output
+    rais_galileo_total_output <- rbind(rais_galileo_output, rais_galileo_new_output)
+    
+    # save it
+    fwrite(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_output_galileo.csv", ano, ano),
+           colClasses = 'character')
+    
+    
+    
+    
+  } else {message("All Estabs are geocoded!")}
+  
+  
+}
 
 
 #' A funcao `rais_gmaps_geocode` roda o geocode para os estabelecimentos problematicos
@@ -192,9 +245,10 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # 1) Abrir output do galileo ------------
-  rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_output_galileo.csv", ano, ano),
+  rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_output_galileo.csv", ano, ano),
                                colClasses = 'character')
   
+  rais_galileo_output[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
   # table(rais_galileo_output$PrecisionDepth, useNA = 'always')
   # table(rais_galileo_output$type_input_galileo, useNA = 'always')
