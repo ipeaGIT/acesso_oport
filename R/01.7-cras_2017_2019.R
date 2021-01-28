@@ -1,82 +1,70 @@
+#> esse script faz Download, Limpeza dos dados brutos e geolocalização dos CRAS
 #> DATASET: Localização dos Centros de Assistência Social
 #> Source: Censo do Sistema Único da Assistência Social (SUAS) - Ministério da Cidadania/MDS
 
-### Download, Limpeza dos dados brutos e geolocalização dos CRAS ###
 
 # Setup 
 source('R/fun/setup.R')
 
-munis_df <- tibble::tribble(
-  ~code_muni, ~abrev_muni, ~name_muni,        ~abrev_estado, ~modo_2017, ~modo_2018, ~modo_2019, ~modo_2020,
-  2304400,    "for",       "Fortaleza",       "CE",          "todos",    "todos",    "todos",    "todos",
-  3550308,    "spo",       "Sao Paulo",       "SP",          "todos",    "todos",    "todos",    "todos",
-  3304557,    "rio",       "Rio de Janeiro",  "RJ",          "ativo",    "todos",    "todos",    "todos",
-  4106902,    "cur",       "Curitiba",        "PR",          "todos",    "todos",    "todos",    "todos",
-  4314902,    "poa",       "Porto Alegre",    "RS",          "todos",    "todos",    "todos",    "todos",
-  3106200,    "bho",       "Belo Horizonte",  "MG",          "todos",    "todos",    "todos",    "todos",
-  5300108,    "bsb",       "Brasilia",        "DF",          "ativo",    "ativo",    "ativo",    "ativo",
-  2927408,    "sal",       "Salvador",        "BA",          "ativo",    "ativo",    "ativo",    "ativo",
-  1302603,    "man",       "Manaus",          "AM",          "ativo",    "ativo",    "ativo",    "ativo",
-  2611606,    "rec",       "Recife",          "PE",          "ativo",    "ativo",    "todos",    "todos",
-  5208707,    "goi",       "Goiania",         "GO",          "ativo",    "ativo",    "todos",    "ativo",
-  1501402,    "bel",       "Belem",           "PA",          "ativo",    "ativo",    "ativo",    "ativo",
-  3518800,    "gua",       "Guarulhos",       "SP",          "ativo",    "ativo",    "ativo",    "ativo",
-  3509502,    "cam",       "Campinas",        "SP",          "todos",    "todos",    "todos",    "ativo",
-  2111300,    "slz",       "Sao Luis",        "MA",          "ativo",    "ativo",    "ativo",    "ativo",
-  3304904,    "sgo",       "Sao Goncalo",     "RJ",          "ativo",    "ativo",    "ativo",    "ativo",
-  2704302,    "mac",       "Maceio",          "AL",          "ativo",    "ativo",    "ativo",    "ativo",
-  3301702,    "duq",       "Duque de Caxias", "RJ",          "ativo",    "ativo",    "ativo",    "ativo",
-  5002704,    "cgr",       "Campo Grande",    "MS",          "ativo",    "ativo",    "ativo",    "ativo",
-  2408102,    "nat",       "Natal",           "RN",          "ativo",    "ativo",    "ativo",    "ativo"
-) %>% data.table::setDT()
+
 
 ###### 1. Download arquivos originais ###################
-
-setwd('L:/Proj_acess_oport/')
 
 # 2019 - CRAS
 
 download.file("https://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/CRAS(5).zip" ,
               destfile = "data-raw/CRAS/Censo_SUAS_2019_CRAS.zip")
 
-unzip("data-raw/CRAS/Censo_SUAS_2019_CRAS.zip", exdir = "data-raw/CRAS")
+unzip("../../data-raw/CRAS/Censo_SUAS_2019_CRAS.zip", exdir = "../../data-raw/CRAS/2019")
 
-# CRAS 2018 - download dos dados brutos
 
+# CRAS 2018
 download.file('https://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/CRAS(3).zip',
               destfile = "data-raw/CRAS/Censo_SUAS_2018_CRAS.zip")
 
-unzip("data-raw/CRAS/Censo_SUAS_2018_CRAS.zip", exdir = "data-raw/CRAS")
+unzip("../../data-raw/CRAS/Censo_SUAS_2018_CRAS.zip", exdir = "../../data-raw/CRAS/2018")
 
-# CRAS 2017 - download dos dados brutos
+# CRAS 2017
 
 download.file('http://aplicacoes.mds.gov.br/sagi/dicivip_datain/ckfinder/userfiles/files/Censo_SUAS/2017/Censo_SUAS_2017_CRAS.zip',
               destfile = "data-raw/CRAS/Censo_SUAS_2017_CRAS.zip")
 
-unzip("data-raw/CRAS/Censo_SUAS_2017_CRAS.zip", exdir = "data-raw/CRAS")
+unzip("../../data-raw/CRAS/Censo_SUAS_2017_CRAS.zip",exdir = "../../data-raw/CRAS/2017")
+
+
+
+
 
 ######### 2. 2019 ###################
 
 # Read data and filter cities
-cras_2019 <- data.table::fread('data-raw/CRAS/CRAS/Censo_SUAS_2019_dados_gerais_RH_CRAS_divulga‡Æo.csv',
+cras_2019 <- data.table::fread('../../data-raw/CRAS/2019/CRAS/Censo_SUAS_2019_dados_gerais_RH_CRAS_divulga‡Æo.csv',
                                select = c("NU_IDENTIFICADOR","q0_1","q0_3","q0_4","q0_6","q0_8","q0_9","q0_10", "q0_11",
                                           "q0_12","q0_15", 'Latitude', 'Longitude', 'q39')
                                )
+
+# filtra somente cras nos municipios do projeto
 cras_2019 <- data.table::setDT(cras_2019, key = 'NU_IDENTIFICADOR')[q0_9 %in% munis_df$code_muni]
 
+# renomeia colunas
 data.table::setnames(cras_2019,
                      old = names(cras_2019),
                      new = c("code_suas","name_suas","logradouro","numero","bairro","cep","code_muni", 'code_uf','email',
                              "telefone","open_date",'lat_suas','long_suas', 'cad_unico')
                      )
 
+# traz info dos municipios para dados dos CRAS
 cras_2019 <- data.table::merge.data.table(cras_2019,
                                           munis_df[,.(name_muni,code_muni,abrev_muni,abrev_estado)],
                                           all.x = TRUE,
                                           by = 'code_muni')
 
+
+# prepara string de endereços - input para google maps
 cras_2019 <- cras_2019[, endereco := paste(paste(paste(paste(paste(logradouro,numero, sep = ", "), bairro,sep = " - "),name_muni, sep=", "),abrev_estado,sep=" - "),cep,sep=", ") ]
 cras_2019 <- cras_2019[,!c('logradouro','numero','bairro','cep')]
+
+
 
 ############### NÃO RODAR NOVAMENTE -- CHECK DAS COORDENADAS COM O API ############################
 
@@ -105,7 +93,6 @@ cras_2019 <- cras_2019[,!c('logradouro','numero','bairro','cep')]
 
 # Merge dos enderecos com base original
 
-library(magrittr)
 # lEITURA DA BASE COM TODOS OS CRAS GEOLOCALIZADOS
 enderecos <- readr::read_csv('data/acesso_oport/cras/geocode_cras.csv') %>% data.table::setDT()
 enderecos <- enderecos[,.(lat=mean(lat),lon=mean(lon)),by=endereco]
@@ -135,6 +122,11 @@ data.table::setDT(cras_2019,key = 'code_cras')[, cad_unico := ifelse(cad_unico =
 # Salva em formato .csv
 
 readr::write_csv(cras_2019,'data/acesso_oport/cras/cras_2019.csv')
+
+
+
+
+
 
 ################ 2018 #########
 
@@ -224,6 +216,10 @@ data.table::setDT(cras_2018,key = 'code_cras')[, cad_unico := stringr::str_sub(c
 
 # Salva em formato .csv
 readr::write_csv(cras_2018,'data/acesso_oport/cras/cras_2018.csv')
+
+
+
+
 
 #######3 4. 2017 #########################
 

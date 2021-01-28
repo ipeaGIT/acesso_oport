@@ -13,9 +13,23 @@ source('./R/fun/setup.R')
 #           'Pess3_V002', 'Pess3_V003', 'Pess3_V004', 
 #           'Pess3_V005', 'Pess3_V006')
 
-## Leitura dos dados
+## Leitura dos dados gerais
 setores1 <- data.table::fread("../../data-raw/setores_censitarios/dados_censo2010A.csv")
 names(setores1)
+
+
+
+6666666666666666666666666666666666666
+## leitura dos dados de renda
+income_files <- list.files(path = "//storage6/bases/DADOS/PUBLICO/CENSO/Setor_Censitario/2010/Originais/", pattern = 'Entorno04', recursive = T)
+income_files <- income_files[income_files %like% '.csv']
+
+colstoread <- c('Cod_setor', 'Cod_municipio', V683::V694)
+setores_renda <- lapply(X=income_files, FUN=fread, select= colstoread)
+# variaveis v683 ate v694
+
+
+
 
 setores1 <- setores1 %>% select(Cod_UF, Cod_municipio, Cod_setor, 
                                 DomRend_V003, Dom2_V002, 

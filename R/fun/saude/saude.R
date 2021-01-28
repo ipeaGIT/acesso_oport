@@ -1,54 +1,52 @@
 
-
 #' A funcao 'saude_filter':
 #' 1) Lê os dados da base do CNES (que foram foi disponibilizada pelo MSaude) e faz filtros selecionando o ano,
-#' e as colunas de interessa
+#' e as colunas de interesse
 #' 2) Faz filtros selecionando os municipios de interesse, hospitais publicos, faz refactor dos niveis de atendimento,
 #' retira hospitais indesejados
 
+
 saude_filter <- function(ano) {
   
-  
   # 1) Ler os dados da base do CNES que foi disponibilizada pelo MSaude ---------------------------------
-  
   
   if(ano %in% c("2017", "2018")) {
     
     
-    cnes19 <- readxl::read_xlsx(path = '../../data-raw/hospitais/2017-2018/BANCO_BANCO_ESTAB_10_2017_E_10_2018_02_10_2020.xlsx',
+    cnes_temp <- readxl::read_xlsx(path = '../../data-raw/hospitais/2017-2018/BANCO_BANCO_ESTAB_10_2017_E_10_2018_02_10_2020.xlsx',
                                 sheet = 'BANCO', skip = 13, 
                                 col_types = "text")
     
     
     # format column names
-    cnes19 <- janitor::clean_names(cnes19)
+    cnes_temp <- janitor::clean_names(cnes_temp)
     
     # filter year 
-    cnes19 <- setDT(cnes19)[competencia %like% ano]
+    cnes_temp <- setDT(cnes_temp)[competencia %like% ano]
     
     # rename columns
-    names(cnes19)[16:32] <- c("instal_fisica_ambu", "instal_fisica_hospt", "instal_fisica_urgencia",
+    names(cnes_temp)[16:32] <- c("instal_fisica_ambu", "instal_fisica_hospt", "instal_fisica_urgencia",
                               "complex_alta_ambu_est", "complex_alta_ambu_mun", "complex_baix_ambu_est", "complex_baix_ambu_mun", "complex_medi_ambu_est", "complex_medi_ambu_mun", 
                               "complex_alta_hosp_est", "complex_alta_hosp_mun", "complex_baix_hosp_est", "complex_baix_hosp_mun", "complex_medi_hosp_est", "complex_medi_hosp_mun", 
                               "complex_nao_aplic_est", "complex_nao_aplic_mun")
-    # nrow(cnes19) # 328631 obs
-    # colnames(cnes19)
+    # nrow(cnes_temp) # 328631 obs
+    # colnames(cnes_temp)
     
     
   } else if (ano == 2019) {
     
-    cnes19 <- readxl::read_xlsx(path = '../../data-raw/hospitais/2019/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
+    cnes_temp <- readxl::read_xlsx(path = '../../data-raw/hospitais/2019/CNES_NDIS_01_10_2019_BANCO_COMP_08_2019.xlsx',
                                 sheet = 'BANCO', skip = 14, 
                                 col_types = "text")
     
     # format column names
-    cnes19 <- janitor::clean_names(cnes19)
+    cnes_temp <- janitor::clean_names(cnes_temp)
     
     # remove 1st NA rows
-    cnes19 <- cnes19[-c(1:3),]
+    cnes_temp <- cnes_temp[-c(1:3),]
     
     # rename columns
-    names(cnes19)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", 
+    names(cnes_temp)[15:30] <- c("instal_fisica_ambu", "instal_fisica_hospt", 
                               "complex_alta_ambu_est", "complex_alta_ambu_mun", 
                               "complex_baix_ambu_est", "complex_baix_ambu_mun", 
                               "complex_medi_ambu_est", "complex_medi_ambu_mun", 
@@ -56,8 +54,8 @@ saude_filter <- function(ano) {
                               "complex_baix_hosp_est", "complex_baix_hosp_mun", 
                               "complex_medi_hosp_est", "complex_medi_hosp_mun", 
                               "complex_nao_aplic_est", "complex_nao_aplic_mun")
-    # nrow(cnes19) # 340115 obs
-    # colnames(cnes19)
+    # nrow(cnes_temp) # 340115 obs
+    # colnames(cnes_temp)
     
     
     
@@ -69,7 +67,7 @@ saude_filter <- function(ano) {
   
   
   # Filter 0: healthcare nao aplica (pq nao tem servicos de alta/baixa complexidade, e.g. academias de saude, secretarias de saude etc)
-  cnes_filter0 <- setDT(cnes19)[is.na(complex_nao_aplic_est)] 
+  cnes_filter0 <- setDT(cnes_temp)[is.na(complex_nao_aplic_est)] 
   cnes_filter0 <- cnes_filter0[is.na(complex_nao_aplic_mun)]
   
   
@@ -80,7 +78,7 @@ saude_filter <- function(ano) {
   # Filter 2: Pessoa juridica
   cnes_filter2 <- cnes_filter1[ pessoa_fisica_ou_pessoa_juridi == 'PESSOA_JURÍDICA']
   
-  
+  ## GOIANIA
   # filter 3: Only municipalities in the project
   cnes_filter3 <- cnes_filter2[ibge %in% substr(munis_df$code_muni, 1,6)]
   
@@ -89,7 +87,7 @@ saude_filter <- function(ano) {
   install_ambu <- ifelse(ano %in% c(2017, 2018), "X", "SIM")
   cnes_filter4 <- cnes_filter3[ instal_fisica_ambu==install_ambu | instal_fisica_hospt==install_ambu]
   
-  
+
   # filter 5. Remove special categories of facilities 
   
   # 5.1 Delete prison hospitals, research centers, police hospitals etc
@@ -102,18 +100,16 @@ saude_filter <- function(ano) {
   
   
   # 5.2 Delete Home care, tele saude, unidades moveis de saude
-  to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DE ORGAOS'
-  
+  to_remove2 <- 'TELESSAUDE|UNIDADE MOVEL|DOMICILIAR|PSICOSSOCIAL|FARMACIA|DE ORGAOS|CENTRAL DE REGULACAO DO ACESSO'
+                
   # apply filter 5
   cnes_filter5 <- cnes_filter4[ estabelecimento %nlike% to_remove1 ]
   cnes_filter5 <- cnes_filter5[ tipo_unidade %nlike% to_remove2 ]
-  # test >>> cnes_filter6[ CNES =='6771963']
+  table(cnes_filter5$tipo_unidade)
   
   
   
-  # table(cnes_filter5$complex_baix_ambu_est, useNA = "always")
-  # table(cnes_filter5$complex_baix_hosp_mun, useNA = "always")
-  # table(cnes_filter5$health_low, useNA = "always")
+  
   
   ### Organiza Nivel de atencao criando dummy
   
@@ -141,8 +137,8 @@ saude_filter <- function(ano) {
   
   # nrow(cnes_filter5) # 4872 obs
   
-  
-  cnes_filter5[, cnes := str_pad(cnes, width = 7, side = "left", pad = 0)]
+  # colocar todos codigos de CNES com 7 digitos
+  cnes_filter5[, cnes := stringr::str_pad(cnes, width = 7, side = "left", pad = 0)]
   
   
   # 3) Salvar ---------
@@ -216,8 +212,8 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
     # selecionar so as colunas necessarias
     dplyr::select(code_muni, lat_digits)
   
-  # trazer a quantidade de digitos para o cnes19
-  cnes19_df_digitos <- cnes_filtered_togeo %>%
+  # trazer a quantidade de digitos para o cnes_temp
+  cnes_df_digitos <- cnes_filtered_togeo %>%
     rename(code_muni = ibge) %>%
     # selecionar so os municipios do projeto
     filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
@@ -225,7 +221,7 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
     left_join(munis, by = "code_muni")
   
   # criar dataframe com as coordenadas ajeitadas
-  cnes19_df_coords_fixed <- cnes19_df_digitos %>%
+  cnes_df_coords_fixed <- cnes_df_digitos %>%
     # primeiro, tirar tudo que for ponto ou virgula
     mutate(lon = gsub("(\\.|,)", "", longitude),
            lat = gsub("(\\.|,)", "", latitude)) %>%
@@ -265,8 +261,8 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # A) Numero de digitos de lat/long apos ponto
-  setDT(cnes19_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
-  A_estbs_pouco_digito <- cnes19_df_coords_fixed[ ndigitos <=2,]
+  setDT(cnes_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  A_estbs_pouco_digito <- cnes_df_coords_fixed[ ndigitos <=2,]
   
   
   # B) fora dos limites do municipio
@@ -276,8 +272,8 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
     st_transform(4326)
   
   # convert para sf
-  cnes19_df_coords_fixed_df <- cnes19_df_coords_fixed[!(is.na(lat))] %>% st_as_sf( coords = c('lon', 'lat'), crs = 4326)
-  temp_intersect <- sf::st_join(cnes19_df_coords_fixed_df, shps)
+  cnes_df_coords_fixed_df <- cnes_df_coords_fixed[!(is.na(lat))] %>% st_as_sf( coords = c('lon', 'lat'), crs = 4326)
+  temp_intersect <- sf::st_join(cnes_df_coords_fixed_df, shps)
   
   # CNES que cairam fora de algum municipio
   B_muni_fora <- subset(temp_intersect, is.na(name_muni))
@@ -289,19 +285,19 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   # D) mais de 5 estabelecimentos com coordenadas iguais
   
   # junta lat lon
-  cnes19_df_coords_fixed$latlon <- paste0(cnes19_df_coords_fixed$lat, '/', cnes19_df_coords_fixed$lon)
+  cnes_df_coords_fixed$latlon <- paste0(cnes_df_coords_fixed$lat, '/', cnes_df_coords_fixed$lon)
   
   # freq de lat lon repetido
-  tab_latlon <- cnes19_df_coords_fixed %>% count(latlon, sort = T)
+  tab_latlon <- cnes_df_coords_fixed %>% count(latlon, sort = T)
   C_latlon_problema <- subset(tab_latlon, n >3 & latlon != "NA/NA")
   
   
   
   # juntar todas municipios com erro de lat/lon
-  munis_problemaA <- subset(cnes19_df_coords_fixed, cnes %in% A_estbs_pouco_digito$cnes ) 
-  munis_problemaB <- subset(cnes19_df_coords_fixed, cnes %in% B_muni_fora$cnes )
-  munis_problemaC <- cnes19_df_coords_fixed[ is.na(lat), ]
-  munis_problemaD <- subset(cnes19_df_coords_fixed, latlon %in% C_latlon_problema$latlon)
+  munis_problemaA <- subset(cnes_df_coords_fixed, cnes %in% A_estbs_pouco_digito$cnes ) 
+  munis_problemaB <- subset(cnes_df_coords_fixed, cnes %in% B_muni_fora$cnes )
+  munis_problemaC <- cnes_df_coords_fixed[ is.na(lat), ]
+  munis_problemaD <- subset(cnes_df_coords_fixed, latlon %in% C_latlon_problema$latlon)
   
   
   
@@ -419,27 +415,27 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   #                             list(i.MatchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]
   
   # identify columns 
-  # cnes19_df_coords_fixed[, co_entidade := as.character(co_entidade)]
-  cnes19_df_coords_fixed[, MatchedAddress := paste0(logradouro, ", ", numero, " - ", municipio, ", ", uf, " - CEP ", cep)]
-  cnes19_df_coords_fixed[, SearchedAddress := paste0(logradouro, ", ", numero, " - ", municipio, ", ", uf, " - CEP ", cep)]
-  cnes19_df_coords_fixed[, PrecisionDepth := "cnes"]
-  cnes19_df_coords_fixed[, geocode_engine := "cnes"]
+  # cnes_df_coords_fixed[, co_entidade := as.character(co_entidade)]
+  cnes_df_coords_fixed[, MatchedAddress := paste0(logradouro, ", ", numero, " - ", municipio, ", ", uf, " - CEP ", cep)]
+  cnes_df_coords_fixed[, SearchedAddress := paste0(logradouro, ", ", numero, " - ", municipio, ", ", uf, " - CEP ", cep)]
+  cnes_df_coords_fixed[, PrecisionDepth := "cnes"]
+  cnes_df_coords_fixed[, geocode_engine := "cnes"]
   
   
-  cnes19_df_coords_fixed[estabs_problema_geocoded_dt, on = "cnes",
+  cnes_df_coords_fixed[estabs_problema_geocoded_dt, on = "cnes",
                          c("MatchedAddress", "PrecisionDepth", "lon", "lat", "geocode_engine") := 
                            list(i.MatchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]  
   
   # identify year
-  cnes19_df_coords_fixed[, year_geocode := ano]
+  cnes_df_coords_fixed[, year_geocode := ano]
   
-  # table(cnes19_df_coords_fixed$PrecisionDepth, useNA = 'always')
-  # table(cnes19_df_coords_fixed$geocode_engine, useNA = 'always')
+  # table(cnes_df_coords_fixed$PrecisionDepth, useNA = 'always')
+  # table(cnes_df_coords_fixed$geocode_engine, useNA = 'always')
   
   
   # 7) Trazer coordenadas corrigidas para os novos hospitais --------------------------
   cnes_filtered_fim <- merge(cnes_filtered,
-                                 cnes19_df_coords_fixed[, .(cnes, lat_digits, lon, lat, ndigitos, latlon,
+                                 cnes_df_coords_fixed[, .(cnes, lat_digits, lon, lat, ndigitos, latlon,
                                                             MatchedAddress, SearchedAddress, PrecisionDepth, geocode_engine, year_geocode)],
                                  by = "cnes",
                                  all.x = TRUE)
@@ -467,7 +463,7 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   
   # table(hospitais$geocode_engine, useNA = 'always')
   
-  ###### Usar dados de lat/lon quando eles existirem na PMAQ (estabelecimentos de baixa complexidade)
+  ###### Usar dados de lat/lon quando eles existirem na PMAQ Ciclo 3 (estabelecimentos de baixa complexidade)
   # Read PMAQ data
   pmaq_df_coords_fixed <- fread('../../data-raw/hospitais/2019/PMAQ/pmaq_df_coords_fixed.csv', colClasses = 'character') %>%
     select(code_muni, cnes = CNES_FINAL, lon, lat) %>%
@@ -477,7 +473,7 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
     mutate(lon = as.numeric(lon),
            lat = as.numeric(lat)) %>% setDT()
   
-  
+  # lookup table (merge) to update coordinates
   cnes_filtered_fim[pmaq_df_coords_fixed, on = "cnes",
                     c("PrecisionDepth", "lon", "lat", "geocode_engine") := 
                       list(i.PrecisionDepth, i.lon, i.lat, i.geocode_engine)]
