@@ -33,22 +33,39 @@ rais_clean_estabs_raw <- function(ano) {
   # 2) Filtrar somente empresas com vinculos ativos
   rais_estabs_raw_0 <- rais_estabs_raw[as.numeric(qt_vinc_ativos) > 0]
   
-  message("Total number of active estabs: ", unique(rais_estabs_raw_0$id_estab) %>% length())
+  # 3) Filtro 2: deletar todas as intituicoes com Natureza Juridica 'publica' 
+  # (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
+  # todos que comecam com o numeral 1 sao de administracao publica
+  
+  
+  # 3.1) Identificar natureza de adm publica
+  rais_estabs_raw_0[, adm_pub := ifelse( substr(nat_jur, 1, 1)==1, 1, 0)]
+  
+  # 3.2) Filtrar apenas adm publica
+  rais_filtro_1 <- rais_estabs_raw_0[ adm_pub != 1 ]
+  
+  # quantos vinculos de natureza juridica publica a gente perde?
+  # nrow(rais_filtro_2) / nrow(rais_filtro_1)
+  
+  # 3.3) Deletar todas as empresas publicas (a entidade 2011 eh empresa publica)
+  rais_filtro_2 <- rais_filtro_1[nat_jur != "2011"]
+  
+  message("Total number of private active estabs: ", unique(rais_filtro_2$id_estab) %>% length())
   
   # todo os estabs para 14 characetrs
-  rais_estabs_raw_0[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+  rais_filtro_2[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
-  # 3) Trazer o nome do municipio
+  # 4) Trazer o nome do municipio
   muni_lookup <- geobr::lookup_muni(code_muni = "all")
   muni_lookup <- muni_lookup %>%
     select(codemun = code_muni, name_muni, abrev_state) %>%
     mutate(codemun = substr(codemun, 1, 6))
   
-  rais_estabs_raw_0 <- rais_estabs_raw_0 %>%
+  rais_filtro_2 <- rais_filtro_2 %>%
     left_join(muni_lookup, by = "codemun") 
   
-  # 4) Selecionar colunas e salvar
-  rais_estabs_raw_0 %>%
+  # 5) Selecionar colunas e salvar
+  rais_filtro_2 %>%
     # fix uf and codemun
     select(id_estab, qt_vinc_ativos, logradouro, bairro, codemun, name_muni, uf = abrev_state, cep) %>% 
     # save it
