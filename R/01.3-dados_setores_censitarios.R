@@ -13,34 +13,53 @@ source('./R/fun/setup.R')
 #           'Pess3_V002', 'Pess3_V003', 'Pess3_V004', 
 #           'Pess3_V005', 'Pess3_V006')
 
-## Leitura dos dados gerais
-setores1 <- data.table::fread("../../data-raw/setores_censitarios/dados_censo2010A.csv")
-names(setores1)
+## Leitura dos dados gerais ------------------
+setores1 <- data.table::fread("../../data-raw/setores_censitarios/dados_censo2010A.csv",
+                              colClasses = 'character')
+# names(setores1)
 
-
-
-6666666666666666666666666666666666666
-## leitura dos dados de renda
-income_files <- list.files(path = "//storage6/bases/DADOS/PUBLICO/CENSO/Setor_Censitario/2010/Originais/", pattern = 'Entorno04', recursive = T)
-income_files <- income_files[income_files %like% '.csv']
-
-colstoread <- c('Cod_setor', 'Cod_municipio', V683::V694)
-setores_renda <- lapply(X=income_files, FUN=fread, select= colstoread)
-# variaveis v683 ate v694
-
-
-
-
+# select vars
 setores1 <- setores1 %>% select(Cod_UF, Cod_municipio, Cod_setor, 
                                 DomRend_V003, Dom2_V002, 
                                 # income brackets
-                                PessRendaV001:PessRendaV010,
+                                # PessRenda_V001:PessRendaV010,
                                 # raca, cor
                                 Pess3_V002, Pess3_V003, Pess3_V004, 
                                 Pess3_V005, Pess3_V006,
                                 # idade
                                 Pess13_V023:Pess13_V134
 )
+
+## leitura dos dados de renda ----------------------
+income_files <- list.files(path = "//storage6/bases/DADOS/PUBLICO/CENSO/Setor_Censitario/2010/Originais/", 
+                           pattern = 'Entorno04', recursive = T, full.names = TRUE)
+income_files <- income_files[income_files %like% '.csv']
+
+# variaveis v683 ate v694
+colstoread <- c('Cod_setor', paste0("V", rep(683:694)))
+setores_renda <- lapply(X=income_files, FUN=fread, select=colstoread, colClasses = "character") %>%
+  rbindlist(fill = TRUE)
+
+# there are some 'x' in some of the variables
+# substitute them for 0s
+setores_renda <- setores_renda %>%
+  mutate_at(vars(starts_with("V")), ~ ifelse(.x == "X", 0, .x))
+
+# rename these variables
+setores_renda <- setores_renda %>%
+  rename_at(vars(starts_with("V")), ~ paste0("Entorno04_", .x))
+
+
+
+# join datasets -----------------------------
+setores2 <- left_join(setores1, setores_renda,
+                      by = "Cod_setor")
+
+setores2 <- setores2 %>% 
+# transform variables to numeric
+  mutate_at(vars(matches("V\\d{3}")), as.numeric)
+
+
 
 # Dom2_V002 # Moradores em domicílios particulares permanentes
 # DomRen_V003 # Total do rendimento nominal mensal dos domicílios particulares permanentes 
@@ -100,7 +119,7 @@ setores1 <- setores1 %>% select(Cod_UF, Cod_municipio, Cod_setor,
 ### 2. Merge dos dados de renda com shapes dos setores censitarios --------------------------------------------------
 
 # filtra apenas municipio do projeto
-setores1 <- setores1[Cod_municipio %in% munis_df$code_muni,]
+setores2 <- setores2[Cod_municipio %in% munis_df$code_muni,]
 
 
 merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "for"
@@ -108,8 +127,8 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   dir.create(sprintf("../../data/acesso_oport/setores_agregados/%s", ano))
   
   
-  # agrupar variaveis de idade e soma-las
-  setores2 <- setores1 %>% mutate(idade_0a5 = rowSums(across(Pess13_V023:Pess13_V039), na.rm = TRUE),
+  # agrupar variaveis de idade/income brackets e soma-las
+  setores3 <- setores2 %>% mutate(idade_0a5 = rowSums(across(Pess13_V023:Pess13_V039), na.rm = TRUE),
                                   
                                   idade_6a14 = rowSums(across(Pess13_V040:Pess13_V048), na.rm = TRUE),
                                   
@@ -123,21 +142,27 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
                                   
                                   idade_70 = rowSums(across(Pess13_V104:Pess13_V134), na.rm = TRUE)
                                   
+  ) %>%
+    mutate(moradores_SM_0_1Q = rowSums(across(c(Entorno04_V693:Entorno04_V694, Entorno04_V683:Entorno04_V684)), na.rm = TRUE),
+           
+           moradores_SM_1Q_1M = rowSums(across(Entorno04_V685:Entorno04_V686), na.rm = TRUE),
+           
+           moradores_SM_1M_1 = rowSums(across(Entorno04_V687:Entorno04_V688), na.rm = TRUE),
+           
+           moradores_SM_1_2 = rowSums(across(Entorno04_V689:Entorno04_V690), na.rm = TRUE),
+           
+           moradores_SM_2 = rowSums(across(Entorno04_V691:Entorno04_V692), na.rm = TRUE)
+           
   )
   
   
   ## Renomeia variaveis
   # Renda 6.19 - variavel escolhida: V003 = Total do rendimento nominal mensal dos domicílios particulares permanentes
-  setores_renda <-  setores2 %>% 
+  setores4 <-  setores3 %>% 
     dplyr::select(cod_uf = Cod_UF, cod_muni = Cod_municipio, cod_setor = Cod_setor, 
                   renda_total = DomRend_V003, moradores_total = Dom2_V002, 
                   # income brackets
-                  pessoas_SM_0        = PessRendaV010,
-                  pessoas_SM_0_1M  = PessRendaV001, pessoas_SM_1M_1  = PessRendaV002,
-                  pessoas_SM_1_2   = PessRendaV003, pessoas_SM_2_3   = PessRendaV004,
-                  pessoas_SM_3_5   = PessRendaV005, pessoas_SM_5_10  = PessRendaV006,
-                  pessoas_SM_10_15 = PessRendaV007, pessoas_SM_15_20 = PessRendaV008,
-                  pessoas_SM_20    = PessRendaV009,
+                  matches("moradores_SM"),
                   # raca, cor
                   cor_branca=Pess3_V002, cor_preta=Pess3_V003, 
                   cor_amarela=Pess3_V004, cor_parda=Pess3_V005, cor_indigena=Pess3_V006,
@@ -145,12 +170,12 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
                   matches("idade"))
   
   # convert NAs para zero
-  setores_renda[is.na(setores_renda)] <- 0
+  setores4[is.na(setores4)] <- 0
   
   # fazer a correcao das idades e da populacao por cor/raca
   # dado de pop total (domicilios part permanentes) é menor do que soma de pop por idade.
   # esse trecho do codigo faz correção pelas proporções de cada idade e cor/raca
-  setores_renda_corrigido <- setores_renda %>%
+  setores5 <- setores4 %>%
     # corrigir idade
     mutate(age_total = rowSums(across(idade_0a5:idade_70), na.rm = TRUE)) %>%
     mutate_at(vars(matches("idade")), ~ .x / age_total) %>%
@@ -162,12 +187,12 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
     select(-age_total, -race_total)
   
   # convert NAs para zero
-  setDT(setores_renda_corrigido)
-  setores_renda_corrigido[is.na(setores_renda_corrigido)] <- 0
+  setDT(setores5)
+  setores5[is.na(setores5)] <- 0
   
   # Criar variavel de renda domicilias per capita de cada setor censitario
-  setores_renda_corrigido[, renda_per_capita := renda_total / moradores_total]
-  setores_renda_corrigido[, cod_setor := as.character(cod_setor)]
+  setores5[, renda_per_capita := renda_total / moradores_total]
+  setores5[, cod_setor := as.character(cod_setor)]
   
   
   # funcao para fazer merge dos dados e salve arquivos na pasta 'data'
@@ -180,7 +205,7 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
     code_muni <- subset(munis_df, abrev_muni==sigla )$code_muni
     
     # subset dados dos setores
-    dados <- subset(setores_renda_corrigido, cod_muni == code_muni)
+    dados <- subset(setores5, cod_muni == code_muni)
     
     # leitura do shape dos setores
     sf <- readr::read_rds( sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla, ano) )
