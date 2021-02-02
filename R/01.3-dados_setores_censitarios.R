@@ -145,7 +145,7 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   ) %>%
     mutate(moradores_SM_0_1Q = rowSums(across(c(Entorno04_V693:Entorno04_V694, Entorno04_V683:Entorno04_V684)), na.rm = TRUE),
            
-           moradores_SM_1Q_1M = rowSums(across(Entorno04_V685:Entorno04_V686), na.rm = TRUE),
+           moradores_SM_1Q_1M = rowSums(across(c(Entorno04_V685, Entorno04_V686)), na.rm = TRUE),
            
            moradores_SM_1M_1 = rowSums(across(Entorno04_V687:Entorno04_V688), na.rm = TRUE),
            
@@ -154,6 +154,29 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
            moradores_SM_2 = rowSums(across(Entorno04_V691:Entorno04_V692), na.rm = TRUE)
            
   )
+  
+  
+  # # somar
+  # setores3_teste <- setores3 %>% 
+  #   mutate(moradores_sm_soma = rowSums(across(Entorno04_V683:Entorno04_V694)), na.rm = TRUE) %>%
+  #   mutate(dif = Dom2_V002 - moradores_sm_soma)
+  # 
+  # # convert NAs para zero
+  # setores3_teste[is.na(setores3_teste)] <- 0
+  # 
+  # hist(setores3_teste$dif)
+  # boxplot(setores3_teste$dif)
+  # summary(setores3_teste$dif)
+  # setores3_teste %>%
+  #   mutate(dif_cut = 
+  #            base::cut(dif, breaks = c(0, 1, 100, 200, 300, 500, 1000, Inf), right = FALSE, dig.lab = 5)) %>%
+  #   count(dif_cut) %>%
+  #   ggplot()+
+  #   geom_col(aes(x = dif_cut, y = n))+
+  #   scale_y_continuous(breaks = c(0, 2500, 10000, 20000, 40000, 60000))
+  
+  
+    
   
   
   ## Renomeia variaveis
@@ -193,6 +216,9 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   # Criar variavel de renda domicilias per capita de cada setor censitario
   setores5[, renda_per_capita := renda_total / moradores_total]
   setores5[, cod_setor := as.character(cod_setor)]
+  
+
+    
   
   
   # funcao para fazer merge dos dados e salve arquivos na pasta 'data'
