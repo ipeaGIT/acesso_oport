@@ -26,6 +26,9 @@ rais_clean_estabs_raw <- function(ano) {
   rais_estabs_raw <- fread(sprintf("../../data-raw/rais/%s/rais_estabs_raw_%s.csv", ano, ano),
                            select = columns,
                            colClasses = "character")
+
+  
+  
   # 1.3) Renomear columns
   colnames(rais_estabs_raw) <- c("id_estab", "qt_vinc_ativos", "nat_jur", "logradouro", "bairro", "codemun", "uf", "cep")
   
@@ -34,23 +37,23 @@ rais_clean_estabs_raw <- function(ano) {
   rais_estabs_raw_0 <- rais_estabs_raw[as.numeric(qt_vinc_ativos) > 0]
   
   # 3) Filtro 2: deletar todas as intituicoes com Natureza Juridica 'publica' 
-  # (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
-  # todos que comecam com o numeral 1 sao de administracao publica
-  
-  # 3.1) Identificar natureza de adm publica
-  rais_estabs_raw_0[, adm_pub := ifelse( substr(nat_jur, 1, 1)==1, 1, 0)]
-  
-  # 3.2) Filtrar apenas adm publica
-  rais_filtro_1 <- rais_estabs_raw_0[ adm_pub != 1 ]
-  
-  # quantos vinculos de natureza juridica publica a gente perde?
-  # nrow(rais_filtro_2) / nrow(rais_filtro_1)
-  
-  # 3.3) Deletar todas as empresas publicas (a entidade 2011 eh empresa publica)
-  rais_filtro_2 <- rais_filtro_1[nat_jur != "2011"]
-  
-  message("Total number of private active estabs: ", unique(rais_filtro_2$id_estab) %>% length())
-  
+      # (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
+      # todos que comecam com o numeral 1 sao de administracao publica
+      
+      # 3.1) Identificar natureza de adm publica
+      rais_estabs_raw_0[, adm_pub := ifelse( substr(nat_jur, 1, 1)==1, 1, 0)]
+      
+      # 3.2) Filtrar apenas adm publica
+      rais_filtro_1 <- rais_estabs_raw_0[ adm_pub != 1 ]
+      
+      # quantos vinculos de natureza juridica publica a gente perde?
+      # nrow(rais_filtro_2) / nrow(rais_filtro_1)
+      
+      # 3.3) Deletar todas as empresas publicas (a entidade 2011 eh empresa publica)
+      rais_filtro_2 <- rais_filtro_1[nat_jur != "2011"]
+      
+      message("Total number of private active estabs: ", unique(rais_filtro_2$id_estab) %>% length())
+      
   # todo os estabs para 14 characetrs
   rais_filtro_2[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
@@ -69,7 +72,6 @@ rais_clean_estabs_raw <- function(ano) {
     select(id_estab, qt_vinc_ativos, logradouro, bairro, codemun, name_muni, uf = abrev_state, cep) %>% 
     # save it
     fwrite(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_filter.csv", ano, ano))
-  
 }
 
 
@@ -79,11 +81,8 @@ rais_clean_estabs_raw <- function(ano) {
 #' Etapas:
 #' 1) Abrir rais filtrada
 #' 2) Se o ano nao for 2017, selecionar somente os estabelecimentos que sao
-#' novos ou que mudaram de endereço e um ano para o outro
+#' novos ou que mudaram de endereço de um ano para o outro
 #' 3) Salvar
-
-
-
 
 rais_export_data_to_galileo <- function(ano) {
   
@@ -94,31 +93,61 @@ rais_export_data_to_galileo <- function(ano) {
                        encoding = "UTF-8")
   
   
-  # 2) Se o ano nao for 2017, selecionar somente os estabelecimentos que sao
+  # todo os CEPS para 8 digitos characetrs
+  rais_filter[, cep := str_pad(cep, width = 8, pad = 0)]
+  
+  # correcao de logradouro, retira '999999'
+  rais_filter[ , logradouro := str_replace(string = logradouro,
+                                          pattern = ', 999999$',
+                                          replacement = '')]
+  rais_filter[ , logradouro := str_replace(string = logradouro,
+                                           pattern = ' 999999$',
+                                           replacement = '')]
+  
+  rais_filter[ , logradouro := str_replace(string = logradouro,
+                                            pattern = ', 99999$',
+                                            replacement = '')]
+  rais_filter[ , logradouro := str_replace(string = logradouro,
+                                           pattern = ' 99999$',
+                                           replacement = '')]
+  
+  rais_filter[ , logradouro := str_replace(string = logradouro,
+                                           pattern = ', 9999$',
+                                           replacement = '')]
+  rais_filter[ , logradouro := str_replace(string = logradouro,
+                                           pattern = ' 9999$',
+                                           replacement = '')]
+
+# 2) Se o ano nao for 2017, selecionar somente os estabelecimentos que sao
   # novos ou que mudaram de endereço e um ano para o outro
   if (ano != 2017) {
     
     # 2.1) Abrir RAIS final do ano anterior
-    rais_etapa8 <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", 
+    rais_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", 
                                     ano-1, ano-1))
     # Selecionar variaveis
-    rais_etapa8 <- rais_etapa8 %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
+    rais_anterior <- rais_anterior %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
     # Pad to 14 chars
-    rais_etapa8[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
+    rais_anterior[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
     
     # 2.2) Selecionar somente os estabs que nao foram georef antes
-    rais_geocode_new <- rais_filter[id_estab %nin% rais_etapa8$id_estab]
+    rais_geocode_new <- rais_filter[id_estab %nin% rais_anterior$id_estab]
+    
     # identify type
     rais_geocode_new[, type_input_galileo := paste0("new_estab_", ano)]
     
     message("Total of new estabs compared to previous year: ", nrow(rais_geocode_new))
     
     # 2.3) Selecionar somente os estabs que mudaram o cep em relacao ao ano anterior
-    rais_geocode_cep <- left_join(rais_filter, select(rais_etapa8, id_estab, logradouro, cep),
+    # Pad to 14 chars
+    rais_anterior[, cep := str_pad(cep, width = 8, pad = 0)]
+    rais_geocode_new[, cep := str_pad(cep, width = 8, pad = 0)]
+    rais_filter[, cep := str_pad(cep, width = 8, pad = 0)]
+    
+    # identifica empresas que foram geocode no ano anterior, mas que mudaram de endereco no ano atual
+    rais_geocode_cep <- left_join(rais_filter, select(rais_anterior, id_estab, logradouro, cep),
                                   by = "id_estab",
                                   suffix = c("_anterior", "_atual")) %>%
-      mutate(cep_anterior = str_pad(cep_anterior, side = "left", width = 8, pad = 0)) %>%
-      mutate(cep_atual = str_pad(cep_atual, side = "left", width = 8, pad = 0)) %>%
       mutate(cep_anterior = substr(cep_anterior, 1, 6)) %>%
       mutate(cep_atual = substr(cep_atual, 1, 6)) %>%
       mutate(cep_igual = ifelse(cep_anterior == cep_atual, "sim", "nao")) %>%
@@ -133,6 +162,7 @@ rais_export_data_to_galileo <- function(ano) {
     
     # 2.4) Juntar os novos estabs a serem georef
     rais_filter_geocode <- rbind(rais_geocode_new, rais_geocode_cep)
+    rais_filter_geocode <- unique(rais_filter_geocode)
     
     message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
     
@@ -144,7 +174,7 @@ rais_export_data_to_galileo <- function(ano) {
     
   } else if (ano == 2017) {
     
-    rais_filter_geocode <- rais_filter %>%
+    rais_filter_geocode <- c %>%
       mutate(type_input_galileo = paste0("rais_", "2017"))
     
     message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
@@ -156,8 +186,6 @@ rais_export_data_to_galileo <- function(ano) {
     message("Input to galileo saved at: ", sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_input_galileo.csv", ano, ano))
     
   }
-  
-  
   
 }
 
@@ -249,6 +277,9 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # 1) Abrir output do galileo ------------
   rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_output_galileo.csv", ano, ano),
                                colClasses = 'character')
+  
+  head(rais_galileo_output)
+  
   
   rais_galileo_output[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   

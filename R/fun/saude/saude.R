@@ -261,7 +261,12 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # A) Numero de digitos de lat/long apos ponto
-  setDT(cnes_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+    #setDT(cnes_df_coords_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  setDT(cnes_df_coords_fixed)[, ndigitos_lat := nchar( gsub("^.*\\.","", lat))    ]
+  setDT(cnes_df_coords_fixed)[, ndigitos_lon := nchar( gsub("^.*\\.","", lon))    ]
+  setDT(cnes_df_coords_fixed)[, ndigitos := pmin(ndigitos_lon, ndigitos_lat) , by= cnes ]
+  
+  
   A_estbs_pouco_digito <- cnes_df_coords_fixed[ ndigitos <=2,]
   
   

@@ -1,5 +1,5 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.1.3 Geocode dados do censo escolar
+###### 0.1.6 Limpeza e Geocode dados da RAIS
 
 # carregar bibliotecas
 source('./R/fun/setup.R')
@@ -9,8 +9,11 @@ purrr::walk(dir('./R/fun/empregos', full.names = TRUE), source)
 
 # Aplicar funcoes para o ano de 2017 -------------
 
-# 1) Filter raw trabalhadores data
+# 1) Save raw data with columns we use in the municipalities of the project
 rais_filter_raw_data(2017)
+
+# 1.1) Filter raw workers data
+rais_filter_pessoas(2017)
 
 # 2) Categorizar trabalhadores por grau de instrucao
 rais_categorize_inst(2017)
@@ -34,8 +37,11 @@ rais_bring_schools(2017)
 
 # Aplicar funcoes para o ano de 2018 -------------
 
-# 1) Filter raw trabalhadores data
+# 1) Save raw data with columns we use
 rais_filter_raw_data(2018)
+
+# 1.1) Filter raw trabalhadores data
+rais_filter_pessoas(2018)
 
 # 2) Categorizar trabalhadores por grau de instrucao
 rais_categorize_inst(2018)
@@ -47,6 +53,8 @@ rais_treat_outliers(2018)
 # realizar geocode
 rais_clean_estabs_raw(2018)
 rais_export_data_to_galileo(2018)
+
+666
 rais_gmaps_geocode(2018, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2018)
@@ -58,8 +66,11 @@ rais_bring_schools(2018)
 
 # Aplicar funcoes para o ano de 2019 -------------
 
-# 1) Filter raw trabalhadores data
+# 1) Save raw data with columns we use
 rais_filter_raw_data(2019)
+
+# 1.1) Filter raw trabalhadores data
+rais_filter_pessoas(2019)
 
 # 2) Categorizar trabalhadores por grau de instrucao
 rais_categorize_inst(2019)

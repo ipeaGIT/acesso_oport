@@ -74,26 +74,33 @@ cras_geocode <- function(ano, run_gmaps = F) {
     
   }
   
+
   # Recodifica endereços sem número
-  cras[, numero := gsub('^0','S/N',numero)]
+  cras[, numero := abs(numero)]
+  cras[, numero := as.character(numero)]
+  cras[, numero := gsub('^0','S/N', numero)]
   
   # Cria coluna com endereço completo
-  cras[, endereco := paste(paste(tp_log, logradouro,sep = ' '),numero,sep = ', ')]
+  cras[, endereco := paste(paste(tp_log, logradouro, sep = ' '),numero,sep = ', ')]
+  table(cras$endereco)
   
   # Endereco em maiusculo, email em minusculo
   cras[, endereco := stringr::str_to_upper(endereco)]
   cras[, bairro := stringr::str_to_upper(bairro)]
   cras[, email := stringr::str_to_lower(email)]
   
+  
   # Remove tipo de logradouro duplicado
   cras[, endereco := gsub('RUA RUA','RUA', endereco)]
   cras[, endereco := gsub('AVENIDA AVENIDA','AVENIDA', endereco)]
   cras[, endereco := gsub('QUADRA QUADRA','QUADRA', endereco)]
-  cras[, endereco := gsub('ÁREA','ÁREA', endereco)]
+  cras[, endereco := gsub('ÁREA ÁREA','ÁREA', endereco)]
+  
+
   
   # 3) Corrige coordenadas defeituosas ------------------------------------------------------------------
   
-  # identificar cidades do projeto com dois digitos de latitude
+  # identificar numero de digitos de lat antes da virgula pra cada cidade do projeto
   munis <- purrr::map_dfr(dir("../../data-raw/municipios/2017/", full.names = TRUE), read_rds) %>%
     as_tibble() %>%
     st_sf() %>%
@@ -134,17 +141,23 @@ cras_geocode <- function(ano, run_gmaps = F) {
     mutate(lon = as.numeric(lon),
            lat = as.numeric(lat))
   
-  # Encontra coordenadas problemáticas
-  # Número de Dígitos após o ponto
-  setDT(cras_fixed)[, ndigitos := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  # Encontra coordenadas problemáticas 
+  # Número de Dígitos após o ponto (menos de 3 digitos apos pontos)
+  setDT(cras_fixed)
+  cras_fixed[, ndigitos_lat := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
+  cras_fixed[, ndigitos_lon := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lon))]
+  cras_fixed[, ndigitos := pmin(ndigitos_lon, ndigitos_lat) , by= code_cras ]
+  
   # Número de CRAS no mesmo ponto
-  cras_fixed <- cras_fixed %>% 
-    group_by(lat, lon) %>% 
-    mutate(cras_rep = n()) %>% 
+  cras_fixed <- cras_fixed %>%
+    group_by(lat, lon) %>%
+    mutate(cras_rep = n()) %>%
     ungroup()
   
   # Indicador se geocode está ok
   setDT(cras_fixed)[, check := ifelse(ndigitos <= 2 | cras_rep > 1, 0, 1)]
+  
+  
   
   # 4) Merge com dataframe original, output intermediário e input geocode -------------------------------------------
   
@@ -160,27 +173,29 @@ cras_geocode <- function(ano, run_gmaps = F) {
   # 5) Geocode CRAS defeituosos --------------------------------------------
   
   # Verifica se algum CRAS defeituoso já foi geocodificado em anos anteriores
-  # Lê historico de geocoding
+  
+  # Lê historico de todos CRAS que estiveram errados e que um dia foram corrigidos
   geocode_hist <- data.table::fread('../../data/acesso_oport/cras/geocode_cras.csv')
   
   # Merge com CRAS defeituosos
   cras_wrong <- merge.data.table(cras_wrong, geocode_hist, all.x = TRUE, by = 'code_cras')
   
-  # Enderecos OK
+  # CRAS que ja foram corrigidos em rodadas passadas
   cras_ok <- cras_wrong[!is.na(lat)]
-  # Input geocode
+  
+  # Input geocode dos CRAS que ainda nao foram corrigidos
   input_geocode <- cras_wrong[is.na(lat)]
   
   # prepara string de endereços - input para google maps
   input_geocode[, input := 
-               paste(paste(paste(paste(endereco, bairro,sep = " - "),name_muni, sep=", "),abrev_estado,sep=" - "),cep,sep=", ")]
+               paste(paste(paste(paste(endereco, bairro,sep = " - "),name_muni, sep=", "),abrev_estado,sep=" - "),cep,sep=", CEP ")]
   
   # lista de enderecos com problema
-  input <- input_geocode %>% pull(input)
+  input <- input_geocode$input
   
   # registrar Google API Key
   my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-  register_google(key = my_api$V1[4])
+  register_google(key = my_api$V1[3])
   
   if (run_gmaps) {
       
@@ -188,25 +203,25 @@ cras_geocode <- function(ano, run_gmaps = F) {
       
       coords_google <- lapply(input,geocode) %>% data.table::rbindlist()
       
-      input_geocode <- input_geocode %>% dplyr::bind_cols(coords_google) %>% select(-input)
+      input_geocode <- input_geocode[, -c('lat', 'lon')] %>% dplyr::bind_cols(coords_google) %>% select(-input)
       
-      cras_final <- dplyr::bind_rows(intermediate, cras_ok, input_geocode) %>% setDT(key = 'code_cras')
+      cras_ano <- dplyr::bind_rows(intermediate, cras_ok, input_geocode) %>% setDT(key = 'code_cras')
       
   } else {
       
     # Arquivo final
-      cras_final <- dplyr::bind_rows(intermediate, cras_ok) %>% setDT(key = 'code_cras')
+    cras_ano <- dplyr::bind_rows(intermediate, cras_ok) %>% setDT(key = 'code_cras')
     
     }
     
      # 6) arquivos Finais  --------------------------------------------
   
     # Update do histórico de geocode
-    update <- cras_final[code_cras %nin% geocode_hist$code_cras,.(code_cras,lon,lat)]
+    update <- cras_ano[code_cras %nin% geocode_hist$code_cras,.(code_cras,lon,lat)]
     geocode_hist_final <- dplyr::bind_rows(geocode_hist, update) %>% setDT(key = 'code_cras')
     
     # Salva arquivos
-    data.table::fwrite(cras_final, sprintf("../../data/acesso_oport/cras/cras_%s.csv", ano))
-    data.table::fwrite(geocode_hist_final, sprintf("../../data/acesso_oport/cras/geocode_cras.csv", ano))
+    data.table::fwrite(cras_ano, sprintf("../../data/acesso_oport/cras/cras_%s.csv", ano))
+    data.table::fwrite(geocode_hist_final, "../../data/acesso_oport/cras/geocode_cras.csv")
     
   }

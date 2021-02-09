@@ -19,7 +19,7 @@ rais_filter_raw_data <- function(ano) {
   # 1.2) Subset municipalities
   estabs_mun <- estabs[ codemun %in% substring(munis_df$code_muni, 1,6)]
   
-  # 1.3) Subset columns
+  # 1.3) Subset columns that we use
   estabs_mun <- estabs_mun[, 1:33]
   
   # 1.4) Salvar
@@ -70,7 +70,6 @@ rais_filter_raw_data <- function(ano) {
 #' 4) Filtro 3: deletar todas as empresas publicas 
 #' 5) Salvar
 
-
 rais_filter_pessoas <- function(ano) {
   
   # 1) Abrir Rais pessoas com colunas que vamos usar
@@ -84,6 +83,7 @@ rais_filter_pessoas <- function(ano) {
   # 2) Filtro 1: selecionar so vinculos ativos
   rais_filtro_1 <- rais_trabs[emp_31dez == 1]
   
+  # number of companies
   # unique(rais_filtro_1$id_estab) %>% length()
   
   
@@ -91,11 +91,10 @@ rais_filter_pessoas <- function(ano) {
   # (ver ../data-raw/rais/ManualRAIS2018.pdf) pagina 19
   # todos que comecam com o numeral 1 sao de administracao publica
   
-  
   # 3.1) Identificar natureza de adm publica
   rais_filtro_1[, adm_pub := ifelse( substr(nat_jur, 1, 1)==1, 1, 0)]
   
-  # 3.2) Filtrar apenas adm publica
+  # 3.2) Filtrar apenas o que nao for adm publica
   rais_filtro_2 <- rais_filtro_1[ adm_pub != 1 ]
   
   # quantos vinculos de natureza juridica publica a gente perde?
@@ -105,8 +104,9 @@ rais_filter_pessoas <- function(ano) {
   rais_filtro_3 <- rais_filtro_2[nat_jur != "2011"]
   
   
-  # 5) Salvar 
-  write_rds(rais_filtro_3, sprintf("../../data/acesso_oport/rais/%s/rais_%s_ind_filtrada.rds", ano, ano))
+  # 5) Salvar
+  rais_filtro_3 <- rais_filtro_3[order(id_estab, grau_instr, nat_jur)]
+  write_rds(rais_filtro_3, sprintf("../../data/acesso_oport/rais/%s/rais_%s_trabal_filtrada.rds", ano, ano), compress ='gz')
   
 }
 
@@ -119,39 +119,38 @@ rais_filter_pessoas <- function(ano) {
 #' sua escolaridade
 #' Etapas:
 #' 1) Abrir RAIS
-#' 2) Categorizar trabalhadores por grau de instrucao
+#' 2) Categorizar trabalhadores por grau de instrucao por empresa
 #' 3) Calcular quantidade de vinculo por grau de instrucao
 #' 4) Somar quantidade total de empregados
 #' 5) Reshape da base de formato long para wide
 #' 6) Salvar
 
-
 rais_categorize_inst <- function(ano) {
   
-  
-  
   # 1) Abrir RAIS anteior
-  rais_trabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_ind_filtrada.rds", ano, ano))
+  rais_trabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_trabal_filtrada.rds", ano, ano))
+  
   # Formatar corretamente o grau de instrucao
-  rais_trabs[, grau_instr := str_replace(grau_instr, "0", "")]
+  rais_trabs[, grau_instr := as.numeric(grau_instr)]
+  rais_trabs[, grau_instr := as.character(grau_instr)]
   
   # 2) Categorizar trabalhadores por grau de instrucao
   rais_cats <- rais_trabs[, instrucao := fifelse(grau_instr %in% c(1:6), "baixo",                                    # menor do que ensino medio (inclui ensino medio incompleto)
-                                                 fifelse(grau_instr %in% c(7, 8), "medio",                           # ensino medio
-                                                         fifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))] # ensino superior
+                                          fifelse(grau_instr %in% c(7, 8), "medio",                           # ensino medio
+                                           fifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))] # ensino superior
   
   
   # 3) Calcular quantidade de vinculo por grau de instrucao em cada estabelecimento
   rais_fim <- rais_trabs[, .(vinculos = .N), by = .(id_estab, clas_cnae20, instrucao)]
   
   # 4) Somar quantidade total de empregados em cada empresa
-  rais_fim <- rais_fim[, total := sum(vinculos), by = .(id_estab, clas_cnae20)]
+  rais_fim[, total := sum(vinculos), by = .(id_estab, clas_cnae20)]
   
   # 5) Reshape da base de formato long para wide
   rais_fim_wide <- tidyr::spread(rais_fim, instrucao, vinculos, fill = 0)
   
   # 6) Salvar
-  write_rds(rais_fim_wide, sprintf("../../data/acesso_oport/rais/%s/rais_%s_vin_instrucao.rds", ano, ano))
+  write_rds(rais_fim_wide, sprintf("../../data/acesso_oport/rais/%s/rais_%s_vin_instrucao.rds", ano, ano), compress = 'gz')
   
 }
 
@@ -164,20 +163,20 @@ rais_categorize_inst <- function(ano) {
 #' Etapas:
 #' 1) Abrir RAIS
 #' 2) Corrigir total de vínculos de ouliers de setores problemáticos da CNAE
-#' 3) Corrige vínculos de setores problemáticos por grau de escolaridade
+#' 3) Corrige vínculos de setores problemáticos por grau de escolaridade (mantem composicao educacional da empresa)
 #' 4) Salvar
 
 rais_treat_outliers <- function(ano) {
-  
   
   # 1) Abrir rais da etapa anterior
   rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_vin_instrucao.rds", ano, ano))
   setDT(rais)
   
   
-  # 2) Corrigir total de vínculos de ouliers de setores problemáticos da CNAE 
+  # 2) Corrigir total de vínculos de outliers de setores problemáticos da CNAE 
   # Extrai o setor da CNAE
   rais[, cnae.setor := substr(clas_cnae20, 1, 2)]
+  rais[, cnae.subsetor := substr(clas_cnae20, 1, 3)]
   
   # Setores considerados problemáticos:
   # * 35 ELETRICIDADE, GÁS E OUTRAS UTILIDADES
@@ -188,16 +187,23 @@ rais_treat_outliers <- function(ano) {
   # * 43 SERVIÇOS ESPECIALIZADOS PARA CONSTRUÇÃO
   # * 49 TRANSPORTE TERRESTRE
   # * 51 TRANSPORTE AÉREO
+  # * 56.2 Serviços de catering, bufê e outros serviços de comida preparada
   # * 64 ATIVIDADES DE SERVIÇOS FINANCEIROS
   # * 78 SELEÇÃO, AGENCIAMENTO E LOCAÇÃO DE MÃO-DE-OBRA
   # * 80 ATIVIDADES DE VIGILÂNCIA, SEGURANÇA E INVESTIGAÇÃO
   # * 81 SERVIÇOS PARA EDIFÍCIOS E ATIVIDADES PAISAGÍSTICAS
   # * 82 SERVIÇOS DE ESCRITÓRIO, DE APOIO ADMINISTRATIVO E OUTROS SERVIÇOS PRESTADOS PRINCIPALMENTE ÀS EMPRESAS
-  cnaes_problema <- c("35", "36", "38", "41", "42", "43", "49", "51", "64", "78", "80", "81", "82")
+  # * 84 ADMINISTRAÇÃO PÚBLICA, DEFESA E SEGURIDADE SOCIAL
+  cnaes_problema <- c("35", "36", "38", "41", "42", "43", "49", "51", "64", "78", "80", "81", "82", "84")
   
+  rais[, cnae_problema := ifelse(cnae.setor %in% cnaes_problema, cnae.setor,
+                                  ifelse(cnae.subsetor == '562', '562', '')) ]
+                                  
+                                  
+
   # Definição de outlier: estabelecimentos de setores problemáticos cujo total de
   # vínculos fique acima do percentil 95 da distribuição de vínculos daquele setor
-  rais[, p95_setor := round(quantile(total, probs = 0.95), 0), by = .(cnae.setor)]
+  rais[, p95_setor := round(quantile(total, probs = 0.95), 0), by = .(cnae_problema)]
   
   # Cria coluna total_corrigido com total de vínculos corrigidos
   # Caso o estabelecimento de um setor problemático tenha mais vínculos que o p95 
@@ -206,14 +212,11 @@ rais_treat_outliers <- function(ano) {
   # permanece igual
   rais[, total_corrigido := total]
   rais[
-    cnae.setor %chin% cnaes_problema, 
-    total_corrigido := fifelse(total_corrigido > p95_setor, p95_setor, total_corrigido)
+    cnae_problema != "", 
+    total_corrigido := fifelse(total_corrigido >= p95_setor, p95_setor, total_corrigido)
     ]
   
-  # Zera todos os empregos da administração pública
-  # * 84 ADMINISTRAÇÃO PÚBLICA, DEFESA E SEGURIDADE SOCIAL
-  rais[cnae.setor == "84", total_corrigido := 0]
-  
+
   # Remove a coluna que guarda o valor do p95
   rais[, p95_setor := NULL]
   
@@ -225,14 +228,14 @@ rais_treat_outliers <- function(ano) {
   rais[
     total_corrigido < total, 
     ":="(
-      alto  = round(alto / total * total_corrigido, 0),
-      medio = round(medio / total * total_corrigido, 0),
-      baixo = round(baixo / total * total_corrigido, 0)
+      alto  = round( (alto / total )* total_corrigido, 0),
+      medio = round( (medio / total) * total_corrigido, 0),
+      baixo = round( (baixo / total) * total_corrigido, 0)
     )
     ]
   
   # 4) Salvar
-  write_rds(rais, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", ano, ano))
+  write_rds(rais, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", ano, ano), compress = 'gz')
   
 }
 
