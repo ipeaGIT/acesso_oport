@@ -33,30 +33,41 @@ setores1 <- setores1 %>% select(Cod_UF, Cod_municipio, Cod_setor,
 ## leitura dos dados de renda ----------------------
 income_files <- list.files(path = "//storage6/bases/DADOS/PUBLICO/CENSO/Setor_Censitario/2010/Originais/", 
                            pattern = 'Entorno04', recursive = T, full.names = TRUE)
-income_files <- income_files[income_files %like% '.csv']
+income_files <- income_files[income_files %ilike% '.xls']
 
 # variaveis v683 ate v694
 colstoread <- c('Cod_setor', paste0("V", rep(683:694)))
-setores_renda <- lapply(X=income_files, FUN=fread, select=colstoread, colClasses = "character") %>%
+setores_renda <- lapply(X=income_files, FUN=readxl::read_xls) %>%
   rbindlist(fill = TRUE)
+
+# select columns
+setores_renda1 <- setores_renda[, ..colstoread]
+
+# change format
+setores_renda1[, Cod_setor := as.character(Cod_setor)]
+
+# table(nchar(setores_renda1$Cod_setor)) # Ok !
 
 # there are some 'x' in some of the variables
 # substitute them for 0s
-setores_renda <- setores_renda %>%
+setores_renda1 <- setores_renda1 %>%
   mutate_at(vars(starts_with("V")), ~ ifelse(.x == "X", 0, .x))
 
 # rename these variables
-setores_renda <- setores_renda %>%
+setores_renda1 <- setores_renda1 %>%
   rename_at(vars(starts_with("V")), ~ paste0("Entorno04_", .x))
 
 
 
 # join datasets -----------------------------
-setores2 <- left_join(setores1, setores_renda,
+# table(nchar(setores1$Cod_setor))
+# table(nchar(setores_renda1$Cod_setor))
+
+setores2 <- left_join(setores1, setores_renda1,
                       by = "Cod_setor")
 
 setores2 <- setores2 %>% 
-# transform variables to numeric
+  # transform variables to numeric
   mutate_at(vars(matches("V\\d{3}")), as.numeric)
 
 
@@ -153,31 +164,10 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
            
            moradores_SM_2 = rowSums(across(Entorno04_V691:Entorno04_V692), na.rm = TRUE)
            
-  )
+    )
   
   
-  # # somar
-  # setores3_teste <- setores3 %>% 
-  #   mutate(moradores_sm_soma = rowSums(across(Entorno04_V683:Entorno04_V694)), na.rm = TRUE) %>%
-  #   mutate(dif = Dom2_V002 - moradores_sm_soma)
-  # 
-  # # convert NAs para zero
-  # setores3_teste[is.na(setores3_teste)] <- 0
-  # 
-  # hist(setores3_teste$dif)
-  # boxplot(setores3_teste$dif)
-  # summary(setores3_teste$dif)
-  # setores3_teste %>%
-  #   mutate(dif_cut = 
-  #            base::cut(dif, breaks = c(0, 1, 100, 200, 300, 500, 1000, Inf), right = FALSE, dig.lab = 5)) %>%
-  #   count(dif_cut) %>%
-  #   ggplot()+
-  #   geom_col(aes(x = dif_cut, y = n))+
-  #   scale_y_continuous(breaks = c(0, 2500, 10000, 20000, 40000, 60000))
-  
-  
-    
-  
+ 
   
   ## Renomeia variaveis
   # Renda 6.19 - variavel escolhida: V003 = Total do rendimento nominal mensal dos domicílios particulares permanentes
@@ -217,8 +207,8 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   setores5[, renda_per_capita := renda_total / moradores_total]
   setores5[, cod_setor := as.character(cod_setor)]
   
-
-    
+  
+  
   
   
   # funcao para fazer merge dos dados e salve arquivos na pasta 'data'
