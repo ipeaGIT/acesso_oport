@@ -53,6 +53,8 @@ rais_treat_outliers(2018)
 # realizar geocode
 rais_clean_estabs_raw(2018)
 rais_export_data_to_galileo(2018)
+
+666
 rais_gmaps_geocode(2018, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2018)
