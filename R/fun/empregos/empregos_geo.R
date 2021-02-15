@@ -162,7 +162,10 @@ rais_export_data_to_galileo <- function(ano) {
     
     # 2.4) Juntar os novos estabs a serem georef
     rais_filter_geocode <- rbind(rais_geocode_new, rais_geocode_cep)
-    rais_filter_geocode <- unique(rais_filter_geocode)
+    rais_filter_geocode <- unique(rais_filter_geocode) %>% setDT()
+    
+    # criar logradouro
+    rais_filter_geocode[, logradouro := paste0(logradouro, " - ", bairro)]
     
     message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
     
@@ -175,7 +178,9 @@ rais_export_data_to_galileo <- function(ano) {
   } else if (ano == 2017) {
     
     rais_filter_geocode <- c %>%
-      mutate(type_input_galileo = paste0("rais_", "2017"))
+      mutate(type_input_galileo = paste0("rais_", "2017")) %>%
+      # criar logradouro
+      mutate(logradouro = paste0(logradouro, " - ", bairro))
     
     message("Total of to be geocoded at galileo: ", nrow(rais_filter_geocode))
     
@@ -278,7 +283,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_output_galileo.csv", ano, ano),
                                colClasses = 'character')
   
-  head(rais_galileo_output)
+  # head(rais_galileo_output)
   
   
   rais_galileo_output[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
@@ -296,7 +301,17 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   rais_galileo_output[, ':='(lon = as.numeric(lon),
                              lat = as.numeric(lat))]
   
+  # 3) Paara estabs com mais um georef, selecionar oq tem melhor precisao
+  # 3.1) Identificar precisao como numerico
+  # table(rais_galileo_output$PrecisionDepth)
+  rais_galileo_output[, precision_depth1 := substr(PrecisionDepth, 1, 1)]
+  # table(rais_galileo_output$precision_depth1)
   
+  # 3.2) Selecionar os com melhor precisao
+  rais_galileo_output <- rais_galileo_output %>%
+    group_by(id_estab) %>%
+    slice(which.max(precision_depth1)) %>%
+    setDT()
   
   # 3) Rodar Google API p/ estabelecimentos q Galileo encontrou com baixa precisao ------
   # 1 e 2 estrelas
@@ -643,7 +658,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
       
       invisible(
         readline
-        (prompt=sprintf("\nThere are %i new estabs to geocode in gmaps2, press [enter] to continue",  
+        (prompt=sprintf("\nThere are %i new estabs to geocode in gmaps cep, press [enter] to continue",  
                         length(setdiff(rais_google_mal_geo$id_estab, names(coordenadas_google_cep)))))
       )
       
