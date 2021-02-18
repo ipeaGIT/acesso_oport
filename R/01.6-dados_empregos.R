@@ -25,6 +25,7 @@ rais_treat_outliers(2017)
 # realizar geocode
 rais_clean_estabs_raw(2017)
 rais_export_data_to_galileo(2017)
+rais_check_new_estabs(2017)
 rais_gmaps_geocode(2017, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2017)
@@ -53,8 +54,7 @@ rais_treat_outliers(2018)
 # realizar geocode
 rais_clean_estabs_raw(2018)
 rais_export_data_to_galileo(2018)
-
-666
+rais_check_new_estabs(2018)
 rais_gmaps_geocode(2018, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2018)
@@ -82,6 +82,7 @@ rais_treat_outliers(2019)
 # realizar geocode
 rais_clean_estabs_raw(2019)
 rais_export_data_to_galileo(2019)
+rais_check_new_estabs(2019)
 rais_gmaps_geocode(2019, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2019)
