@@ -483,7 +483,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   rais_rodovias_tipo2 <- estabs_problema_3estrelas[rodovia %in% rodovias$tipo2]
   rais_rodovias_tipo3 <- estabs_problema_3estrelas[logradouro %like% "(RODOVIA )|(ROD )|(ROD. )(RODOVIARIO )"]
 
-# deletar os duplicados do tipo 1 e 2 no tipo 3
+  # deletar os duplicados do tipo 1 e 2 no tipo 3
   rais_rodovias_tipo3 <- rais_rodovias_tipo3[id_estab %nin% c(rais_rodovias_tipo1$id_estab, rais_rodovias_tipo2$id_estab)]
   
   # 4.4) Juntar todas as rodovias
@@ -506,20 +506,24 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   same_lat <- subset(same_lat, n  >14)
   
   
+  # definir esses estabelecimentos
   rais_same_coords <- subset(estabs_problema_3estrelas, same_coords %in% same_lat$same_coords)
   
-  !!!!!!  6666666 checar se nao se repete com as rodovidas
+  # juntar tudo na rais rodovias
+  # !!!!!!  6666666 checar se nao se repete com as rodovidas
+  rais_rodovias_samecoords <- estabs_problema_3estrelas[id_estab %in% c(rais_rodovias$id_estab,
+                                                                        rais_same_coords$id_estab)]
   # paramos aqui
   
   
   
   # 4.5) Salvar os estabs de rodovia problematicos
-  fwrite(rais_rodovias, sprintf("../../data/acesso_oport/rais/%s/geocode/geocode_google2_rodovias.csv", ano))
-  rais_rodovias <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/geocode_google2_rodovias.csv", ano),
+  fwrite(rais_rodovias_samecoords, sprintf("../../data/acesso_oport/rais/%s/geocode/geocode_google2_rodovias.csv", ano))
+  rais_rodovias_samecoords <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/geocode_google2_rodovias.csv", ano),
                          colClasses = "character")
   
   # 4.5) Listas enderecosde rodovia problematicos
-  enderecos_rodovias <- rais_rodovias %>% mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
+  enderecos_rodovias <- rais_rodovias_samecoords %>% mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
   
   # 4.6) Rodar o geocode do gmaps para rodovias
   
@@ -529,7 +533,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     coordenadas_google_rodovias <- lapply(X=enderecos_rodovias, ggmap::geocode, output = "all")
     
     # identify list names as id_estab
-    names(coordenadas_google_rodovias) <- rais_rodovias$id_estab 
+    names(coordenadas_google_rodovias) <- rais_rodovias_samecoords$id_estab 
     
     # save
     write_rds(coordenadas_google_rodovias, sprintf("../../data/acesso_oport/rais/%s/geocode/rais_geocode_%s_output_google2.rds", ano, ano))
@@ -542,26 +546,26 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     
     names(coordenadas_google_rodovias) <- str_pad(names(coordenadas_google_rodovias), width = 14, pad = 0)
     
-    if (length(setdiff(rais_rodovias$id_estab, names(coordenadas_google_rodovias))) > 0) {
+    if (length(setdiff(rais_rodovias_samecoords$id_estab, names(coordenadas_google_rodovias))) > 0) {
       
       invisible(
         readline
         (prompt=sprintf("\nThere are %i new estabs to geocode in gmaps2, press [enter] to continue",  
-                        length(setdiff(rais_rodovias$id_estab, names(coordenadas_google_rodovias)))))
+                        length(setdiff(rais_rodovias_samecoords$id_estab, names(coordenadas_google_rodovias)))))
       )
       
       # new estab to geocode in gmaps1
-      rais_rodovias_new <- rais_rodovias[ id_estab %nin% names(coordenadas_google_rodovias)]
+      rais_rodovias_samecoords_new <- rais_rodovias_samecoords[ id_estab %nin% names(coordenadas_google_rodovias)]
       
       # list address
-      enderecos_rodovias_new <- rais_rodovias_new %>% 
+      enderecos_rodovias_new <- rais_rodovias_samecoords_new %>% 
         mutate(fim = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% .$fim
       
       # send to gmaps
       coordenadas_google_rodovias_new <- lapply(X=enderecos_rodovias_new, ggmap::geocode, output = "all")
       
       # identify list names as id_estab
-      names(coordenadas_google_rodovias_new) <- rais_rodovias_new$id_estab
+      names(coordenadas_google_rodovias_new) <- rais_rodovias_samecoords_new$id_estab
       
       # bind to the old geocoded estabs by gmaps1
       coordenadas_google_rodovias <- c(coordenadas_google_rodovias, coordenadas_google_rodovias_new)
@@ -607,10 +611,10 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # 4.9) MAKE SURE WE ARE ONLY TREATING PROBLEMATIC estabs
-  rodovias_problema_geocoded_dt <- rodovias_problema_geocoded_dt[id_estab %in% rais_rodovias$id_estab]
+  rodovias_problema_geocoded_dt <- rodovias_problema_geocoded_dt[id_estab %in% rais_rodovias_samecoords$id_estab]
   
   # 4.10) Identificar a informacao de searchedaddress
-  searchedaddress_rodovias <- filter(rais_rodovias, id_estab %in% names(coordenadas_google_rodovias)) %>%
+  searchedaddress_rodovias <- filter(rais_rodovias_samecoords, id_estab %in% names(coordenadas_google_rodovias)) %>%
     mutate(SearchedAddress = paste0(logradouro, " - ", name_muni, ", ", uf, " - CEP ", cep)) %>% select(id_estab, SearchedAddress) %>%
     distinct(id_estab, .keep_all = TRUE)
   rodovias_problema_geocoded_dt <- left_join(rodovias_problema_geocoded_dt, searchedaddress_rodovias, by = "id_estab") %>% setDT()
