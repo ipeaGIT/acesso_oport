@@ -1,3 +1,5 @@
+# carregar bibliotecas
+source('./R/fun/setup.R')
 
 
 #' Pegar os dados brutos da RAIS do servidor do IPEA, filtrar pra somente os 
@@ -57,7 +59,6 @@ rais_filter_raw_data <- function(ano) {
   fwrite(trabal, sprintf('../../data-raw/rais/%s/rais_trabal_raw_%s.csv', ano, ano))
   
 }
-
 
 
 #' Filtrar a base de pessoas, selecionando somente os vinculos ativos e deletando
@@ -252,9 +253,8 @@ rais_treat_outliers <- function(ano) {
 
 rais_bring_geocode <- function(ano) {
   
-  # 1) Abrir a rais dos trabalhadores corrigida a ser georef
+  # 1) Abrir a rais dos trabalhadores (agregada por estab) corrigida a ser georef
   rais_estabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", ano, ano))
-  
   
   # 2) Abrir a rais dos estabs georeferenciados
   rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", ano, ano))
@@ -269,20 +269,54 @@ rais_bring_geocode <- function(ano) {
   
   
   # 3) Juntar as duas bases
-  rais_estabs_geocode_end <- merge(
-    rais_estabs,
-    rais_estabs_geocode,
-    by = "id_estab",
-    sort = FALSE,
-    all.x = TRUE
-  )
+  rais_estabs_geocode_end <- merge( rais_estabs,
+                                    rais_estabs_geocode,
+                                    by = "id_estab",
+                                    sort = FALSE,
+                                    all.x = TRUE
+                                  )
   
   # table(rais_estabs_geocode_end$PrecisionDepth, useNA = 'always')
   # table(rais_estabs_geocode_end$geocode_engine, useNA = 'always')
   # table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
   
+  # vamos manter
+3 Estrelas
+4 Estrelas
+airport
+amusement_park
+bus_station
+establishment
+intersection
+neighborhood
+political
+post_box
+street_number
+premise
+subpremise
+town_square
+
+
   
-  # filter(rais_estabs_geocode_end, is.na(geocode_engine)) %>% View()
+666666666666666
+paramos aqui para baixo
+
+  
+rais_estabs_geocode_end[ PrecisionDepth == 'route' &
+                           geocode_engine == 'gmaps_prob2',
+                         .(geocode_engine, SearchedAddress, MatchedAddress)] 
+
+# postal_code ???
+#   route ???
+- numero de casos % de cada municipio
+- manter rua?
+- descartar avenida?
+- descartar quando CEP do SearchedAddress != MatchedAddress
+
+
+
+
+# filter(rais_estabs_geocode_end, is.na(geocode_engine)) %>% View()
   
   # 4) Salvar
   write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
