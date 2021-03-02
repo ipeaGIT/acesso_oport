@@ -509,6 +509,12 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # definir esses estabelecimentos
   rais_same_coords <- subset(estabs_problema_3estrelas, same_coords %in% same_lat$same_coords)
   
+  # rais_same_coords[, a := str_replace(string = logradouro, "(^.+),\\s?(\\d+)\\s-\\s.+$", "\\1")]
+  # rais_same_coords[, b := str_replace(string = logradouro, "(^.+),\\s?(\\d+)\\s-\\s.+$", "\\2")]
+  # rais_same_coords %>% arrange(lon) %>% select(logradouro, a, b) %>% View()
+  
+  # unique(rais_same_coords$logradouro) %>% length()
+  
   # juntar tudo na rais rodovias
   # !!!!!!  6666666 checar se nao se repete com as rodovidas
   rais_rodovias_samecoords <- estabs_problema_3estrelas[id_estab %in% c(rais_rodovias$id_estab,
