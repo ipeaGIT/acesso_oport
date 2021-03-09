@@ -25,13 +25,13 @@ criar_hexagonos <- function(ano, munis = "all") {
   # sigla_muni <- 'slz'
   # sigla_muni <- 'poa'
   
-  shape_to_hexagon <- function(sigla_muni) {
+  shape_to_hexagon <- function(sigla_muni, ano) {
     
     code <- filter(munis_df, abrev_muni == sigla_muni)
     
     code <- code$code_muni
     
-    muni <- geobr::read_municipality(code, year = 2019) %>% 
+    muni <- geobr::read_municipality(code, year = ano) %>% 
       st_transform(crs=4326) %>%
       # Buffer para extender a area do municipio e assim evitar que os hexagonos nao considerem areas de borda
       st_buffer(dist = 0.003)
@@ -46,8 +46,6 @@ criar_hexagonos <- function(ano, munis = "all") {
     
     # resolution <- res_todas[2]
     
-    
-    
     make_hex <- function(resolution) {
       
       # get the unique h3 ids of the hexagons intersecting your polygon at a given resolution
@@ -61,21 +59,18 @@ criar_hexagonos <- function(ano, munis = "all") {
         mutate(sigla_muni = sigla_muni)
       
       # delete possible duplicates
-      hex_grid <- distinct(hex_grid, id_hex, .keep_all = TRUE) %>%
-        st_sf()
+      hex_grid <- distinct(hex_grid, id_hex, .keep_all = TRUE) %>% st_sf()
       
       # mapview(select(hex_grid, geometry))
       
       # salvar ------------------------------------------------------------------
       
       # rsolution
-      if (nchar(resolution) == 1) res_fim <- paste0("0", resolution) else res_fim <- resolution
-      
-      # dir.create(sprintf("../../data/acesso_oport/hex_municipio/%s", ano))
+      res_fim <- paste0("0", resolution)
       
       # salvar no disco
       write_rds(hex_grid, 
-                sprintf("../../data/acesso_oport/hex_municipio/%s/hex_%s_%s_%s.rds", ano, sigla_muni, res_fim, ano))
+                sprintf("../../data/acesso_oport/hex_municipio/%s/hex_%s_%s_%s.rds", ano, sigla_muni, res_fim, ano), compress = 'gz')
     }
     
     # salve arquivo de cada resolucao

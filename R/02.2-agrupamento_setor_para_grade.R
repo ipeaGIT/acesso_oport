@@ -1,7 +1,5 @@
 # Agrega informacao ddos setores censitários (renda, idade) para a grade estatistica
 
-
-
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
@@ -13,7 +11,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
   
   renda_de_setor_p_grade_muni <- function(sigla_muni) {
     
-    # sigla_muni <- 'for'; ano <- 2019
+    # sigla_muni <- 'nat'; ano <- 2019
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -26,6 +24,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     setor <- readr::read_rds(path_setor)
     grade <- readr::read_rds(path_grade)
     
+    # Drop grades vazias
+    grade <- subset(grade, POP >0)
     
     # mesma projecao
     setor <- sf::st_transform(setor, sf::st_crs(grade))
@@ -34,6 +34,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     grade$id_grade <- 1:nrow(grade)
     
     # corrigir grades de borda
+    # cortar as grades da borda e tira rebarbas
     grade_corrigida <- grade %>%
       mutate(area_antes = as.numeric(st_area(.))) %>%
       st_intersection(setor %>% dplyr::select(code_tract)) %>%
@@ -43,8 +44,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
                 pop_mulheres = first(FEM),
                 area_antes = first(area_antes))
     
-    
-    # corrigir populacao das grades de borda que foram cortadas (porque parte da grade caia fora do municipio)
+    # corrigir populacao das grades de borda que foram cortadas (porque parte da grade 
+    # cai fora do municipio)
     grade_corrigida <- grade_corrigida %>%    
       mutate(area_depois = as.numeric(st_area(.))) %>%
       mutate(prop = area_depois/area_antes) %>%
@@ -52,28 +53,35 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
              pop_homens = prop * pop_homens,
              pop_mulheres = prop * pop_mulheres)
     
-    # Criar id unico de cada grade e filtra colunas
+
+    # Seleciona colunas da GRADE
     grade_corrigida <- grade_corrigida %>%
       rename(area_grade = area_depois) %>%
       dplyr::select(id_grade, pop_total, pop_homens, pop_mulheres, area_grade)
     
-    # Criar id unico de cada setor e filtra colunas
+    # Criar id unico de cada setor e filtra colunas DO SETOR
     setor <- setor %>%
       mutate(id_setor = 1:n()) %>%
       mutate(area_setor = st_area(.)) %>%
       dplyr::select(id_setor, renda_total, area_setor, 
                     # domicilios por renda
-                    matches("moradoes_SM"),
+                    matches("moradores_SM"),
                     # cores
-                    cor_branca, cor_preta, cor_amarela, cor_parda, cor_indigena,
+                    matches("cor_"),
                     # idade
                     matches("idade")
       )
     
+    
     # agrega cor negra
-    setDT(setor)[, cor_negra := sum(cor_preta, cor_parda), by=id_setor]
+    setDT(setor)[, cor_negra := cor_preta + cor_parda ]
     setor[, c('cor_preta', 'cor_parda') := NULL]
     
+    
+    
+666666666
+falatando renda total dos setor censitario
+
     # Calcular a proporcao que cada cor em cada setor censitario
     setDT(setor)[,  pop_total := sum(cor_branca, cor_amarela, cor_indigena, cor_negra),  by=id_setor]
     setor[,  ":="(
@@ -104,7 +112,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     # volta para sf
     setor <- st_sf(setor)
-    
+    head(setor)
     
     
     # funcao de reaportion com duas variaveis de referencia (populacao e area)

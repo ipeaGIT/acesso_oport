@@ -39,7 +39,9 @@ cras_geocode <- function(ano, run_gmaps = F) {
                                          "ident.6.Bairro","ident.8.CEP","IBGE7","ident.10.UF", "ident.11.Email",
                                          "ident.12.Tel","ident.15.DTImp", 'Latitude', 'Longitude', 'q35'))
     
-  }  # 2) Renomeia colunas, filtra cidades e recodifica variáveis ---------------------------------
+  }
+  
+  # 2) Renomeia colunas, filtra cidades e recodifica variáveis ---------------------------------
   
   # renomeia colunas
   data.table::setnames(cras,
@@ -55,6 +57,8 @@ cras_geocode <- function(ano, run_gmaps = F) {
                                        munis_df[,.(name_muni,code_muni,abrev_estado)],
                                        all.x = TRUE,
                                        by = 'code_muni')
+  head(cras)
+  
   
   # Recodifia tipo de logradouro e indicador de Cadastramento no CADUnico
   
@@ -70,6 +74,7 @@ cras_geocode <- function(ano, run_gmaps = F) {
     
   } else if (ano != '2019'){
     
+    # se faz cadastro do cadUnico
     cras[, cad_unico := stringr::str_sub(cad_unico,1,3)]
     
   }
@@ -87,8 +92,6 @@ cras_geocode <- function(ano, run_gmaps = F) {
   # Endereco em maiusculo, email em minusculo
   cras[, endereco := stringr::str_to_upper(endereco)]
   cras[, bairro := stringr::str_to_upper(bairro)]
-  cras[, email := stringr::str_to_lower(email)]
-  
   
   # Remove tipo de logradouro duplicado
   cras[, endereco := gsub('RUA RUA','RUA', endereco)]
@@ -156,11 +159,10 @@ cras_geocode <- function(ano, run_gmaps = F) {
   
   # Indicador se geocode está ok
   setDT(cras_fixed)[, check := ifelse(ndigitos <= 2 | cras_rep > 1, 0, 1)]
-  
+  table(cras_fixed$check)
   
   
   # 4) Merge com dataframe original, output intermediário e input geocode -------------------------------------------
-  
   cras <- merge.data.table(cras, 
                            cras_fixed[,.(code_cras,lon,lat,check)],
                            all.x = TRUE,

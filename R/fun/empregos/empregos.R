@@ -244,12 +244,13 @@ rais_treat_outliers <- function(ano) {
 
 
 
-#' Trazer o geocode dos estabelecimentos
+#' Trazer o geocode dos estabelecimentos para rais  ---------------------------------------
 #' Etapas:
 #' 1) Abrir a rais dos trabalhadores
 #' 2) Abrir a rais dos estabs georeferenciados
 #' 3) Juntar as duas bases
-#' 4) Salvar
+#' 4) Selecionar apenas enderecos encontrados com boa precisao
+#' 5) Salvar
 
 rais_bring_geocode <- function(ano) {
   
@@ -280,7 +281,7 @@ rais_bring_geocode <- function(ano) {
   # table(rais_estabs_geocode_end$geocode_engine, useNA = 'always')
   # table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
   
-  # vamos manter
+  ## vamos manter
   # 3 Estrelas
   # 4 Estrelas
   # airport
@@ -295,16 +296,11 @@ rais_bring_geocode <- function(ano) {
   # premise
   # subpremise
   # town_square
-  # route e postal_code: pegar somente os que tem mesmo cep?
+  # postal_code
+  # 'route' pegar somente os que tem mesmo cep
   
-  # postal_code ???
-  #   route ???
-  # - numero de casos % de cada municipio
-  # - manter rua?
-  # - descartar avenida?
-  # - descartar quando CEP do SearchedAddress != MatchedAddress
-  
-  # por municipio
+
+  # Quantidade de endereços encontrados no nivel de route por municipio
   rais_estabs_geocode_end %>%
     filter(PrecisionDepth == 'route'
            # geocode_engine == 'gmaps_prob2'
@@ -334,43 +330,38 @@ rais_bring_geocode <- function(ano) {
     mutate(perc = n / sum(n)) %>% arrange(PrecisionDepth)
   
   
-  # 4) Select accepted precisiondepth ---------------------------------------
+  # 4) Select accepted precisiondepth
   # 3 Estrelas, 4 Estrelas, airport, amusement_park, bus_station, establishment
   # intersection, neighborhood, political, post_box, street_number, premise, subpremise
-  # town_square
-  # route e postal_code: pegar somente os que tem mesmo cep
+  # town_square, postal_code e (route com mesmo cep)
   
   # 4.1) Identificar os route e postal_code que tem o mesmo cep
   rais_estabs_geocode_end1 <- rais_estabs_geocode_end %>%
-    filter(PrecisionDepth %in% c('postal_code', 'route')) %>%
-    # geocode_engine == 'gmaps_prob2') %>%
-    # select columns
-    select(id_estab, geocode_engine, PrecisionDepth, SearchedAddress, MatchedAddress) %>%
-    # extract cep
-    mutate(cep_searched = str_extract(SearchedAddress, "(\\d{5}-\\d{3})|(\\d{8})"),
-           cep_matched = str_extract(MatchedAddress, "\\d{5}-\\d{3}")) %>%
-    # delete '-'
-    mutate(across(starts_with("cep"), ~str_replace(.x, "-", ""))) %>%
-    # mutate(across(starts_with("cep"), ~str_sub(.x, 1, 7))) %>%
-    # check if they are the same
-    mutate(igual = ifelse(cep_searched == cep_matched, TRUE, FALSE)) %>%
-    # filter only the same
-    filter(igual)
+                                filter(PrecisionDepth %in% c('route')) %>%
+                                # geocode_engine == 'gmaps_prob2') %>%
+                                # select columns
+                                select(id_estab, geocode_engine, PrecisionDepth, SearchedAddress, MatchedAddress) %>%
+                                # extract cep
+                                mutate(cep_searched = str_extract(SearchedAddress, "(\\d{5}-\\d{3})|(\\d{8})"),
+                                       cep_matched = str_extract(MatchedAddress, "\\d{5}-\\d{3}")) %>%
+                                # delete '-'
+                                mutate(across(starts_with("cep"), ~str_replace(.x, "-", ""))) %>%
+                                # mutate(across(starts_with("cep"), ~str_sub(.x, 1, 7))) %>%
+                                # check if they are the same
+                                mutate(igual = ifelse(cep_searched == cep_matched, TRUE, FALSE)) %>%
+                                # filter only the same
+                                filter(igual)
   
   # 4.2) Filtrar todos os precision dept e somente os estabs de route e postal_code com match de cep
-  rais_estabs_geocode_end[PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
+  rais_estabs_geocode_end <- rais_estabs_geocode_end[(PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
                                                 'bus_station', 'establishment', 'intersection', 'neighborhood', 
-                                                'political', 'post_box', 'street_number', 'premise', 'subpremise','town_square') |
-                                                  id_estab %in% rais_estabs_geocode_end1$id_estab]
-  
-  
-  
-  
-  
+                                                'political', 'post_box', 'street_number', 'premise', 'subpremise',
+                                                'town_square', 'postal_code')) |
+                                                 (id_estab %in% rais_estabs_geocode_end1$id_estab)]
   
   
   # 5) Salvar
-  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
+  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano), compress = 'gz')
   
 }
 
@@ -383,7 +374,7 @@ rais_bring_geocode <- function(ano) {
 #' Etapas:
 #' 1) Abrir RAIS
 #' 2) Abrir censo escolar georeferenciado
-#' 3) Calcular a distribuicao de nivel de escolaridade da cidade
+#' 3) Calcular a distribuicao de nivel de escolaridade da RAIS na cidade
 #' 4) Trazer proporcoes para as escolas
 #' 5) Criar classificaoes de geocode
 #' 6) Juntar rais com escolas proporcionais
@@ -394,18 +385,21 @@ rais_bring_schools <- function(ano) {
   # 1) Abrir RAIS corrigida
   rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
   
-  
   # table(rais$PrecisionDepth, useNA = 'always')
   # table(rais$geocode_engine, useNA = 'always')
   # table(rais$type_input_galileo, useNA = 'always')
   
   
-  # 2) Arir censo escolar georeferenciado
-  escolas <- read_rds("../../data/acesso_oport/censo_escolar/2018/educacao_inep_2018.rds") %>%
+  # 2) Abrir censo escolar georeferenciado
+  
+!!!!!!!66666666666 - atualizar o ano dinamico
+  escolas <- read_rds("../../data/acesso_oport/censo_escolar/2018/educacao_inep_geocoded_fim_2018.rds") %>%
     # Deletar escolas q nao foram localizadas
     dplyr::filter(!is.na(lat)) %>%
     # Selecionar variaveis
-    dplyr::select(id_estab = CO_ENTIDADE, codemun = CO_MUNICIPIO, lon, lat, total_corrigido = QT_FUNCIONARIOS)
+    dplyr::select(id_estab = co_entidade, code_muni, lon, lat, 
+                  total_corrigido = nu_funcionarios,
+                  geocode_engine, PrecisionDepth)
   
   
   # 3) Calcular a distribuicao de nivel de escolaridade da cidade
@@ -417,19 +411,18 @@ rais_bring_schools <- function(ano) {
   
   # 4) Trazer proporcoes para as escolas
   escolas_prop <- escolas %>%
-    # ajeitar codemun
-    mutate(codemun = substr(codemun, 1, 6)) %>%
+    # ajeitar code_muni
+    mutate(codemun = substr(code_muni, 1, 6)) %>%
     left_join(rais_prop_escol, by = "codemun") %>%
     # multiplicar totais por composicao
     mutate(alto = round(prop_alto * total_corrigido),
            medio = round(prop_medio * total_corrigido),
            baixo = round(prop_baixo * total_corrigido)) %>%
-    select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido)
+    select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido, 
+           geocode_engine, PrecisionDepth)
   
   # 5) Criar classificaoes de geocode
-  setDT(escolas_prop)[, geocode_engine := "galileo"]
-  escolas_prop[, PrecisionDepth := "4 Estrelas"]
-  escolas_prop[, type_input_galileo := "inep"]
+  setDT(escolas_prop)[, type_input_galileo := "inep_google"]
   
   # 6) Juntar rais com escolas proporcionais
   rais2 <- rbind(rais, escolas_prop, fill = T)
@@ -445,9 +438,7 @@ rais_bring_schools <- function(ano) {
   
   
   # 7) Salvar
-  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano))
-  
-  
+  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano), compress = 'gz')
   
   
 }
