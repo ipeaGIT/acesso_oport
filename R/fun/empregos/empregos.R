@@ -1,5 +1,5 @@
 # carregar bibliotecas
-source('./R/fun/setup.R')
+# source('./R/fun/setup.R')
 
 
 #' Pegar os dados brutos da RAIS do servidor do IPEA, filtrar pra somente os 
@@ -137,8 +137,8 @@ rais_categorize_inst <- function(ano) {
   
   # 2) Categorizar trabalhadores por grau de instrucao
   rais_cats <- rais_trabs[, instrucao := fifelse(grau_instr %in% c(1:6), "baixo",                                    # menor do que ensino medio (inclui ensino medio incompleto)
-                                          fifelse(grau_instr %in% c(7, 8), "medio",                           # ensino medio
-                                           fifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))] # ensino superior
+                                                 fifelse(grau_instr %in% c(7, 8), "medio",                           # ensino medio
+                                                         fifelse(grau_instr %in% c(9, 10, 11), "alto", grau_instr)))] # ensino superior
   
   
   # 3) Calcular quantidade de vinculo por grau de instrucao em cada estabelecimento
@@ -198,10 +198,10 @@ rais_treat_outliers <- function(ano) {
   cnaes_problema <- c("35", "36", "38", "41", "42", "43", "49", "51", "64", "78", "80", "81", "82", "84")
   
   rais[, cnae_problema := ifelse(cnae.setor %in% cnaes_problema, cnae.setor,
-                                  ifelse(cnae.subsetor == '562', '562', '')) ]
-                                  
-                                  
-
+                                 ifelse(cnae.subsetor == '562', '562', '')) ]
+  
+  
+  
   # Definição de outlier: estabelecimentos de setores problemáticos cujo total de
   # vínculos fique acima do percentil 95 da distribuição de vínculos daquele setor
   rais[, p95_setor := round(quantile(total, probs = 0.95), 0), by = .(cnae_problema)]
@@ -215,9 +215,9 @@ rais_treat_outliers <- function(ano) {
   rais[
     cnae_problema != "", 
     total_corrigido := fifelse(total_corrigido >= p95_setor, p95_setor, total_corrigido)
-    ]
+  ]
   
-
+  
   # Remove a coluna que guarda o valor do p95
   rais[, p95_setor := NULL]
   
@@ -233,7 +233,7 @@ rais_treat_outliers <- function(ano) {
       medio = round( (medio / total) * total_corrigido, 0),
       baixo = round( (baixo / total) * total_corrigido, 0)
     )
-    ]
+  ]
   
   # 4) Salvar
   write_rds(rais, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", ano, ano), compress = 'gz')
@@ -274,51 +274,102 @@ rais_bring_geocode <- function(ano) {
                                     by = "id_estab",
                                     sort = FALSE,
                                     all.x = TRUE
-                                  )
+  )
   
   # table(rais_estabs_geocode_end$PrecisionDepth, useNA = 'always')
   # table(rais_estabs_geocode_end$geocode_engine, useNA = 'always')
   # table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
   
   # vamos manter
-3 Estrelas
-4 Estrelas
-airport
-amusement_park
-bus_station
-establishment
-intersection
-neighborhood
-political
-post_box
-street_number
-premise
-subpremise
-town_square
-
-
+  # 3 Estrelas
+  # 4 Estrelas
+  # airport
+  # amusement_park
+  # bus_station
+  # establishment
+  # intersection
+  # neighborhood
+  # political
+  # post_box
+  # street_number
+  # premise
+  # subpremise
+  # town_square
+  # route e postal_code: pegar somente os que tem mesmo cep?
   
-666666666666666
-paramos aqui para baixo
-
+  # postal_code ???
+  #   route ???
+  # - numero de casos % de cada municipio
+  # - manter rua?
+  # - descartar avenida?
+  # - descartar quando CEP do SearchedAddress != MatchedAddress
   
-rais_estabs_geocode_end[ PrecisionDepth == 'route' &
-                           geocode_engine == 'gmaps_prob2',
-                         .(geocode_engine, SearchedAddress, MatchedAddress)] 
-
-# postal_code ???
-#   route ???
-- numero de casos % de cada municipio
-- manter rua?
-- descartar avenida?
-- descartar quando CEP do SearchedAddress != MatchedAddress
-
-
-
-
-# filter(rais_estabs_geocode_end, is.na(geocode_engine)) %>% View()
+  # por municipio
+  rais_estabs_geocode_end %>%
+    filter(PrecisionDepth == 'route'
+           # geocode_engine == 'gmaps_prob2'
+    ) %>%
+    count(name_muni, sort = TRUE)
   
-  # 4) Salvar
+  
+  # extract cep
+  a <- rais_estabs_geocode_end %>%
+    filter(PrecisionDepth %in% c('postal_code', 'route')) %>%
+    # geocode_engine == 'gmaps_prob2') %>%
+    # select columns
+    select(geocode_engine, PrecisionDepth, SearchedAddress, MatchedAddress) %>%
+    # extract cep
+    mutate(cep_searched = str_extract(SearchedAddress, "(\\d{5}-\\d{3})|(\\d{8})"),
+           cep_matched = str_extract(MatchedAddress, "\\d{5}-\\d{3}")) %>%
+    # delete '-'
+    mutate(across(starts_with("cep"), ~str_replace(.x, "-", ""))) %>%
+    # mutate(across(starts_with("cep"), ~str_sub(.x, 1, 7))) %>%
+    # check if they are the same
+    mutate(igual = ifelse(cep_searched == cep_matched, TRUE, FALSE))
+  
+  # percentages of cep match by precisiondepth 
+  a %>% 
+    count(igual, PrecisionDepth) %>%
+    group_by(PrecisionDepth) %>%
+    mutate(perc = n / sum(n)) %>% arrange(PrecisionDepth)
+  
+  
+  # 4) Select accepted precisiondepth ---------------------------------------
+  # 3 Estrelas, 4 Estrelas, airport, amusement_park, bus_station, establishment
+  # intersection, neighborhood, political, post_box, street_number, premise, subpremise
+  # town_square
+  # route e postal_code: pegar somente os que tem mesmo cep
+  
+  # 4.1) Identificar os route e postal_code que tem o mesmo cep
+  rais_estabs_geocode_end1 <- rais_estabs_geocode_end %>%
+    filter(PrecisionDepth %in% c('postal_code', 'route')) %>%
+    # geocode_engine == 'gmaps_prob2') %>%
+    # select columns
+    select(id_estab, geocode_engine, PrecisionDepth, SearchedAddress, MatchedAddress) %>%
+    # extract cep
+    mutate(cep_searched = str_extract(SearchedAddress, "(\\d{5}-\\d{3})|(\\d{8})"),
+           cep_matched = str_extract(MatchedAddress, "\\d{5}-\\d{3}")) %>%
+    # delete '-'
+    mutate(across(starts_with("cep"), ~str_replace(.x, "-", ""))) %>%
+    # mutate(across(starts_with("cep"), ~str_sub(.x, 1, 7))) %>%
+    # check if they are the same
+    mutate(igual = ifelse(cep_searched == cep_matched, TRUE, FALSE)) %>%
+    # filter only the same
+    filter(igual)
+  
+  # 4.2) Filtrar todos os precision dept e somente os estabs de route e postal_code com match de cep
+  rais_estabs_geocode_end[PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
+                                                'bus_station', 'establishment', 'intersection', 'neighborhood', 
+                                                'political', 'post_box', 'street_number', 'premise', 'subpremise','town_square') |
+                                                  id_estab %in% rais_estabs_geocode_end1$id_estab]
+  
+  
+  
+  
+  
+  
+  
+  # 5) Salvar
   write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
   
 }
