@@ -107,7 +107,7 @@ rais_filter_pessoas <- function(ano) {
   
   # 5) Salvar
   rais_filtro_3 <- rais_filtro_3[order(id_estab, grau_instr, nat_jur)]
-  write_rds(rais_filtro_3, sprintf("../../data/acesso_oport/rais/%s/rais_%s_trabal_filtrada.rds", ano, ano), compress ='gz')
+  write_rds(rais_filtro_3, sprintf("../../data/acesso_oport/rais/%s/rais_%s_trabal_etapa0_filtrada.rds", ano, ano), compress ='gz')
   
 }
 
@@ -151,7 +151,7 @@ rais_categorize_inst <- function(ano) {
   rais_fim_wide <- tidyr::spread(rais_fim, instrucao, vinculos, fill = 0)
   
   # 6) Salvar
-  write_rds(rais_fim_wide, sprintf("../../data/acesso_oport/rais/%s/rais_%s_vin_instrucao.rds", ano, ano), compress = 'gz')
+  write_rds(rais_fim_wide, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa1_instrucao.rds", ano, ano), compress = 'gz')
   
 }
 
@@ -170,7 +170,7 @@ rais_categorize_inst <- function(ano) {
 rais_treat_outliers <- function(ano) {
   
   # 1) Abrir rais da etapa anterior
-  rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_vin_instrucao.rds", ano, ano))
+  rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa1_instrucao.rds", ano, ano))
   setDT(rais)
   
   
@@ -236,7 +236,7 @@ rais_treat_outliers <- function(ano) {
   ]
   
   # 4) Salvar
-  write_rds(rais, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", ano, ano), compress = 'gz')
+  write_rds(rais, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa2_corrigido.rds", ano, ano), compress = 'gz')
   
 }
 
@@ -254,10 +254,10 @@ rais_treat_outliers <- function(ano) {
 rais_bring_geocode <- function(ano) {
   
   # 1) Abrir a rais dos trabalhadores (agregada por estab) corrigida a ser georef
-  rais_estabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido.rds", ano, ano))
+  rais_estabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa2_corrigido.rds", ano, ano))
   
   # 2) Abrir a rais dos estabs georeferenciados
-  rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", ano, ano))
+  rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", ano, ano))
   rais_estabs_geocode <- select(rais_estabs_geocode, -qt_vinc_ativos)
   
   # pad everyone to 14 characters
@@ -370,7 +370,7 @@ rais_bring_geocode <- function(ano) {
   
   
   # 5) Salvar
-  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
+  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano))
   
 }
 
@@ -392,7 +392,7 @@ rais_bring_geocode <- function(ano) {
 rais_bring_schools <- function(ano) {
   
   # 1) Abrir RAIS corrigida
-  rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano))
+  rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano))
   
   
   # table(rais$PrecisionDepth, useNA = 'always')
@@ -445,7 +445,7 @@ rais_bring_schools <- function(ano) {
   
   
   # 7) Salvar
-  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano))
+  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_censoEscolar.rds", ano, ano))
   
   
   
