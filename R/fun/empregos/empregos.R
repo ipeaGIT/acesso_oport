@@ -361,11 +361,7 @@ rais_bring_geocode <- function(ano) {
   
   
   # 5) Salvar
-<<<<<<< HEAD
   write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano))
-=======
-  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_estabs_%s_geocoded_all.rds", ano, ano), compress = 'gz')
->>>>>>> 06bcebd76e84cf1dd514236f7ffa88881c243f85
   
 }
 
@@ -442,13 +438,7 @@ rais_bring_schools <- function(ano) {
   
   
   # 7) Salvar
-<<<<<<< HEAD
   write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_censoEscolar.rds", ano, ano))
-  
-  
-=======
-  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano), compress = 'gz')
->>>>>>> 06bcebd76e84cf1dd514236f7ffa88881c243f85
   
   
 }
