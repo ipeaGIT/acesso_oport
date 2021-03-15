@@ -52,6 +52,6 @@ extrai_malha_viaria <- function(muni, year) {
 }
 
 purrr::walk(munis_df$abrev_muni, extrai_malha_viaria, year = 2020)
-extrai_malha_viaria(muni = "poa", year = 2020)
+system.time(extrai_malha_viaria(muni = "poa", year = 2020))
 
 
