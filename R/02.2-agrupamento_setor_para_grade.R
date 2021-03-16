@@ -53,7 +53,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
              pop_homens = prop * pop_homens,
              pop_mulheres = prop * pop_mulheres)
     
-
+    
     # Seleciona colunas da GRADE
     grade_corrigida <- grade_corrigida %>%
       rename(area_grade = area_depois) %>%
@@ -79,10 +79,12 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     
     
-666666666
-falatando renda total dos setor censitario
-
+    
     # Calcular a proporcao que cada cor em cada setor censitario
+    # aqui, eh calculada a proporcao que cada segmento de populacao tem em relacao
+    # a populacao dentro do proprio setor
+    # a variavel renda total nao esta aqui pq ela ja representa o total da renda,
+    # nao sendo segmentada
     setDT(setor)[,  pop_total := sum(cor_branca, cor_amarela, cor_indigena, cor_negra),  by=id_setor]
     setor[,  ":="(
       # renda
@@ -143,13 +145,14 @@ falatando renda total dos setor censitario
       
       # Calcular a renda dentro de cada pedaco
       dplyr::mutate(renda_pedaco = renda_total * pop_prop_grade_no_setor) %>%
-      dplyr::mutate(moradores_SM_0_1Q_pedaco = moradores_SM_0_1Q * pop_prop_grade_no_setor) %>%
-      dplyr::mutate(moradores_SM_1Q_1M_pedaco = moradores_SM_1Q_1M * pop_prop_grade_no_setor) %>%
-      dplyr::mutate(moradores_SM_1M_1_pedaco = moradores_SM_1M_1 * pop_prop_grade_no_setor) %>%
-      dplyr::mutate(moradores_SM_1_2_pedaco = moradores_SM_1_2 * pop_prop_grade_no_setor) %>%
-      dplyr::mutate(moradores_SM_2_pedaco = moradores_SM_2 * pop_prop_grade_no_setor) %>%
+      # dplyr::mutate(moradores_SM_0_1Q_pedaco = moradores_SM_0_1Q * pop_prop_grade_no_setor) %>%
+      # dplyr::mutate(moradores_SM_1Q_1M_pedaco = moradores_SM_1Q_1M * pop_prop_grade_no_setor) %>%
+      # dplyr::mutate(moradores_SM_1M_1_pedaco = moradores_SM_1M_1 * pop_prop_grade_no_setor) %>%
+      # dplyr::mutate(moradores_SM_1_2_pedaco = moradores_SM_1_2 * pop_prop_grade_no_setor) %>%
+      # dplyr::mutate(moradores_SM_2_pedaco = moradores_SM_2 * pop_prop_grade_no_setor) %>%
       
       # Calcular cor/raca dentro de cada pedaco
+      # como essas variaveis estao agora como proporcoes
       dplyr::mutate(branca_pedaco = cor_b_prop * area_prop_grade * pop_total) %>%
       dplyr::mutate(amarela_pedaco = cor_a_prop * area_prop_grade * pop_total) %>%
       dplyr::mutate(indigena_pedaco = cor_i_prop * area_prop_grade * pop_total) %>%
