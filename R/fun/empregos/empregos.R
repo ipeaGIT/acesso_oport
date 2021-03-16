@@ -107,7 +107,7 @@ rais_filter_pessoas <- function(ano) {
   
   # 5) Salvar
   rais_filtro_3 <- rais_filtro_3[order(id_estab, grau_instr, nat_jur)]
-  write_rds(rais_filtro_3, sprintf("../../data/acesso_oport/rais/%s/rais_%s_trabal_etapa0_filtrada.rds", ano, ano), compress ='gz')
+  write_rds(rais_filtro_3, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa0_trabal_filtrada.rds", ano, ano), compress ='gz')
   
 }
 
@@ -129,7 +129,7 @@ rais_filter_pessoas <- function(ano) {
 rais_categorize_inst <- function(ano) {
   
   # 1) Abrir RAIS anteior
-  rais_trabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_trabal_filtrada.rds", ano, ano))
+  rais_trabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa0_trabal_filtrada.rds", ano, ano))
   
   # Formatar corretamente o grau de instrucao
   rais_trabs[, grau_instr := as.numeric(grau_instr)]
@@ -259,7 +259,7 @@ rais_bring_geocode <- function(ano) {
   
   # 2) Abrir a rais dos estabs georeferenciados
   rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", ano, ano))
-  rais_estabs_geocode <- select(rais_estabs_geocode, -qt_vinc_ativos)
+  rais_estabs_geocode <- select(rais_estabs_geocode, -precision_depth1)
   
   # pad everyone to 14 characters
   rais_estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
@@ -361,7 +361,7 @@ rais_bring_geocode <- function(ano) {
   
   
   # 5) Salvar
-  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano))
+  write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano), compress = 'gz')
   
 }
 

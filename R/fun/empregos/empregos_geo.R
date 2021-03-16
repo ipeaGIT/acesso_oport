@@ -123,7 +123,7 @@ rais_export_data_to_galileo <- function(ano) {
   if (ano != 2017) {
     
     # 2.1) Abrir RAIS final do ano anterior
-    rais_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_final.rds", 
+    rais_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", 
                                     ano-1, ano-1))
     # Selecionar variaveis
     rais_anterior <- rais_anterior %>% select(id_estab, logradouro, cep, lon, lat) %>% setDT()
@@ -176,7 +176,7 @@ rais_export_data_to_galileo <- function(ano) {
     
   } else if (ano == 2017) {
     
-    rais_filter_geocode <- c %>%
+    rais_filter_geocode <- rais_filter %>%
       mutate(type_input_galileo = paste0("rais_", "2017")) %>%
       # criar logradouro
       mutate(logradouro = paste0(logradouro, " - ", bairro))
@@ -388,7 +388,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
                 sprintf("../../data/acesso_oport/rais/%s/geocode/gmaps/rais_geocode_%s_output_google1.rds", ano, ano), compress = 'gz')
       
       
-    }
+    } else {message("All Estabs are geocoded!")}
   }
   
   
