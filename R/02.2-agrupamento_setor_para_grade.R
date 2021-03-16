@@ -35,6 +35,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     # corrigir grades de borda
     # cortar as grades da borda e tira rebarbas
+    # e divide a grade segundo recorte dos setores
     grade_corrigida <- grade %>%
       mutate(area_antes = as.numeric(st_area(.))) %>%
       st_intersection(setor %>% dplyr::select(code_tract)) %>%
@@ -60,6 +61,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       dplyr::select(id_grade, pop_total, pop_homens, pop_mulheres, area_grade)
     
     # Criar id unico de cada setor e filtra colunas DO SETOR
+    # calcula area de cada setor
     setor <- setor %>%
       mutate(id_setor = 1:n()) %>%
       mutate(area_setor = st_area(.)) %>%
@@ -132,18 +134,20 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       # Calcular a proporcao de cada grade que esta naquele pedacao
       dplyr::mutate(area_prop_grade =  area_pedaco/area_grade) %>%
       
-      # Calcular a quantidade de populacao em cada pedaco (baseado na grade)
-      dplyr::mutate(pop_prop_grade = pop_total * area_prop_grade) %>%
+      # Calcular a quantidade (absoluto) de populacao em cada pedaco (baseado na grade)
+      dplyr::mutate(pop_sub_grade = pop_total * area_prop_grade) %>%
       
-      # Calcular a proporcao de populacao de cada grade que esta dentro do setor
+      # Calcular a populacao do setor somando-se a pop das grades
+      # necessario pq populacao da grade nao bate 100% com po do setor
       group_by(id_setor) %>%
-      dplyr::mutate(sum = sum(pop_prop_grade, na.rm = TRUE)) %>%
+      dplyr::mutate(total_pop_setor = sum(pop_sub_grade, na.rm = TRUE)) %>%
       ungroup() %>%
       
       # Calcular a populacao proporcional de cada pedaco dentro do setor
-      dplyr::mutate(pop_prop_grade_no_setor =  pop_prop_grade/sum) %>%
+      dplyr::mutate(pop_prop_grade_no_setor =  pop_sub_grade/total_pop_setor) %>%
       
       # Calcular a renda dentro de cada pedaco
+      # assume que renda do setor eh distribuida igualmente para cada pessoa dentro do setor
       dplyr::mutate(renda_pedaco = renda_total * pop_prop_grade_no_setor) %>%
       # dplyr::mutate(moradores_SM_0_1Q_pedaco = moradores_SM_0_1Q * pop_prop_grade_no_setor) %>%
       # dplyr::mutate(moradores_SM_1Q_1M_pedaco = moradores_SM_1Q_1M * pop_prop_grade_no_setor) %>%
@@ -153,55 +157,87 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       
       # Calcular cor/raca dentro de cada pedaco
       # como essas variaveis estao agora como proporcoes
-      dplyr::mutate(branca_pedaco = cor_b_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(amarela_pedaco = cor_a_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(indigena_pedaco = cor_i_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(negra_pedaco = cor_n_prop * area_prop_grade * pop_total) %>%
+      dplyr::mutate(branca_pedaco = cor_b_prop * pop_sub_grade) %>%
+      dplyr::mutate(amarela_pedaco = cor_a_prop * pop_sub_grade) %>%
+      dplyr::mutate(indigena_pedaco = cor_i_prop * pop_sub_grade) %>%
+      dplyr::mutate(negra_pedaco = cor_n_prop * pop_sub_grade) %>%
+      
+      ## exemplo visual para entender o que esta sendo feito
+      # subset(ui, id_grade %in% c(1306) ) %>% select(., id_grade, cor_b_prop, area_prop_grade, pop_total)
       
       # Calcular proporcionais para idade
-      dplyr::mutate(idade_1_pedaco = idade_1_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_2_pedaco = idade_2_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_3_pedaco = idade_3_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_4_pedaco = idade_4_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_5_pedaco = idade_5_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_6_pedaco = idade_6_prop * area_prop_grade * pop_total) %>%
-      dplyr::mutate(idade_7_pedaco = idade_7_prop * area_prop_grade * pop_total)
+      dplyr::mutate(idade_1_pedaco = idade_1_prop * pop_sub_grade) %>%
+      dplyr::mutate(idade_2_pedaco = idade_2_prop * pop_sub_grade) %>%
+      dplyr::mutate(idade_3_pedaco = idade_3_prop * pop_sub_grade) %>%
+      dplyr::mutate(idade_4_pedaco = idade_4_prop * pop_sub_grade) %>%
+      dplyr::mutate(idade_5_pedaco = idade_5_prop * pop_sub_grade) %>%
+      dplyr::mutate(idade_6_pedaco = idade_6_prop * pop_sub_grade) %>%
+      dplyr::mutate(idade_7_pedaco = idade_7_prop * pop_sub_grade)
     
-    # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
-    ui_fim <- ui %>%
-      st_set_geometry(NULL) %>%
-      group_by(id_grade, pop_total, pop_homens, pop_mulheres) %>%
-      dplyr::summarise(
+    # # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
+    # ui_fim <- ui %>%
+    #   st_set_geometry(NULL) %>%
+    #   group_by(id_grade, pop_total, pop_homens, pop_mulheres) %>%
+    #   dplyr::summarise(
+    #     # renda
+    #     renda = sum(renda_pedaco, na.rm = TRUE),
+    #     # moradores_SM_0_1Q = sum(moradores_SM_0_1Q_pedaco, na.rm = TRUE),
+    #     # moradores_SM_1Q_1M = sum(moradores_SM_1Q_1M_pedaco, na.rm = TRUE),
+    #     # moradores_SM_1M_1 = sum(moradores_SM_1M_1_pedaco, na.rm = TRUE),
+    #     # moradores_SM_1_2 = sum(moradores_SM_1_2_pedaco, na.rm = TRUE),
+    #     # moradores_SM_2 = sum(moradores_SM_2_pedaco, na.rm = TRUE),
+    #     # cor
+    #     cor_branca = as.numeric(sum(branca_pedaco, na.rm = TRUE)),
+    #     cor_amarela = as.numeric(sum(amarela_pedaco, na.rm = TRUE)),
+    #     cor_indigena = as.numeric(sum(indigena_pedaco, na.rm = TRUE)),
+    #     cor_negra = as.numeric(sum(negra_pedaco, na.rm = TRUE)),
+    #     # para idade
+    #     idade_0a5   = as.numeric(sum(idade_1_pedaco, na.rm = TRUE)),
+    #     idade_6a14  = as.numeric(sum(idade_2_pedaco, na.rm = TRUE)),
+    #     idade_15a18 = as.numeric(sum(idade_3_pedaco, na.rm = TRUE)),
+    #     idade_19a24 = as.numeric(sum(idade_4_pedaco, na.rm = TRUE)),
+    #     idade_25a39 = as.numeric(sum(idade_5_pedaco, na.rm = TRUE)),
+    #     idade_40a69 = as.numeric(sum(idade_6_pedaco, na.rm = TRUE)),
+    #     idade_70    = as.numeric(sum(idade_7_pedaco, na.rm = TRUE))
+    #   ) %>%
+    #   dplyr::mutate(renda = as.numeric(renda)) %>%
+    #   ungroup()
+    #    
+    # ui_fim_sf <- grade_corrigida %>%
+    #   dplyr::select(id_grade) %>%
+    #   left_join(ui_fim, by = "id_grade") %>%
+    #   # arredodandar valores
+    #   mutate_at(vars(matches("pop|renda|moradores|cor|idade")), round)
+    
+    
+    
+    # Renomear as colunas 
+    ui_fim_sf <- ui %>%
+      dplyr::select(
+        id_grade, pop_total, pop_homens, pop_mulheres,
         # renda
-        renda = sum(renda_pedaco, na.rm = TRUE),
-        moradores_SM_0_1Q = sum(moradores_SM_0_1Q_pedaco, na.rm = TRUE),
-        moradores_SM_1Q_1M = sum(moradores_SM_1Q_1M_pedaco, na.rm = TRUE),
-        moradores_SM_1M_1 = sum(moradores_SM_1M_1_pedaco, na.rm = TRUE),
-        moradores_SM_1_2 = sum(moradores_SM_1_2_pedaco, na.rm = TRUE),
-        moradores_SM_2 = sum(moradores_SM_2_pedaco, na.rm = TRUE),
+        renda = renda_pedaco,
+        # moradores_SM_0_1Q = moradores_SM_0_1Q_pedaco,
+        # moradores_SM_1Q_1M = moradores_SM_1Q_1M_pedaco,
+        # moradores_SM_1M_1 = moradores_SM_1M_1_pedaco,
+        # moradores_SM_1_2 = moradores_SM_1_2_pedaco,
+        # moradores_SM_2 = moradores_SM_2_pedaco,
+    
         # cor
-        cor_branca = as.numeric(sum(branca_pedaco, na.rm = TRUE)),
-        cor_amarela = as.numeric(sum(amarela_pedaco, na.rm = TRUE)),
-        cor_indigena = as.numeric(sum(indigena_pedaco, na.rm = TRUE)),
-        cor_negra = as.numeric(sum(negra_pedaco, na.rm = TRUE)),
+        cor_branca = branca_pedaco,
+        cor_amarela = amarela_pedaco,
+        cor_indigena = indigena_pedaco,
+        cor_negra = negra_pedaco,
+    
         # para idade
-        idade_0a5   = as.numeric(sum(idade_1_pedaco, na.rm = TRUE)),
-        idade_6a14  = as.numeric(sum(idade_2_pedaco, na.rm = TRUE)),
-        idade_15a18 = as.numeric(sum(idade_3_pedaco, na.rm = TRUE)),
-        idade_19a24 = as.numeric(sum(idade_4_pedaco, na.rm = TRUE)),
-        idade_25a39 = as.numeric(sum(idade_5_pedaco, na.rm = TRUE)),
-        idade_40a69 = as.numeric(sum(idade_6_pedaco, na.rm = TRUE)),
-        idade_70    = as.numeric(sum(idade_7_pedaco, na.rm = TRUE))
-      ) %>%
-      dplyr::mutate(renda = as.numeric(renda)) %>%
-      ungroup()
-    
-    ui_fim_sf <- grade_corrigida %>%
-      dplyr::select(id_grade) %>%
-      left_join(ui_fim, by = "id_grade") %>%
-      # arredodandar valores
-      mutate_at(vars(matches("pop|renda|moradores|cor|idade")), round)
-    
+        idade_0a5   = idade_1_pedaco,
+        idade_6a14  = idade_2_pedaco,
+        idade_15a18 = idade_3_pedaco,
+        idade_19a24 = idade_4_pedaco,
+        idade_25a39 = idade_5_pedaco,
+        idade_40a69 = idade_6_pedaco,
+        idade_70    = idade_7_pedaco
+      )
     
     # Salvar em disco
     path_out <- sprintf("../../data/acesso_oport/grade_municipio_com_renda_cor/%s/grade_renda_cor_%s_%s.rds", ano, sigla_muni, ano)

@@ -13,14 +13,28 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # 1) Abrir arquivos com as oportunidades -------------------------------------
   
   # 1.1) Saude
-  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_geocoded_pmaq_%s.rds", ano, ano)) 
+  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_geocoded_pmaq_%s.rds", ano, ano)) 
   
   # remove lat lon missing
   cnes <- cnes[!is.na(lat),] 
   
-  # filter only estabs with high wuality geocode
+  # filter only estabs with high quality geocode
+  table(cnes$PrecisionDepth)
   cnes <- cnes[PrecisionDepth %in% c("cnes", "4 Estrelas", "3 Estrelas", "street_number", "route")]
   
+  cnes <- cnes[(PrecisionDepth %in% c('cnes','3 Estrelas', '4 Estrelas', 
+                                      'airport', 'amusement_park', 'PMAQ', 
+                                      'bus_station', 'establishment',
+                                      'intersection', 'neighborhood', 
+                                      'political', 'post_box', 'street_number',
+                                      'premise', 'subpremise',
+                                      'town_square', 'postal_code')) |
+                                                       (id_estab %in% rais_estabs_geocode_end1$id_estab)]
+ 666666666
+ # manter apenas routes que tem mesmo cep entre procurado e achado
+  
+ 
+ 
   # select columns
   cnes <- cnes[, .(cnes, code_muni,
                    health_low, health_med, health_high,
@@ -117,6 +131,12 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       # Agrupar populacao, cor e renda
       # join espacial 
       hex_pop <- hex_muni %>% st_join(centroide_pop)
+      
+      
+666666666
+### a. substituir CENTROID pela proporcao de intersecao
+### b. arredondamento %>%
+      ###  mutate_at(vars(matches("pop|renda|moradores|cor|idade")), round)
       
       # Summarize
       hex_pop <- setDT(hex_pop)[, .(cor_branca   = sum(round(cor_branca,0), na.rm = TRUE),
