@@ -27,7 +27,7 @@ educacao_filter <- function(ano) {
                  "TP_DEPENDENCIA", "TP_SITUACAO_FUNCIONAMENTO"), 
                ifelse(ano == 2017, "NU_FUNCIONARIOS", "QT_FUNCIONARIOS"))
   
-  escolas <- fread(sprintf("../../data-raw/censo_escolar/%s/censo-escolar_escolas_%s.CSV", ano, ano),
+  escolas <- fread(sprintf("../../data-raw/educacao/%s/censo-escolar_escolas_%s.CSV", ano, ano),
                    select = colunas)
   head(escolas)
   
@@ -143,7 +143,7 @@ educacao_filter <- function(ano) {
   # 5) Salvar ---------------------------
   
   # salvar
-  write_rds(escolas_etapa_fim, sprintf("../../data/acesso_oport/censo_escolar/%s/educacao_inep_filter_%s.rds", ano, ano), compress = 'gz')
+  write_rds(escolas_etapa_fim, sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano), compress = 'gz')
   
 }
 
@@ -172,13 +172,13 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # 1) Abrir a base de escolas geo filtrada ----------------------
-  escolas_geo <- read_rds(sprintf("../../data/acesso_oport/censo_escolar/%s/educacao_inep_filter_%s.rds", ano, ano))
+  escolas_geo <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano))
   
   # 2) Separar somente as escolas para geocode que nao forem geocoded no ano anterior ----------
   
   if (ano != 2017) {
     
-    escolas_previous_geo <- read_rds(sprintf("../../data/acesso_oport/censo_escolar/%i/educacao_inep_geocoded_fim_%i.rds", ano - 1, ano - 1)) %>%
+    escolas_previous_geo <- read_rds(sprintf("../../data/acesso_oport/educacao/%i/educacao_%i_geocoded.rds", ano - 1, ano - 1)) %>%
       select(co_entidade, SearchedAddress,  PrecisionDepth, MatchedAddress, geocode_engine, lon, lat, year_geocode)
     
     escolas_geo_togeo <- escolas_geo %>% filter(co_entidade %nin% escolas_previous_geo$co_entidade)
@@ -285,7 +285,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
       names(coordenadas_google1) <- munis_problema_enderecos$co_entidade
       
       # save
-      write_rds(coordenadas_google1, sprintf("../../data/acesso_oport/censo_escolar/%s/geocode/escolas_geocode_%s_output_google1.rds", ano, ano), compress = 'gz')
+      write_rds(coordenadas_google1, sprintf("../../data/acesso_oport/educacao/%s/geocode/escolas_geocode_%s_output_google1.rds", ano, ano), compress = 'gz')
       
       
     }
@@ -293,7 +293,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
     
   } else {
     
-    coordenadas_google1 <- read_rds(sprintf("../../data/acesso_oport/censo_escolar/%s/geocode/escolas_geocode_%s_output_google1.rds", ano, ano))
+    coordenadas_google1 <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/geocode/escolas_geocode_%s_output_google1.rds", ano, ano))
   }
   
   
@@ -441,7 +441,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   # 8) Salvar ---------------------
   write_rds(escolas_geo,
-            sprintf("../../data/acesso_oport/censo_escolar/%s/educacao_inep_geocoded_fim_%s.rds", ano, ano), compress = 'gz')
+            sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_geocoded.rds", ano, ano), compress = 'gz')
   
 }
 

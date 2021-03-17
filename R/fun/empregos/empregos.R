@@ -281,84 +281,6 @@ rais_bring_geocode <- function(ano) {
   # table(rais_estabs_geocode_end$geocode_engine, useNA = 'always')
   # table(rais_estabs_geocode_end$type_input_galileo, useNA = 'always')
   
-  ## vamos manter
-  # 3 Estrelas
-  # 4 Estrelas
-  # airport
-  # amusement_park
-  # bus_station
-  # establishment
-  # intersection
-  # neighborhood
-  # political
-  # post_box
-  # street_number
-  # premise
-  # subpremise
-  # town_square
-  # postal_code
-  # 'route' pegar somente os que tem mesmo cep
-  
-
-  # # Quantidade de endereços encontrados no nivel de route por municipio
-  # rais_estabs_geocode_end %>%
-  #   filter(PrecisionDepth == 'route'
-  #          # geocode_engine == 'gmaps_prob2'
-  #   ) %>%
-  #   count(name_muni, sort = TRUE)
-  # 
-  # 
-  # # extract cep
-  # a <- rais_estabs_geocode_end %>%
-  #   filter(PrecisionDepth %in% c('postal_code', 'route')) %>%
-  #   # geocode_engine == 'gmaps_prob2') %>%
-  #   # select columns
-  #   select(geocode_engine, PrecisionDepth, SearchedAddress, MatchedAddress) %>%
-  #   # extract cep
-  #   mutate(cep_searched = str_extract(SearchedAddress, "(\\d{5}-\\d{3})|(\\d{8})"),
-  #          cep_matched = str_extract(MatchedAddress, "\\d{5}-\\d{3}")) %>%
-  #   # delete '-'
-  #   mutate(across(starts_with("cep"), ~str_replace(.x, "-", ""))) %>%
-  #   # mutate(across(starts_with("cep"), ~str_sub(.x, 1, 7))) %>%
-  #   # check if they are the same
-  #   mutate(igual = ifelse(cep_searched == cep_matched, TRUE, FALSE))
-  # 
-  # # percentages of cep match by precisiondepth 
-  # a %>% 
-  #   count(igual, PrecisionDepth) %>%
-  #   group_by(PrecisionDepth) %>%
-  #   mutate(perc = n / sum(n)) %>% arrange(PrecisionDepth)
-  
-  
-  # 4) Select accepted precisiondepth
-  # 3 Estrelas, 4 Estrelas, airport, amusement_park, bus_station, establishment
-  # intersection, neighborhood, political, post_box, street_number, premise, subpremise
-  # town_square, postal_code e (route com mesmo cep)
-  
-  # 4.1) Identificar os route e postal_code que tem o mesmo cep
-  rais_estabs_geocode_end1 <- rais_estabs_geocode_end %>%
-                                filter(PrecisionDepth %in% c('route')) %>%
-                                # geocode_engine == 'gmaps_prob2') %>%
-                                # select columns
-                                select(id_estab, geocode_engine, PrecisionDepth, SearchedAddress, MatchedAddress) %>%
-                                # extract cep
-                                mutate(cep_searched = str_extract(SearchedAddress, "(\\d{5}-\\d{3})|(\\d{8})"),
-                                       cep_matched = str_extract(MatchedAddress, "\\d{5}-\\d{3}")) %>%
-                                # delete '-'
-                                mutate(across(starts_with("cep"), ~str_replace(.x, "-", ""))) %>%
-                                # mutate(across(starts_with("cep"), ~str_sub(.x, 1, 7))) %>%
-                                # check if they are the same
-                                mutate(igual = ifelse(cep_searched == cep_matched, TRUE, FALSE)) %>%
-                                # filter only the same
-                                filter(igual)
-  
-  # 4.2) Filtrar todos os precision dept e somente os estabs de route e postal_code com match de cep
-  rais_estabs_geocode_end <- rais_estabs_geocode_end[(PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
-                                                'bus_station', 'establishment', 'intersection', 'neighborhood', 
-                                                'political', 'post_box', 'street_number', 'premise', 'subpremise',
-                                                'town_square', 'postal_code')) |
-                                                 (id_estab %in% rais_estabs_geocode_end1$id_estab)]
-  
   
   # 5) Salvar
   write_rds(rais_estabs_geocode_end, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano), compress = 'gz')
@@ -394,7 +316,7 @@ rais_bring_schools <- function(ano) {
   
   if (ano == 2017) {
     
-  escolas <- read_rds("../../data/acesso_oport/censo_escolar/2017/educacao_inep_geocoded_fim_2017.rds") %>%
+  escolas <- read_rds("../../data/acesso_oport/educacao/2017/educacao_inep_geocoded_fim_2017.rds") %>%
     # Deletar escolas q nao foram localizadas
     dplyr::filter(!is.na(lat)) %>%
     # Selecionar variaveis
@@ -404,7 +326,7 @@ rais_bring_schools <- function(ano) {
     
   } else if (ano %in% c(2018, 2019)) {
     
-  escolas <- read_rds("../../data/acesso_oport/censo_escolar/2018/educacao_inep_geocoded_fim_2018.rds") %>%
+  escolas <- read_rds("../../data/acesso_oport/educacao/2018/educacao_inep_geocoded_fim_2018.rds") %>%
     # Deletar escolas q nao foram localizadas
     dplyr::filter(!is.na(lat)) %>%
     # Selecionar variaveis

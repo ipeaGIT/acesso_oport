@@ -142,7 +142,7 @@ saude_filter <- function(ano) {
   
   
   # 3) Salvar ---------
-  write_rds(cnes_filter5, sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_%s.rds", ano, ano))
+  write_rds(cnes_filter5, sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter.rds", ano, ano))
   
   
 }
@@ -177,7 +177,7 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   
   # 1) Abrir a base filtrada -----------------------------
   
-  cnes_filtered <- read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_%s.rds", ano, ano))
+  cnes_filtered <- read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter.rds", ano, ano))
   
   # table(nchar(cnes_filtered$cnes))
   
@@ -187,7 +187,7 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   if (ano != 2017) {
     
     # geocode only estabs that werent geocoded in the previous year
-    cnes_previous <- read_rds(sprintf("../../data/acesso_oport/hospitais/%i/hospitais_filter_geocoded_pmaq_%i.rds", ano-1, ano-1)) %>%
+    cnes_previous <- read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_geocoded.rds", ano-1, ano-1)) %>%
       select(cnes, lat_digits, lon, lat, ndigitos, latlon, MatchedAddress, SearchedAddress, PrecisionDepth, geocode_engine, year_geocode)
     
     cnes_filtered_togeo <- cnes_filtered %>% filter(cnes %nin% cnes_previous$cnes)
@@ -333,14 +333,14 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   names(coordenadas_google1) <- munis_problema$cnes
   
   # save
-  write_rds(coordenadas_google1, sprintf("../../data/acesso_oport/hospitais/%s/geocode/hospitais_geocode_%s_output_google1.rds", ano, ano))
+  write_rds(coordenadas_google1, sprintf("../../data/acesso_oport/saude/%s/geocode/hospitais_geocode_%s_output_google1.rds", ano, ano))
   
   
     }
     
   } else {
   
-    coordenadas_google1 <- read_rds(sprintf("../../data/acesso_oport/hospitais/%s/geocode/hospitais_geocode_%s_output_google1.rds", ano, ano))
+    coordenadas_google1 <- read_rds(sprintf("../../data/acesso_oport/saude/%s/geocode/hospitais_geocode_%s_output_google1.rds", ano, ano))
   
   }
   
@@ -491,7 +491,7 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   cnes_filtered_fim %>%
     rename(code_muni = ibge) %>%
     # select(CNES, code_muni, health_low, health_med, health_high)
-    readr::write_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_geocoded_pmaq_%s.rds", ano, ano))
+    readr::write_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_geocoded.rds", ano, ano))
   
   
   
