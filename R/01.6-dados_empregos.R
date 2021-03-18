@@ -36,24 +36,27 @@ rais_bring_geocode(2017)
 # 4) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
 rais_bring_schools(2017)
 
+# 5) Selecionar somente as obsservacoes com boa qualidade de geocode
+source("R/fun/filter_geocode.R")
+geocode_filter(ano = 2017, "rais")
 
 
 
 # Aplicar funcoes para o ano de 2018 -------------
 
-# 1) Save raw data with columns we use
+# 0) Save raw data with columns we use
 rais_filter_raw_data(2018)
 
-# 1.1) Filter raw trabalhadores data
+# 0.1) Filter raw trabalhadores data
 rais_filter_pessoas(2018)
 
-# 2) Categorizar trabalhadores por grau de instrucao
+# 1) Categorizar trabalhadores por grau de instrucao
 rais_categorize_inst(2018)
 
-# 4) Tratar os outliers 
+# 2) Tratar os outliers 
 rais_treat_outliers(2018)
 
-# 5) Realizar e trazer geocode dos estabelecimentos
+# 3) Realizar e trazer geocode dos estabelecimentos
 # realizar geocode
 rais_clean_estabs_raw(2018)
 rais_export_data_to_galileo(2018)
@@ -65,10 +68,12 @@ rais_gmaps_geocode(2018, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2018)
 
-# 6) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
+# 4) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
 rais_bring_schools(2018)
 
-
+# 5) Selecionar somente as obsservacoes com boa qualidade de geocode
+source("R/fun/filter_geocode.R")
+geocode_filter(ano = 2018, "rais")
 
 # Aplicar funcoes para o ano de 2019 -------------
 
@@ -99,6 +104,8 @@ rais_bring_geocode(2019)
 # 4) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
 rais_bring_schools(2019)
 
-
+# 5) Selecionar somente as obsservacoes com boa qualidade de geocode
+source("R/fun/filter_geocode.R")
+geocode_filter(ano = 2019, "rais")
 
 

@@ -7,9 +7,13 @@ source('./R/fun/setup.R')
 # carregar funcoes
 source('./R/fun/educacao/educacao.R')
 
-# Aplicar funcao filtro
+# 1) Aplicar funcao filtro ----------------
 lapply(X=2017:2019, FUN=educacao_filter)
 
-# Aplicar funcao geocode
+# 2) Aplicar funcao geocode ---------------
 lapply(X=2017:2019, FUN=educacao_geocode)
+
+# 3) Selecionar somente as obsservacoes com boa qualidade de geocode ----------
+source("R/fun/filter_geocode.R")
+lapply(X=2017:2019, geocode_filter, "educacao")
 
