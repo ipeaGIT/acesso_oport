@@ -195,3 +195,7 @@ teste_gtfs_to_gps.R
 testes
 .Rprofile
 R/temp
+uber_speed
+reports
+data_dictionary
+
