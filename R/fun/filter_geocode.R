@@ -2,11 +2,30 @@
 
 
 
-# filter geocode
+# This function filter only the estabs (either jobs, schools or hospitals) that
+# have a a good geocododing quality
+# We consider good quality:
+# - From galileo: "4 Estrelas" and "3 Estrelas"
+# - From gmaps (https://developers.google.com/maps/documentation/geocoding/overview#Types):
+# 'airport'
+# 'amusement_park'
+# 'bus_station'
+# 'establishment'
+# 'intersection'
+# 'neighborhood'
+# 'political'
+# 'post_box'
+# 'street_number'
+# 'premise'
+# 'subpremise'
+# 'town_square'
+# 'postal_code'
+# 'route': only when cep from the input matches the cep from the output
+
 
 # ano <- 2018; atividade <- 'educacao'
 
-geocode_Filter <- function(ano, atividade) {
+geocode_filter <- function(ano, atividade) {
   
   # determinar path dos dados
   path_in <- case_when(
@@ -16,32 +35,16 @@ geocode_Filter <- function(ano, atividade) {
     
   )
   
-  # arbri dados
+  # 1) abrir dados ---------
   data <- read_rds(path_in) %>%
     # identificar a variabel que repreesnta a identificacao do estabelecimento
     rename(id = 1)
   
   # table(data$PrecisionDepth, useNA = 'always')
   
-  ## vamos manter
-  # 3 Estrelas
-  # 4 Estrelas
-  # airport
-  # amusement_park
-  # bus_station
-  # establishment
-  # intersection
-  # neighborhood
-  # political
-  # post_box
-  # street_number
-  # premise
-  # subpremise
-  # town_square
-  # postal_code
-  # 'route' pegar somente os que tem mesmo cep
+
   
-  # 1.1) Identificar os route e postal_code que tem o mesmo cep
+  # 2.1) Identificar os route que tem o mesmo cep
   data1 <- data %>%
     filter(PrecisionDepth %in% c('route')) %>%
     # geocode_engine == 'gmaps_prob2') %>%
@@ -59,7 +62,7 @@ geocode_Filter <- function(ano, atividade) {
     filter(igual)
   
   
-  # 1.2) Filtrar todos os precision dept e somente os estabs de route e postal_code com match de cep
+  # 2) Filtrar todos os precision dept e somente os estabs de route com match de cep
   data <- data[(PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
                                       'bus_station', 'establishment', 'intersection', 'neighborhood', 
                                       'political', 'post_box', 'street_number', 'premise', 'subpremise',
@@ -67,7 +70,7 @@ geocode_Filter <- function(ano, atividade) {
                  (id %in% data1$id)]
   
   
-  # 1.3 Salvar --------------------------------------------------------------
+  # 3) Salvar --------------------------------------------------------------
   
   path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_geocoded_filter.rds", 
                       atividade, ano, atividade, ano)
