@@ -24,6 +24,7 @@
 
 
 # ano <- 2018; atividade <- 'educacao'
+# ano <- 2017; atividade <- 'saude'
 
 geocode_filter <- function(ano, atividade) {
   
@@ -68,7 +69,7 @@ geocode_filter <- function(ano, atividade) {
                                       'political', 'post_box', 'street_number', 'premise', 'subpremise',
                                       'town_square', 'postal_code', 
                                       # these one are exclusive for educacao and saude
-                                      'inep', 'cnes')) |
+                                      'inep', 'cnes', 'PMAQ')) |
                  (id %in% data1$id)]
   
   
