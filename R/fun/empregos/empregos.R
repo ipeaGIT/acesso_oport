@@ -259,7 +259,6 @@ rais_bring_geocode <- function(ano) {
   
   # 2) Abrir a rais dos estabs georeferenciados
   rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", ano, ano))
-  rais_estabs_geocode <- select(rais_estabs_geocode, -precision_depth1)
   
   # pad everyone to 14 characters
   rais_estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
@@ -316,7 +315,7 @@ rais_bring_schools <- function(ano) {
   
   if (ano == 2017) {
     
-  escolas <- read_rds("../../data/acesso_oport/educacao/2017/educacao_inep_geocoded_fim_2017.rds") %>%
+  escolas <- read_rds("../../data/acesso_oport/educacao/2017/educacao_2017_geocoded.rds") %>%
     # Deletar escolas q nao foram localizadas
     dplyr::filter(!is.na(lat)) %>%
     # Selecionar variaveis
@@ -326,7 +325,7 @@ rais_bring_schools <- function(ano) {
     
   } else if (ano %in% c(2018, 2019)) {
     
-  escolas <- read_rds("../../data/acesso_oport/educacao/2018/educacao_inep_geocoded_fim_2018.rds") %>%
+  escolas <- read_rds("../../data/acesso_oport/educacao/2018/educacao_2018_geocoded.rds") %>%
     # Deletar escolas q nao foram localizadas
     dplyr::filter(!is.na(lat)) %>%
     # Selecionar variaveis

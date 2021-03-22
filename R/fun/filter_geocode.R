@@ -43,7 +43,7 @@ geocode_filter <- function(ano, atividade) {
   
   # table(data$PrecisionDepth, useNA = 'always')
   
-
+  
   
   # 2.1) Identificar os route que tem o mesmo cep
   data1 <- data %>%
@@ -75,8 +75,18 @@ geocode_filter <- function(ano, atividade) {
   
   # 3) Salvar --------------------------------------------------------------
   
-  path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_geocoded_filter.rds", 
-                      atividade, ano, atividade, ano)
+  if (atividade %in% c("educacao", "saude")) {
+    path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_geocoded_filter.rds", 
+                        atividade, ano, atividade, ano) 
+  }
+  
+  else if (atividade == "rais") {
+    
+    path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_etapa5_censoEscolar_filter.rds", 
+                        atividade, ano, atividade, ano) 
+    
+  }
+  
   write_rds(data, path_out)
   
   

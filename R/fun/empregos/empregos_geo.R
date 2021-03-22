@@ -279,7 +279,8 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   # 1) Abrir output do galileo ------------
   rais_galileo_output <- fread(sprintf("../../data/acesso_oport/rais/%s/geocode/galileo/rais_%s_output_galileo.csv", ano, ano),
-                               colClasses = 'character')
+                               colClasses = 'character',
+                               fill = TRUE)
   
   # head(rais_galileo_output)
   
@@ -312,6 +313,9 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     group_by(id_estab) %>%
     slice(which.max(precision_depth1)) %>%
     setDT()
+  
+  # apagar precision_depth1
+  rais_galileo_output <- rais_galileo_output %>% select(-precision_depth1)
 
   
   # 3) Rodar Google API p/ estabelecimentos q Galileo encontrou com baixa precisao ------
@@ -831,7 +835,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     # 11.5) Trazer entao os estabs geocoded do ano anterior
     
     # 11.5.1) Get previous geocode
-    rais_ano_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode.rds", ano-1, ano-1))
+    rais_ano_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode.rds", ano-1, ano-1))
     rais_ano_anterior <- rais_ano_anterior %>% select(id_estab, lon, lat, 
                                           SearchedAddress, MatchedAddress,
                                           PrecisionDepth, type_input_galileo, geocode_engine)
@@ -865,7 +869,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   
   # 12) Salvar! ---------
   write_rds(rais_filter_geocode_end, 
-            sprintf("../../data/acesso_oport/rais/%s/rais_%s_estabs_geocode_completo.rds", ano, ano), compress = 'gz')
+            sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", ano, ano), compress = 'gz')
   
 }
 
