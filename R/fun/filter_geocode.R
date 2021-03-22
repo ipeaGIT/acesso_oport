@@ -66,7 +66,9 @@ geocode_filter <- function(ano, atividade) {
   data <- data[(PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
                                       'bus_station', 'establishment', 'intersection', 'neighborhood', 
                                       'political', 'post_box', 'street_number', 'premise', 'subpremise',
-                                      'town_square', 'postal_code', 'inep')) |
+                                      'town_square', 'postal_code', 
+                                      # these one are exclusive for educacao and saude
+                                      'inep', 'cnes')) |
                  (id %in% data1$id)]
   
   
