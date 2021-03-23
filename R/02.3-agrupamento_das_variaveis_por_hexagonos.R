@@ -13,27 +13,11 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # 1) Abrir arquivos com as oportunidades -------------------------------------
   
   # 1.1) Saude
-  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/hospitais/%s/hospitais_filter_geocoded_pmaq_%s.rds", ano, ano)) 
+  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_geocoded_filter.rds", ano, ano)) 
   
   # remove lat lon missing
   cnes <- cnes[!is.na(lat),] 
   
-  # filter only estabs with high quality geocode
-  table(cnes$PrecisionDepth)
-  cnes <- cnes[PrecisionDepth %in% c("cnes", "4 Estrelas", "3 Estrelas", "street_number", "route")]
-  
-  cnes <- cnes[(PrecisionDepth %in% c('cnes','3 Estrelas', '4 Estrelas', 
-                                      'airport', 'amusement_park', 'PMAQ', 
-                                      'bus_station', 'establishment',
-                                      'intersection', 'neighborhood', 
-                                      'political', 'post_box', 'street_number',
-                                      'premise', 'subpremise',
-                                      'town_square', 'postal_code')) |
-                                                       (id_estab %in% rais_estabs_geocode_end1$id_estab)]
- 666666666
- # manter apenas routes que tem mesmo cep entre procurado e achado
-  
- 
  
   # select columns
   cnes <- cnes[, .(cnes, code_muni,
@@ -44,13 +28,10 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
   # 1.2) Escolas
-  escolas <- read_rds(sprintf("../../data/acesso_oport/censo_escolar/%s/educacao_inep_final_%s.rds", ano, ano))
+  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_geocoded_filter.rds", ano, ano))
   
   # remove lat lon missing
   escolas <- escolas[!is.na(lat),] 
-  
-  # filter only estabs with high wuality geocode
-  escolas <- escolas[PrecisionDepth %in% c("inep", "4 Estrelas", "3 Estrelas", "street_number", "route")]
   
   # select columns
   escolas <- escolas[, .(co_entidade, code_muni,
@@ -59,13 +40,10 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
   # 1.3) Empregos
-  empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_corrigido_geocoded_censoEscolar.rds", ano, ano))
+  empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa5_censoEscolar_filter.rds", ano, ano))
     
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
-  
-  # filter only estabs with high wuality geocode
-  empregos <- empregos[PrecisionDepth %in% c("4 Estrelas", "3 Estrelas", "street_number", "route")]
   
   # select columns
   empregos <- empregos[, .(codemun, id_estab, baixo, medio, alto, lon, lat)]
