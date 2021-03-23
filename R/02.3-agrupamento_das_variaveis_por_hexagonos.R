@@ -13,18 +13,17 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # 1) Abrir arquivos com as oportunidades -------------------------------------
   
   # 1.1) Saude
-  cnes <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_geocoded_filter.rds", ano, ano)) 
+  cnes_data <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_geocoded_filter.rds", ano, ano)) 
   
   # remove lat lon missing
-  cnes <- cnes[!is.na(lat),] 
+  cnes_data <- cnes_data[!is.na(lat),] 
   
- 
   # select columns
-  cnes <- cnes[, .(cnes, code_muni,
+  cnes_data <- cnes_data[, .(cnes, code_muni,
                    health_low, health_med, health_high,
                    lon, lat)]
   
-  cnes <- cnes %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
+  cnes_data <- cnes_data %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
   
   # 1.2) Escolas
@@ -32,6 +31,10 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   # remove lat lon missing
   escolas <- escolas[!is.na(lat),] 
+  
+  
+  # rename id
+  escolas <- rename(escolas, co_entidade = id)
   
   # select columns
   escolas <- escolas[, .(co_entidade, code_muni,
@@ -44,6 +47,9 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
+  
+  # rename id
+  empregos <- rename(empregos, id_estab = id)
   
   # select columns
   empregos <- empregos[, .(codemun, id_estab, baixo, medio, alto, lon, lat)]
@@ -91,7 +97,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # saude
-    cnes_filtrado <- setDT(cnes)[code_muni == substr(cod_mun_ok, 1, 6)] %>% st_sf()
+    cnes_filtrado <- setDT(cnes_data)[code_muni == substr(cod_mun_ok, 1, 6)] %>% st_sf()
     
     
     

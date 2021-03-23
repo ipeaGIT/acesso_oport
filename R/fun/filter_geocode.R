@@ -24,7 +24,7 @@
 
 
 # ano <- 2018; atividade <- 'educacao'
-# ano <- 2017; atividade <- 'saude'
+# ano <- 2018; atividade <- 'saude'
 
 geocode_filter <- function(ano, atividade) {
   
@@ -75,12 +75,25 @@ geocode_filter <- function(ano, atividade) {
   
   # 3) Salvar --------------------------------------------------------------
   
-  if (atividade %in% c("educacao", "saude")) {
+  if (atividade %in% c("educacao")) {
+    
+    data <- rename(data, co_entidade = id) %>% setDT()
     path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_geocoded_filter.rds", 
                         atividade, ano, atividade, ano) 
+    
+  } else if (atividade == "saude") {
+    
+    
+    data <- rename(data, cnes = id) %>% setDT()
+    path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_geocoded_filter.rds", 
+                        atividade, ano, atividade, ano) 
+    
   }
   
   else if (atividade == "rais") {
+    
+    # rename id
+    data <- rename(data, id_estab = id) %>% setDT()
     
     path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_etapa5_censoEscolar_filter.rds", 
                         atividade, ano, atividade, ano) 

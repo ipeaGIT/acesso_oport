@@ -15,4 +15,4 @@ lapply(X=2017:2019, FUN=saude_geocode)
 
 # Selecionar somente as obsservacoes com boa qualidade de geocode
 source("R/fun/filter_geocode.R")
-walk(X=2017:2019, geocode_filter, "saude")
+lapply(X=2017:2019, geocode_filter, "saude")
