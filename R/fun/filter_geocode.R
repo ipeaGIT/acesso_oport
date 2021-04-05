@@ -25,6 +25,7 @@
 
 # ano <- 2018; atividade <- 'educacao'
 # ano <- 2018; atividade <- 'saude'
+# ano <- 2018; atividade <- 'rais'
 
 geocode_filter <- function(ano, atividade) {
   
@@ -45,8 +46,8 @@ geocode_filter <- function(ano, atividade) {
   
   
   
-  # 2.1) Identificar os route que tem o mesmo cep
-  data1 <- data %>%
+  # 2.1) Identificar os route que tem o mesmo cep do input e output
+  df_routes_cep_match <- data %>%
     filter(PrecisionDepth %in% c('route')) %>%
     # geocode_engine == 'gmaps_prob2') %>%
     # select columns
@@ -63,14 +64,14 @@ geocode_filter <- function(ano, atividade) {
     filter(igual)
   
   
-  # 2) Filtrar todos os precision dept e somente os estabs de route com match de cep
+  # 2) Filtrar todos os precision depth (galileo) e categoria escolidas (gmaps) e somente os estabs de route com match de cep
   data <- data[(PrecisionDepth %in% c('3 Estrelas', '4 Estrelas', 'airport', 'amusement_park',
                                       'bus_station', 'establishment', 'intersection', 'neighborhood', 
                                       'political', 'post_box', 'street_number', 'premise', 'subpremise',
                                       'town_square', 'postal_code', 
                                       # these one are exclusive for educacao and saude
                                       'inep', 'cnes', 'PMAQ')) |
-                 (id %in% data1$id)]
+                 (id %in% df_routes_cep_match$id)]
   
   
   # 3) Salvar --------------------------------------------------------------
@@ -100,7 +101,7 @@ geocode_filter <- function(ano, atividade) {
     
   }
   
-  write_rds(data, path_out)
+  write_rds(data, path_out, compress = "gz")
   
   
   

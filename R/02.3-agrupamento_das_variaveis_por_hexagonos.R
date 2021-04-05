@@ -1,4 +1,4 @@
-# Agrega informacoes demograficas e uso do solo nos hexagonos
+# Agrega informacoes demograficas e de uso do solo nos hexagonos
 
 # carregar bibliotecas -----------------------------------------------------------------------------
 source('./R/fun/setup.R')
@@ -32,10 +32,6 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # remove lat lon missing
   escolas <- escolas[!is.na(lat),] 
   
-  
-  # rename id
-  escolas <- rename(escolas, co_entidade = id)
-  
   # select columns
   escolas <- escolas[, .(co_entidade, code_muni,
                    mat_infantil, mat_fundamental, mat_medio,
@@ -48,18 +44,17 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
   
-  # rename id
-  empregos <- rename(empregos, id_estab = id)
-  
   # select columns
   empregos <- empregos[, .(codemun, id_estab, baixo, medio, alto, lon, lat)]
   
-  #' A funcao `agrupar_variaveis` agrupa as variaveis acima nos hexagonos de
-  #' cada um dos municipios
+  #' A funcao `agrupar_variaveis` agrupa as variaveis de uso do solo determinadas acima
+  #'  nos hexagonos de cada um dos municipios
+  #'  Tambem traz as informacoes demograficas da grade do ibge
   
   agrupar_variaveis <- function(sigla_muni) { 
     
     # sigla_muni <- "for"
+    # sigla_muni <- "nat"
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -70,7 +65,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     # Pegar endereco das grades e hexagonos em todas resolucoes
     grade_file <- sprintf("../../data/acesso_oport/grade_municipio_com_renda_cor/%s/grade_renda_cor_%s_%s.rds", ano, sigla_muni, ano)
     
-    # Gerar centroide da grade grade de cada municipio
+    # Gerar centroide da grade de cada municipio
     centroide_pop <- readr::read_rds(grade_file) %>%
       dplyr::select(id_grade, pop_total, pop_homens, pop_mulheres,
                     renda,  
