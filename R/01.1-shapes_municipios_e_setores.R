@@ -11,7 +11,9 @@ download_muni_setores <- function(ano, munis = "all") {
 
   download_muni_setores_un <- function(sigla_muni) {
     
-    code <- munis_df[abrev_muni == sigla_muni]$code_muni
+    
+    # extract code muni
+    code <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% stringr::str_split(",") %>% unlist()
     
     
     # criar pasta do municipios
@@ -20,8 +22,8 @@ download_muni_setores <- function(ano, munis = "all") {
     
     
     # Download de arquivos
-    muni_sf <- geobr::read_municipality(code_muni= code, year=2010, simplified = F)
-    ct_sf <- geobr::read_census_tract(code_tract = code, year=2010, simplified = F)
+    muni_sf <- geobr::read_municipality(code_muni= code, year=ano, simplified = F)
+    ct_sf <- geobr::read_census_tract(code_tract = code, year=ano, simplified = F)
     
     
     # salvar municipios
