@@ -22,7 +22,7 @@ criar_grade_muni_all <- function(ano, munis = "all") {
     message(paste0('Rodando cidade ', sigla,"\n"))
     
     # codigo do estado do municipio
-    cod_estado <- subset(munis_df, abrev_muni==sigla)$abrev_estado %>% as.character()
+    cod_estado <- subset(munis_list$munis_df, abrev_muni==sigla)$abrev_estado %>% as.character()
     
     # Leitura das grades estatisticas dos estados
     grade <- read_statistical_grid(code_grid = cod_estado, year = 2010)
@@ -55,7 +55,8 @@ criar_grade_muni_all <- function(ano, munis = "all") {
   # Aplicar funcao ----------------------
   if (munis == "all") {
     
-    x = munis_df$abrev_muni
+    # seleciona todos municipios ou RMs do ano escolhido
+    x = munis_list$munis_metro[ano_metro == ano]$abrev_muni
     
   } else (x = munis)
   
