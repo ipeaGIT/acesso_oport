@@ -31,6 +31,8 @@ criar_hexagonos <- function(ano, munis = "all") {
     
     code <- code$code_muni
     
+    66666666666666666666666666 trazer o shape dos municipios data-raw em vez da baixar novamente
+    
     muni <- geobr::read_municipality(code, year = ano) %>% 
       st_transform(crs=4326) %>%
       # Buffer para extender a area do municipio e assim evitar que os hexagonos nao considerem areas de borda
