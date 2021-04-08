@@ -129,8 +129,9 @@ setores2 <- setores2 %>%
 
 ### 2. Merge dos dados de renda com shapes dos setores censitarios --------------------------------------------------
 
-# filtra apenas municipio do projeto
-setores2 <- setores2[Cod_municipio %in% munis_df$code_muni,]
+# filtra apenas municipios do projeto
+code_munis <- munis_list$munis_metro$code_muni %>% unlist %>% unique()
+setores2 <- setores2[Cod_municipio %in% code_munis,]
 
 
 merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "for"
@@ -218,10 +219,10 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
     message('Working on city ', sigla, '\n')
     
     # codigo do municipios
-    code_muni <- subset(munis_df, abrev_muni==sigla )$code_muni
+    code_muni <- subset(munis_list$munis_metro, abrev_muni==sigla & ano_metro == ano )$code_muni %>% unlist()
     
     # subset dados dos setores
-    dados <- subset(setores5, cod_muni == code_muni)
+    dados <- subset(setores5, cod_muni %in% code_muni)
     
     # leitura do shape dos setores
     sf <- readr::read_rds( sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla, ano) )

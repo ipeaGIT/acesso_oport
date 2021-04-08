@@ -13,10 +13,8 @@ download_muni_setores <- function(ano, munis = "all") {
     
     
     # extract code muni
-    code <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% 
-      stringr::str_split(",") %>% 
-      unlist() %>%
-      as.numeric()
+    code_munis <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% 
+      unlist()
     
     # criar pasta do municipios
     dir.create(sprintf("../../data-raw/municipios/%s", ano))  
@@ -24,9 +22,9 @@ download_muni_setores <- function(ano, munis = "all") {
     
     
     # Download de arquivos
-    muni_sf <- purrr::map_dfr(code, geobr::read_municipality, year=ano, simplified = F)
+    muni_sf <- purrr::map_dfr(code_munis, geobr::read_municipality, year=ano, simplified = F)
 
-    ct_sf <- purrr::map_dfr(code, geobr::read_census_tract, year=2010, simplified = F)
+    ct_sf <- purrr::map_dfr(code_munis, geobr::read_census_tract, year=2010, simplified = F)
 
 
     # salvar municipios
@@ -39,7 +37,8 @@ download_muni_setores <- function(ano, munis = "all") {
   # 2. Aplica funcao ------------------------------------------
   if (munis == "all") {
     
-    x = munis_list$munis_df$abrev_muni
+    # seleciona todos municipios ou RMs do ano escolhido
+    x = munis_list$munis_metro[ano_metro == ano]$abrev_muni
     
   } else (x = munis)
   
