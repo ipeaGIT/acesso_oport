@@ -16,15 +16,23 @@ download_muni_setores <- function(ano, munis = "all") {
     code_munis <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% 
       unlist()
     
+    # extract state code
+    state_code <- substr(code_munis[1], 1, 2) %>% as.numeric()
+    
+    
     # criar pasta do municipios
     dir.create(sprintf("../../data-raw/municipios/%s", ano))  
     dir.create(sprintf("../../data-raw/setores_censitarios/%s", ano))  
     
     
-    # Download de arquivos
-    muni_sf <- purrr::map_dfr(code_munis, geobr::read_municipality, year=ano, simplified = F)
+    # Download de arquivos - shapes dos municipios
+    uf_sf <- geobr::read_municipality(state_code)
+    muni_sf <- uf_sf %>% filter(code_muni %in% code_munis)
+    # muni_sf <- purrr::map_dfr(code_munis, geobr::read_municipality, year=ano, simplified = F)
 
-    ct_sf <- purrr::map_dfr(code_munis, geobr::read_census_tract, year=2010, simplified = F)
+    # Download de arquivos - shapes dos setores censitarios
+    uf_sf_tracts <- geobr::read_census_tract(state_code)
+    ct_sf <- uf_sf_tracts %>% filter(code_muni %in% code_munis)
 
 
     # salvar municipios

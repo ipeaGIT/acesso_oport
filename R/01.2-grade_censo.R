@@ -22,32 +22,48 @@ criar_grade_muni_all <- function(ano, munis = "all") {
     message(paste0('Rodando cidade ', sigla,"\n"))
     
     # codigo do estado do municipio
-    cod_estado <- subset(munis_list$munis_df, abrev_muni==sigla)$abrev_estado %>% as.character()
+    cod_estado <- subset(munis_list$munis_df, abrev_muni==sigla)$abrev_estado %>% 
+      as.character()
     
     # Leitura das grades estatisticas dos estados
     grade <- read_statistical_grid(code_grid = cod_estado, year = 2010)
     
-    # Leitura do municipio
-    muni <- readr::read_rds( sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla, ano) )
+    # Leitura do(s) municipio(s)
+    muni <- readr::read_rds(sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", 
+                                    ano, sigla, ano) )
+    
+    666666666666666666666666666666666666
+    # marcus
+    source("R/fun/dissolve_polygons.R")
+    # dissolver fronteiras
+    muni <- muni %>%
+      # group_by(code_state) %>%
+      # summarise() %>% 
+      dissolve_polygons(group_column = "code_state")
     
     # mesma projecao geografica
     grade <- grade %>% st_transform(crs = 4326)
     muni <- muni   %>%  st_transform(crs = 4326)
     
     # Intersecao
-    grade_muni <- st_join(grade, muni)
+    nrow(grade)
+    grade_muni <- st_join(grade, muni, largest = TRUE)
+    nrow(grade_muni)
     
     # Mantem grades so do municipio
-    grade_muni <- setDT(grade_muni)[!is.na(code_muni)]
+    grade_muni <- setDT(grade_muni)[!is.na(code_state)]
     
     # Transformar para sf
-    grade_muni <- st_sf(grade_muni)
+    grade_muni <- st_sf(grade_muni, crs = 4326)
     
     # limpa memoria
     rm(grade, muni)
+    gc(T)
 
     # salvar no disco
-    write_rds(grade_muni, sprintf("../../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla, ano), compress = 'gz')
+    write_rds(grade_muni, 
+              sprintf("../../data-raw/grade_municipio/%s/grade_%s_%s.rds", ano, sigla, ano), 
+              compress = 'gz')
   
     }
   
