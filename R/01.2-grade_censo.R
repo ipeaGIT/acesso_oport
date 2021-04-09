@@ -4,6 +4,8 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
+# função do geobr para dissolver polígonos
+source("R/fun/dissolve_polygons.R")
 
 
 ### Funcao
@@ -32,24 +34,16 @@ criar_grade_muni_all <- function(ano, munis = "all") {
     muni <- readr::read_rds(sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", 
                                     ano, sigla, ano) )
     
-    666666666666666666666666666666666666
-    # marcus
-    source("R/fun/dissolve_polygons.R")
-    # dissolver fronteiras
-    muni <- muni %>%
-      # group_by(code_state) %>%
-      # summarise() %>% 
-      dissolve_polygons(group_column = "code_state")
+    # Dissolver os polígonos dos municípios componentes da RM
+    muni <- dissolve_polygons(muni, group_column = "code_state")
     
     # mesma projecao geografica
     grade <- grade %>% st_transform(crs = 4326)
     muni <- muni   %>%  st_transform(crs = 4326)
     
     # Intersecao
-    nrow(grade)
     grade_muni <- st_join(grade, muni, largest = TRUE)
-    nrow(grade_muni)
-    
+
     # Mantem grades so do municipio
     grade_muni <- setDT(grade_muni)[!is.na(code_state)]
     
