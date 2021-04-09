@@ -134,7 +134,7 @@ code_munis <- munis_list$munis_metro$code_muni %>% unlist %>% unique()
 setores2 <- setores2[Cod_municipio %in% code_munis,]
 
 
-merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "for"
+merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "goi"
   
   dir.create(sprintf("../../data/acesso_oport/setores_agregados/%s", ano))
   
@@ -238,13 +238,14 @@ merge_renda_setores_all <- function(ano, munis = "all") { # munis <- sigla <- "f
   # aplicar funcao -----------------
   if (munis == "all") {
     
-    x = munis_df$abrev_muni
+    # seleciona todos municipios ou RMs do ano escolhido
+    x = munis_list$munis_metro[ano_metro == ano]$abrev_muni
     
   } else (x = munis)
   
   # Parallel processing using future.apply
   # purrr::walk(x, merge_renda_setores)
-  future::plan(future::multiprocess)
+  future::plan(future::multicore)
   invisible(future.apply::future_lapply(X = x, FUN=merge_renda_setores, future.packages=c('sf', 'dplyr', 'data.table')))
   
 }
@@ -254,3 +255,4 @@ merge_renda_setores_all(ano = 2017)
 merge_renda_setores_all(ano = 2018)
 merge_renda_setores_all(ano = 2019)
 merge_renda_setores_all(ano = 2020)
+
