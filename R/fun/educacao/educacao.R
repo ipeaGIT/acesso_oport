@@ -1,151 +1,212 @@
 
 
+
 #' A funcao 'educacao_filter':
 #' 1) Lê os dados do censo escolar (que foram baixadas do site do INEP, base de escolas) e faz filtros selecionando
-#' somente escolas ativas, publicas, e dentro dos municipios de desejo
-#' 2) Lê os dados de coordenadas que foram disponibilizados pelo INEP e limpa dados
-#' 3) Traz as coordenadas dos dados do INEP para os dados do censo escolar de escolas
-#' 4) Identifica a etapa de ensino que as escolas oferecem
 
-educacao_filter <- function(ano) {
+
+educacao_filter <- function(ano, download = FALSE) {
   
-  # 1) Ler escolas do ano do censo escolar ---------------------------------------------------------
+  
+  # a <- fread("../../data-raw/censo_escolar/2017/MATRICULA_CO.CSV", nrow = 10)
+  
+  # 1) Abrir e juntar dados de matriculas ------------------------------------
+  matriculas <- lapply(list.files(sprintf("../../data-raw/censo_escolar/%s", ano), 
+                                  pattern = "MATRICULA", full.names = TRUE),
+                       fread, select = c("CO_ENTIDADE", "TP_DEPENDENCIA", "TP_ETAPA_ENSINO", "IN_REGULAR")) %>%
+    rbindlist()
+  
+  # selecionar somente matriculas regulares
+  matriculas <- matriculas[IN_REGULAR == 1]
+  # selecionar somente matriculas em escolas publicas
+  matriculas <- matriculas[TP_DEPENDENCIA %in% c(1, 2, 3)]
+  
+  # count(matriculas, TP_ETAPA_ENSINO)
+  
+  # categorias a serem escolhidas e re-categorizadas
+  # checar arquivo Dicionário de Dados da Educaç╞o Básica 2017.excel na mesma pasta
+  matriculas[,
+             mat_tipo := case_when(
+               TP_ETAPA_ENSINO == 1  ~ "mat_infantil"   , # - Educação Infantil - Creche
+               TP_ETAPA_ENSINO == 2  ~ "mat_infantil"   , # - Educação Infantil - Pré-escola
+               TP_ETAPA_ENSINO == 4  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 1ª Série
+               TP_ETAPA_ENSINO == 5  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 2ª Série
+               TP_ETAPA_ENSINO == 6  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 3ª Série
+               TP_ETAPA_ENSINO == 7  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 4ª Série
+               TP_ETAPA_ENSINO == 8  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 5ª Série
+               TP_ETAPA_ENSINO == 9  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 6ª Série
+               TP_ETAPA_ENSINO == 10 ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 7ª Série
+               TP_ETAPA_ENSINO == 11 ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 8ª Série
+               TP_ETAPA_ENSINO == 14 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 1º Ano
+               TP_ETAPA_ENSINO == 15 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 2º Ano
+               TP_ETAPA_ENSINO == 16 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 3º Ano
+               TP_ETAPA_ENSINO == 17 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 4º Ano
+               TP_ETAPA_ENSINO == 18 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 5º Ano
+               TP_ETAPA_ENSINO == 19 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 6º Ano
+               TP_ETAPA_ENSINO == 20 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 7º Ano
+               TP_ETAPA_ENSINO == 21 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 8º Ano
+               TP_ETAPA_ENSINO == 41 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 9º Ano
+               TP_ETAPA_ENSINO == 25 ~ "mat_medio"      , # - Ensino Médio - 1ª Série
+               TP_ETAPA_ENSINO == 26 ~ "mat_medio"      , # - Ensino Médio - 2ª Série
+               TP_ETAPA_ENSINO == 27 ~ "mat_medio"      , # - Ensino Médio - 3ª Série
+               TP_ETAPA_ENSINO == 28 ~ "mat_medio"      , # - Ensino Médio - 4ª Série
+               TP_ETAPA_ENSINO == 29 ~ "mat_medio"      , # - Ensino Médio - Não Seriada
+               TP_ETAPA_ENSINO == 30 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 1ª Série
+               TP_ETAPA_ENSINO == 31 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 2ª Série
+               TP_ETAPA_ENSINO == 32 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 3ª Série
+               TP_ETAPA_ENSINO == 33 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 4ª Série
+               TP_ETAPA_ENSINO == 34 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) Não Seriada
+               TP_ETAPA_ENSINO == 35 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 1ª Série
+               TP_ETAPA_ENSINO == 36 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 2ª Série
+               TP_ETAPA_ENSINO == 37 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 3ª Série
+               TP_ETAPA_ENSINO == 38 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 4ª Série
+               TP_ETAPA_ENSINO == 39 ~ ""               , # - Curso Técnico - Concomitante
+               TP_ETAPA_ENSINO == 40 ~ ""               , # - Curso Técnico - Subsequente
+               TP_ETAPA_ENSINO == 68 ~ ""               , # - Curso FIC Concomitante
+               TP_ETAPA_ENSINO == 65 ~ "mat_fundamental", # - EJA - Ensino Fundamental - Projovem Urbano
+               TP_ETAPA_ENSINO == 67 ~ "mat_medio"      , # - Curso FIC integrado na modalidade EJA  - Nível Médio
+               TP_ETAPA_ENSINO == 69 ~ "mat_fundamental", # - EJA - Ensino Fundamental -  Anos iniciais
+               TP_ETAPA_ENSINO == 70 ~ "mat_fundamental", # - EJA - Ensino Fundamental -  Anos finais
+               TP_ETAPA_ENSINO == 71 ~ "mat_medio"      , # - EJA - Ensino Médio
+               TP_ETAPA_ENSINO == 72 ~ "mat_fundamental", # - EJA - Ensino Fundamental  - Anos iniciais e Anos finais4
+               TP_ETAPA_ENSINO == 73 ~ "mat_fundamental", # - Curso FIC integrado na modalidade EJA - Nível Fundamental (EJA integrada à Educação Profissional de Nível Fundamental)
+               TP_ETAPA_ENSINO == 74 ~ "mat_medio"       # - Curso Técnico Integrado na Modalidade EJA (EJA integrada à Educação Profissional de Nível Médio)
+             )]
+  
+  # table(matriculas$mat_tipo, useNA = "always")
+  
+  # tirar os que nao sao etapa de ensino e agrupar
+  matriculas <- matriculas[mat_tipo != ""]
+  matriculas <- matriculas[!is.na(mat_tipo)]
+  matriculas_group <- matriculas[, .(.N), by = .(CO_ENTIDADE, mat_tipo)]
+  
+  # transformar para formato largo
+  matriculas_group_wide <- tidyr::pivot_wider(matriculas_group,
+                                              names_from = mat_tipo,
+                                              values_from = N,
+                                              values_fill = 0)
+  
+  
+  # 2) Ler escolas do ano do censo escolar ---------------------------------------------------------
+  
+  # processo manual:
+  # 1) baixar dados para os anos desse link: https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar
+  # 2) dezipar o arquivo completamente
+  # 3) copiar o arquivo de ANEXOS/dicionario, ESCOLAS, e as MATRICULAS de todas as regioes
+  # 4) copiar para a pasta do ano no data-raw
+  
+  # essa funcao esta desativada porque os dados estao sendo baixados manualmente
+  # deu problema na funcao de zip_list que sempre dava crash no R
+  # if (download) {
+  #   
+  #   # os dados do censo escolar sao baixados daqui https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar
+  #   # os dados tambem podem ser baixados automaticamente para cada ano (arquivo .zip)
+  #   # definir url
+  #   url <- ifelse(ano == 2017, sprintf("https://download.inep.gov.br/microdados/micro_censo_escolar_%s.zip", ano),
+  #                 sprintf("https://download.inep.gov.br/microdados/microdados_educacao_basica_%s.zip", ano))
+  #   curl::curl_download(url,
+  #                       destfile = sprintf("../../data-raw/censo_escolar/%s/censo-escolar_%s.zip", ano, ano),
+  #                       quiet = FALSE)
+  #   
+  #   # extrar os arquivos dentro de cada zip
+  #   zip_list <- zip_list(sprintf("https://download.inep.gov.br/microdados/micro_censo_escolar_%s.zip", ano))
+  #   
+  #   # so vamos extrair dos arquivos: a base de escolas e a base com a qtde de matriculas
+  #   zip::unzip(zipfile = sprintf("https://download.inep.gov.br/microdados/micro_censo_escolar_%s.zip", ano), 
+  #              files = "",
+  #              exdir = sprintf("../../data-raw/censo_escolar/%s", ano))
+  # }
   
   # colunas de interesse: 
   colunas <- c(c("CO_ENTIDADE", "NO_ENTIDADE", "CO_MUNICIPIO",
-                 "IN_COMUM_CRECHE", "IN_COMUM_PRE", 
-                 "IN_COMUM_FUND_AI", "IN_COMUM_FUND_AF", 
-                 "IN_COMUM_MEDIO_MEDIO", "IN_COMUM_MEDIO_NORMAL",
-                 "IN_ESP_EXCLUSIVA_CRECHE", "IN_ESP_EXCLUSIVA_PRE", 
-                 "IN_COMUM_MEDIO_INTEGRADO", "IN_PROFISSIONALIZANTE",
-                 "IN_ESP_EXCLUSIVA_FUND_AI", "IN_ESP_EXCLUSIVA_FUND_AF",
-                 "IN_ESP_EXCLUSIVA_MEDIO_MEDIO", "IN_ESP_EXCLUSIVA_MEDIO_INTEGR",
-                 "IN_ESP_EXCLUSIVA_MEDIO_NORMAL","IN_COMUM_EJA_MEDIO","IN_COMUM_EJA_PROF",
-                 "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
-                 "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND",
+                 # "IN_COMUM_CRECHE", "IN_COMUM_PRE", 
+                 # "IN_COMUM_FUND_AI", "IN_COMUM_FUND_AF", 
+                 # "IN_COMUM_MEDIO_MEDIO", "IN_COMUM_MEDIO_NORMAL",
+                 # "IN_ESP_EXCLUSIVA_CRECHE", "IN_ESP_EXCLUSIVA_PRE", 
+                 # "IN_COMUM_MEDIO_INTEGRADO", "IN_PROFISSIONALIZANTE",
+                 # "IN_ESP_EXCLUSIVA_FUND_AI", "IN_ESP_EXCLUSIVA_FUND_AF",
+                 # "IN_ESP_EXCLUSIVA_MEDIO_MEDIO", "IN_ESP_EXCLUSIVA_MEDIO_INTEGR",
+                 # "IN_ESP_EXCLUSIVA_MEDIO_NORMAL","IN_COMUM_EJA_MEDIO","IN_COMUM_EJA_PROF",
+                 # "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
+                 # "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND",
                  "IN_LOCAL_FUNC_UNID_PRISIONAL", "IN_LOCAL_FUNC_PRISIONAL_SOCIO", # escolas prisionais
                  "TP_DEPENDENCIA", "TP_SITUACAO_FUNCIONAMENTO"), 
                ifelse(ano == 2017, "NU_FUNCIONARIOS", "QT_FUNCIONARIOS"))
   
-  escolas <- fread(sprintf("../../data-raw/educacao/%s/censo-escolar_escolas_%s.CSV", ano, ano),
+  escolas <- fread(sprintf("../../data-raw/censo_escolar/%s/ESCOLAS.CSV", ano),
                    select = colunas)
-  head(escolas)
-  
   # rename funcionarios variable
   if (ano != 2019) {
     
     colnames(escolas)[ncol(escolas)] <- "NU_FUNCIONARIOS"
-  
-    }
+    
+  }
   
   # format columns
   escolas <- janitor::clean_names(escolas)
   
   # filter municipalties
-  escolas <- escolas[co_municipio %in% munis_df$code_muni]
+  muni_list <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% unlist()
+  escolas_munis <- escolas[co_municipio %in% muni_list]
   
   # only public
-  escolas <- escolas[tp_dependencia %in% c(1, 2, 3)]
+  escolas_munis <- escolas_munis[tp_dependencia %in% c(1, 2, 3)]
   
   # only active
-  escolas <- escolas[tp_situacao_funcionamento == 1]
-  
-  # 2) Ler as coordenadas da escolas fornecidas pelo INEP -------------------------------------------
-  escolas_coords <- fread("../../data-raw/censo_escolar/coordenadas_geo/escolas_inep_2020.csv",
-                          encoding = "UTF-8")
-  
-  # reformat columns
-  escolas_coords <- janitor::clean_names(escolas_coords)
-  escolas_coords <- escolas_coords %>% 
-    select(co_entidade = codigo_inep, endereco, lon = longitude, lat = latitude)
-  
-  
-  # table(nchar(escolas$co_entidade))
-  # table(nchar(escolas_coords$co_entidade))
-  
-  # 3) Join das escolas do censo escolar com as coords fornecidas pelo INEP ------------------------
-  # join to create escolas geo
-  escolas_geo <- merge(
-    escolas,
-    escolas_coords,
-    by = "co_entidade",
-    all.x = TRUE
-  )
-  
-  head(escolas_geo)
-  
-  
-  
-  # 4) Identificar a etapa do ensino de cada escola --------------------
-  escolas_geo <- escolas_geo %>%
-    # identificar o tipo de ensino em cada escola
-    mutate(mat_infantil = ifelse(in_comum_creche == 1 | 
-                                   in_comum_pre == 1 |
-                                   in_esp_exclusiva_creche == 1 |
-                                   in_esp_exclusiva_pre ==1, 1, 0)) %>%
-    
-    mutate(mat_fundamental = ifelse(in_comum_fund_ai == 1 | 
-                                      in_comum_fund_af == 1 |
-                                      in_esp_exclusiva_fund_ai ==1 |
-                                      in_esp_exclusiva_fund_af ==1 |
-                                      in_comum_eja_fund ==1 |
-                                      in_esp_exclusiva_eja_fund ==1, 1, 0)) %>%
-    mutate(mat_medio = ifelse(in_comum_medio_medio == 1 |
-                                in_comum_medio_normal == 1 |
-                                in_comum_medio_integrado ==1 |
-                                in_profissionalizante ==1 |
-                                in_esp_exclusiva_medio_medio ==1 |
-                                in_esp_exclusiva_medio_integr ==1 |
-                                in_esp_exclusiva_medio_normal ==1 |
-                                in_comum_eja_medio ==1 |
-                                in_comum_eja_prof ==1 |
-                                in_esp_exclusiva_eja_medio ==1 |
-                                in_esp_exclusiva_eja_prof ==1 |
-                                in_comum_prof ==1 |
-                                in_esp_exclusiva_prof ==1, 1, 0)) %>%
-    mutate(co_entidade = as.character(co_entidade))
-    
-  
-  # Selecionar variaveis
-    # after 2019, variable 'nu_funcionarios' was descontinued
-    if (ano %in% c(2017, 2018)) {
-      
-      escolas_geo <- escolas_geo %>%
-        select(co_entidade, code_muni = co_municipio, no_entidade, mat_infantil, mat_fundamental, mat_medio, 
-               in_local_func_unid_prisional, in_local_func_prisional_socio, nu_funcionarios,
-               endereco, lon, lat)
-        
-      
-    } else {
-      
-      
-      escolas_geo <- escolas_geo %>%
-        select(co_entidade, code_muni = co_municipio, no_entidade, mat_infantil, mat_fundamental, mat_medio, 
-               in_local_func_unid_prisional, in_local_func_prisional_socio,
-               endereco, lon, lat)
-      
-    }
-  
+  escolas_munis <- escolas_munis[tp_situacao_funcionamento == 1]
   
   # Identifica codigo das escolas priosionais
-  escolas_prisionais <- subset(escolas_geo, in_local_func_unid_prisional ==1 | in_local_func_prisional_socio ==1)$co_entidade
-  
+  escolas_prisionais <- subset(escolas_munis, in_local_func_unid_prisional ==1 | in_local_func_prisional_socio ==1)$co_entidade
   
   # remove escolas prisionais
-  escolas_etapa_fim <- subset(escolas_geo, co_entidade %nin% escolas_prisionais)
-  escolas_etapa_fim$in_local_func_unid_prisional <- NULL
-  escolas_etapa_fim$in_local_func_prisional_socio <- NULL
+  escolas_fim <- subset(escolas_munis, co_entidade %nin% escolas_prisionais)
+  escolas_fim$in_local_func_unid_prisional <- NULL
+  escolas_fim$in_local_func_prisional_socio <- NULL
+  
+
+  # 3) trazer matriculas -------------------------------------------------------
+
+  escolas_fim_mat <- left_join(
+    escolas_fim, 
+    matriculas_group_wide,
+    by = c("co_entidade" = "CO_ENTIDADE"),
+    sort = FALSE
+  )
+  
+  sum(is.na(escolas_fim_mat$mat_infatil))
+  sum(is.na(escolas_fim_mat$mat_fundamental))
+  sum(is.na(escolas_fim_mat$mat_medio))
   
   
+  # 4) Selecionar variaveis e salvar ---------------
+  # after 2019, variable 'nu_funcionarios' was descontinued
+  if (ano %in% c(2017, 2018)) {
+    
+    escolas_fim_mat <- escolas_fim_mat %>%
+      select(co_entidade, code_muni = co_municipio, no_entidade, 
+             mat_infantil, mat_fundamental, mat_medio, 
+             nu_funcionarios
+             )
+    
+    
+  } else {
+    
+    
+    escolas_fim_mat <- escolas_fim_mat %>%
+      select(co_entidade, code_muni = co_municipio, no_entidade, 
+             mat_infantil, mat_fundamental, mat_medio, 
+             nu_funcionarios)
+    
+  }
   
   
+  # 4) salvar ---------------------------
+  write_rds(escolas_fim_mat, sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano), compress = 'gz')
   
-  # 5) Salvar ---------------------------
-  
-  # salvar
-  write_rds(escolas_etapa_fim, sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano), compress = 'gz')
   
 }
+
+
 
 
 
@@ -170,9 +231,30 @@ educacao_filter <- function(ano) {
 educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   
+  # 1) Trazer as coordenadas da escolas fornecidas pelo INEP -------------------------------------------
+  escolas_coords <- fread("../../data-raw/censo_escolar/coordenadas_geo/escolas_inep_2020.csv",
+                          encoding = "UTF-8")
+  # abrir escolas filter
+  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano))
   
-  # 1) Abrir a base de escolas geo filtrada ----------------------
-  escolas_geo <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano))
+  # reformat columns
+  escolas_coords <- janitor::clean_names(escolas_coords)
+  escolas_coords <- escolas_coords %>% 
+    select(co_entidade = codigo_inep, endereco, lon = longitude, lat = latitude)
+  
+  
+  # table(nchar(escolas$co_entidade))
+  # table(nchar(escolas_coords$co_entidade))
+  
+  # 3) Join das escolas do censo escolar com as coords fornecidas pelo INEP ------------------------
+  # join to create escolas geo
+  escolas_geo <- merge(
+    escolas,
+    escolas_coords,
+    by = "co_entidade",
+    all.x = TRUE
+  )
+  
   
   # 2) Separar somente as escolas para geocode que nao forem geocoded no ano anterior ----------
   
@@ -183,7 +265,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
     
     escolas_geo_togeo <- escolas_geo %>% filter(co_entidade %nin% escolas_previous_geo$co_entidade)
     
-  
+    
     
   } else (escolas_geo_togeo <- escolas_geo)
   
@@ -206,7 +288,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   
   # A) Numero de digitos de lat/long apos ponto
-
+  
   # Acho que esse aqui funciona melhor
   setDT(escolas_geo_togeo)[, ndigitos_lat := nchar( gsub("^.*\\.","", lat))    ]
   setDT(escolas_geo_togeo)[, ndigitos_lon := nchar( gsub("^.*\\.","", lon))    ]
@@ -337,8 +419,8 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   # identify searched address
   searchedaddress <- filter(munis_problema_enderecos, co_entidade %in% names(coordenadas_google1)) %>%
-                        mutate(SearchedAddress = endereco) %>% select(co_entidade, SearchedAddress) %>%
-                        distinct(co_entidade, .keep_all = TRUE)
+    mutate(SearchedAddress = endereco) %>% select(co_entidade, SearchedAddress) %>%
+    distinct(co_entidade, .keep_all = TRUE)
   
   estabs_problema_geocoded_dt <- left_join(estabs_problema_geocoded_dt, searchedaddress, by = "co_entidade") %>% setDT()
   
@@ -408,8 +490,8 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   # Replace problematic INEP coordinates and classifications with results from Google
   escolas_geo_togeo[estabs_problema_geocoded_dt, on = "co_entidade",
-              c("MatchedAddress", "PrecisionDepth", "lon", "lat", "geocode_engine", "year_geocode") := 
-                list(i.MatchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine, i.year_geocode)]
+                    c("MatchedAddress", "PrecisionDepth", "lon", "lat", "geocode_engine", "year_geocode") := 
+                      list(i.MatchedAddress, i.PrecisionDepth, i.lon, i.lat, i.geocode_engine, i.year_geocode)]
   
   # table(escolas_geo$PrecisionDepth, useNA = 'always')
   # table(escolas_geo$geocode_engine, useNA = 'always')
@@ -422,8 +504,8 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
                 list(i.lon, i.lat,
                      i.MatchedAddress, i.SearchedAddress, i.PrecisionDepth, i.geocode_engine, i.year_geocode)]
   
-
-    
+  
+  
   # 7) Trazer coordenadas do ano anterior para as novas escolas --------------------------
   if (ano != "2017") {
     
