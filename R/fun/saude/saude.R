@@ -80,7 +80,9 @@ saude_filter <- function(ano) {
   
   ## GOIANIA
   # filter 3: Only municipalities in the project
-  cnes_filter3 <- cnes_filter2[ibge %in% substr(munis_df$code_muni, 1,6)]
+  code_munis <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% 
+    unlist() %>% substring(., 1, 6)
+  cnes_filter3 <- cnes_filter2[ibge %in% code_munis]
   
   
   # filter 4: Only atendimento hospitalar ou ambulatorial
@@ -175,6 +177,10 @@ saude_filter <- function(ano) {
 
 saude_geocode <- function(ano, run_gmaps = FALSE) {
   
+  # primeiro, estabelecer os municipios do projeto no ano
+  code_munis <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% 
+    unlist()
+  
   # 1) Abrir a base filtrada -----------------------------
   
   cnes_filtered <- read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter.rds", ano, ano))
@@ -198,7 +204,8 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   # 3) Corrigir latitude e  longitude  ---------------------------------
   
   # identificar cidades do projeto com dois digitos de latitude
-  munis <- purrr::map_dfr(dir("../../data-raw/municipios/2017/", full.names = TRUE), read_rds) %>%
+  munis <- purrr::map_dfr(
+    as.integer(code_munis), geobr::read_municipality) %>%
     as_tibble() %>%
     st_sf() %>%
     st_centroid() %>%
@@ -215,9 +222,6 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   # trazer a quantidade de digitos para o cnes_temp
   cnes_df_digitos <- cnes_filtered_togeo %>%
     rename(code_muni = ibge) %>%
-    # selecionar so os municipios do projeto
-    filter(code_muni %in% substr(munis_df$code_muni, 1, 6)) %>%
-    mutate(code_muni = as.character(code_muni)) %>%
     left_join(munis, by = "code_muni")
   
   # criar dataframe com as coordenadas ajeitadas

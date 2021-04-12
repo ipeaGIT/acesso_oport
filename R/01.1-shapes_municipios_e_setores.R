@@ -3,6 +3,8 @@
 
 # carregar bibliotecas
 source('./R/fun/setup.R')
+# função do geobr para dissolver polígonos
+source("R/fun/dissolve_polygons.R")
 
 
 # 1. Funcao para download de shape file dos municipios e setores censitarios ------------------
@@ -29,10 +31,14 @@ download_muni_setores <- function(ano, munis = "all") {
     uf_sf <- geobr::read_municipality(state_code)
     muni_sf <- uf_sf %>% filter(code_muni %in% code_munis)
     # muni_sf <- purrr::map_dfr(code_munis, geobr::read_municipality, year=ano, simplified = F)
+    # Dissolver os polígonos dos municípios componentes da RM
+    muni_sf <- dissolve_polygons(muni_sf, group_column = "code_state")
+    muni_sf <- st_transform(muni_sf, 4326)
 
     # Download de arquivos - shapes dos setores censitarios
     uf_sf_tracts <- geobr::read_census_tract(state_code)
     ct_sf <- uf_sf_tracts %>% filter(code_muni %in% code_munis)
+    ct_sf <- st_transform(ct_sf, 4326)
 
 
     # salvar municipios

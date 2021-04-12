@@ -16,10 +16,14 @@ rais_filter_raw_data <- function(ano) {
   # 1.1) Abrir dados
   estabs <- fread(sprintf('//storage6/bases/DADOS/RESTRITO/RAIS/csv/estab%s.csv', ano)
                   #, nrows = 5
-                  , colClasses='character')
+                  , colClasses='character'
+                  , select = 1:33)
   
   # 1.2) Subset municipalities
-  estabs_mun <- estabs[ codemun %in% substring(munis_df$code_muni, 1,6)]
+  # extract code muni
+  code_munis <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% 
+    unlist() %>% substring(., 1, 6)
+  estabs_mun <- estabs[ codemun %in% code_munis]
   
   # 1.3) Subset columns that we use
   estabs_mun <- estabs_mun[, 1:33]
@@ -52,7 +56,7 @@ rais_filter_raw_data <- function(ano) {
   
   
   # 2.3) Subset municipalities
-  trabal <- trabal[ codemun %in% substring(munis_df$code_muni, 1,6)]
+  trabal <- trabal[ codemun %in% code_munis]
   
   
   # 2.4) Salvar

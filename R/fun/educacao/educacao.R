@@ -194,11 +194,14 @@ educacao_filter <- function(ano, download = FALSE) {
     
     escolas_fim_mat <- escolas_fim_mat %>%
       select(co_entidade, code_muni = co_municipio, no_entidade, 
-             mat_infantil, mat_fundamental, mat_medio, 
-             nu_funcionarios)
+             mat_infantil, mat_fundamental, mat_medio
+             )
     
   }
   
+  message("Total de matriculas nivel mat_infantil: ", sum(escolas_fim_mat$mat_infantil, na.rm = TRUE))
+  message("Total de matriculas nivel mat_fundamental: ", sum(escolas_fim_mat$mat_fundamental, na.rm = TRUE))
+  message("Total de matriculas nivel mat_medio: ", sum(escolas_fim_mat$mat_medio, na.rm = TRUE))
   
   # 4) salvar ---------------------------
   write_rds(escolas_fim_mat, sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano), compress = 'gz')
@@ -253,7 +256,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
     escolas_coords,
     by = "co_entidade",
     all.x = TRUE
-  )
+  ) %>% mutate(co_entidade = as.character(co_entidade)) %>% setDT()
   
   
   # 2) Separar somente as escolas para geocode que nao forem geocoded no ano anterior ----------
@@ -420,7 +423,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   # identify searched address
   searchedaddress <- filter(munis_problema_enderecos, co_entidade %in% names(coordenadas_google1)) %>%
     mutate(SearchedAddress = endereco) %>% select(co_entidade, SearchedAddress) %>%
-    distinct(co_entidade, .keep_all = TRUE)
+    distinct(co_entidade, .keep_all = TRUE) %>% mutate(co_entidade = as.character(co_entidade))
   
   estabs_problema_geocoded_dt <- left_join(estabs_problema_geocoded_dt, searchedaddress, by = "co_entidade") %>% setDT()
   

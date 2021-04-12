@@ -24,19 +24,17 @@ criar_hexagonos <- function(ano, munis = "all") {
   
   # sigla_muni <- 'slz'
   # sigla_muni <- 'poa'
+  # sigla_muni <- 'goi'; ano <- 2019
   
-  shape_to_hexagon <- function(sigla_muni, ano) {
+  shape_to_hexagon <- function(sigla_muni) {
     
-    code <- filter(munis_df, abrev_muni == sigla_muni)
-    
-    code <- code$code_muni
-    
-    66666666666666666666666666 trazer o shape dos municipios data-raw em vez da baixar novamente
-    
-    muni <- geobr::read_municipality(code, year = ano) %>% 
-      st_transform(crs=4326) %>%
+    # Leitura do(s) municipio(s)
+    muni <- readr::read_rds(sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", 
+                                    ano, sigla_muni, ano) ) %>%
       # Buffer para extender a area do municipio e assim evitar que os hexagonos nao considerem areas de borda
       st_buffer(dist = 0.003)
+    
+    # mapview(muni)
     
     # resolucoes desejadas
     # Available resolutions considerinf length of short diagonal - https://uber.github.io/h3/#/documentation/core-library/resolution-table
@@ -54,7 +52,7 @@ criar_hexagonos <- function(ano, munis = "all") {
       hex_ids <- polyfill(muni, res = resolution, simple = TRUE)
       
       # pass the h3 ids to return the hexagonal grid
-      hex_grid <- hex_ids %>%  # hex_ids[[1]] %>%  # change necessary to accommodate multiple municipalities
+      hex_grid <- hex_ids %>%  
         h3_to_polygon(simple = FALSE) %>%
         rename(id_hex = h3_address) %>%
         as_tibble() %>% 
@@ -87,13 +85,15 @@ criar_hexagonos <- function(ano, munis = "all") {
   #### Aplicando funcao em paralelo para salvar grades de hexagonos ---------------------------------------------------------------
   if (munis == "all") {
     
-    x = munis_df$abrev_muni
+    # seleciona todos municipios ou RMs do ano escolhido
+    x = munis_list$munis_metro[ano_metro == ano]$abrev_muni
     
   } else (x = munis)
   
   # Parallel processing using future.apply
-  future::plan(future::multiprocess)
-  future.apply::future_lapply(X = x, FUN=shape_to_hexagon, future.packages=c('h3jsr','sf', 'dplyr'))
+  # future::plan(future::multiprocess)
+  # future.apply::future_lapply(X = x, FUN=shape_to_hexagon, future.packages=c('h3jsr','sf', 'dplyr'))
+  lapply(X = x, shape_to_hexagon)
   
 }
 
