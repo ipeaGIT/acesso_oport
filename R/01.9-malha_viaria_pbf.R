@@ -67,8 +67,7 @@ filtrar_malha_viaria_br(year = 2020)
 # função para extrair a malha viária do município -------------------------
 
 
-# muni <- "poa"
-# year <- 2020
+# muni <- "poa"; year <- 2017
 
 extrai_malha_viaria <- function(muni, year) {
   ## encontrar bounding box da cidade, a partir do grid de topografia
@@ -83,7 +82,8 @@ extrai_malha_viaria <- function(muni, year) {
   osmosis_path <- sprintf("../../data-raw/malha_viaria/osmosis/bin/osmosis.bat")
   
   # PBF do Brasil inteiro
-  br_pbf <- sprintf("../../data-raw/malha_viaria/%s/br/brazil-latest-filtered.osm.pbf", year)
+  year_brazil <- ifelse(year %in% c(2017:2020), 2020, year)
+  br_pbf <- sprintf("../../data-raw/malha_viaria/%s/br/brazil-latest-filtered.osm.pbf", year_brazil)
   
   # PBF do município
   muni_pbf <- sprintf("../../data-raw/malha_viaria/%s/%s/%s_%s.osm.pbf", year, muni, muni, year)
@@ -107,7 +107,7 @@ extrai_malha_viaria <- function(muni, year) {
   tictoc::toc()
 }
 
-purrr::walk(munis_df$abrev_muni, extrai_malha_viaria, year = 2020)
+purrr::walk(munis_list$munis_metro[ano_metro == ano]$abrev_muni, extrai_malha_viaria, year = 2020)
 system.time(extrai_malha_viaria(muni = "poa", year = 2020))
 
 

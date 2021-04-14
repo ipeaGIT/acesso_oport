@@ -313,7 +313,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
   temp_intersect <- sf::st_join(censoescolar_df_coords_fixed_df, shps)
   
   # escolas que cairam fora de algum municipio
-  B_muni_fora <- subset(temp_intersect, is.na(name_muni))
+  B_muni_fora <- subset(temp_intersect, is.na(code_state))
   
   
   
@@ -462,7 +462,7 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
     st_as_sf(coords = c('lon', 'lat'), crs = 4326) %>%
     sf::st_join(shps %>% st_buffer(0.0008)) %>%
     # escolas que cairam fora de algum municipio, a serem georreferenciadas na unha
-    filter(is.na(name_muni)) %>%
+    filter(is.na(code_state)) %>%
     select(co_entidade, SearchedAddress)
   
   

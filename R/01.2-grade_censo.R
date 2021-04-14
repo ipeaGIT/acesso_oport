@@ -37,7 +37,7 @@ criar_grade_muni_all <- function(ano, munis = "all") {
                                     ano, sigla, ano) )
     
     # Dissolver os polígonos dos municípios componentes da RM
-    muni <- dissolve_polygons(muni, group_column = "code_state")
+    # muni <- dissolve_polygons(muni, group_column = "code_state")
     
     # mesma projecao geografica
     grade <- grade %>% st_transform(crs = 4326)

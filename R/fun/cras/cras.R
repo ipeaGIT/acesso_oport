@@ -50,11 +50,13 @@ cras_geocode <- function(ano, run_gmaps = F) {
                                "telefone","open_date",'lat_suas','lon_suas', 'cad_unico'))
   
   # filtra somente cras nos municipios do projeto
-  cras <- data.table::setDT(cras, key = 'code_cras')[code_muni %in% munis_df$code_muni]
+  code_munis <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% 
+    unlist()
+  cras <- data.table::setDT(cras, key = 'code_cras')[code_muni %in% code_munis]
   
   # traz info dos municipios para dados dos CRAS
   cras <- data.table::merge.data.table(cras,
-                                       munis_df[,.(name_muni,code_muni,abrev_estado)],
+                                       munis_list$munis_df[,.(name_muni,code_muni,abrev_estado)],
                                        all.x = TRUE,
                                        by = 'code_muni')
   head(cras)
@@ -87,7 +89,7 @@ cras_geocode <- function(ano, run_gmaps = F) {
   
   # Cria coluna com endereço completo
   cras[, endereco := paste(paste(tp_log, logradouro, sep = ' '),numero,sep = ', ')]
-  table(cras$endereco)
+  # table(cras$endereco)
   
   # Endereco em maiusculo, email em minusculo
   cras[, endereco := stringr::str_to_upper(endereco)]
@@ -104,7 +106,8 @@ cras_geocode <- function(ano, run_gmaps = F) {
   # 3) Corrige coordenadas defeituosas ------------------------------------------------------------------
   
   # identificar numero de digitos de lat antes da virgula pra cada cidade do projeto
-  munis <- purrr::map_dfr(dir("../../data-raw/municipios/2017/", full.names = TRUE), read_rds) %>%
+  munis <- purrr::map_dfr(
+    as.integer(code_munis), geobr::read_municipality) %>%
     as_tibble() %>%
     st_sf() %>%
     st_centroid() %>%
@@ -113,16 +116,17 @@ cras_geocode <- function(ano, run_gmaps = F) {
     # quantos digitos as latitudes tem antes da virgula?
     mutate(lat_digits = sub("^-?(\\d+)[[:punct:]]{1}\\d+$", "\\1", lat)) %>%
     mutate(lat_digits = nchar(lat_digits)) %>%
+    # municipio so tem 6 digitos
+    mutate(code_muni = substr(code_muni, 1,6)) %>%
     # selecionar so as colunas necessarias
-    dplyr::select(code_muni, lat_digits) %>% 
-    mutate(code_muni = as.integer(code_muni))
+    dplyr::select(code_muni, lat_digits)
     
   # criar dataframe com as coordenadas ajeitadas
   cras_fixed <- cras %>%
     # Seleciona Colunas 
     select(code_muni,code_cras,lon_suas,lat_suas) %>% 
     # Left join com número de dígitos da latitude
-    left_join(munis,
+    left_join(munis %>% mutate(code_muni = as.integer(code_muni)),
               by = 'code_muni') %>% 
     # primeiro, tirar tudo que for ponto ou virgula
     mutate(lon = gsub("(\\.|,)", "", lon_suas),

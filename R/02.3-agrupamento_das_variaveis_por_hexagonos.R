@@ -20,8 +20,8 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   # select columns
   cnes_data <- cnes_data[, .(cnes, code_muni,
-                   health_low, health_med, health_high,
-                   lon, lat)]
+                             health_low, health_med, health_high,
+                             lon, lat)]
   
   cnes_data <- cnes_data %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
@@ -34,13 +34,13 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   # select columns
   escolas <- escolas[, .(co_entidade, code_muni,
-                   mat_infantil, mat_fundamental, mat_medio,
-                   lon, lat)]
+                         mat_infantil, mat_fundamental, mat_medio,
+                         lon, lat)]
   
   
   # 1.3) Empregos
   empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa5_censoEscolar_filter.rds", ano, ano))
-    
+  
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
   
@@ -80,7 +80,8 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       st_centroid()
     
     # Qual o codigo do municipio em questao?
-    cod_mun_ok <- munis_df[abrev_muni == sigla_muni]$code_muni
+    cod_mun_ok <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% 
+      unlist()
     
     # Filtrar somente as atividades referentes a cada municipio e transforma em sf
     # para rais 2017
@@ -112,29 +113,29 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       hex_pop <- hex_muni %>% st_join(centroide_pop)
       
       
-666666666
-### a. substituir CENTROID pela proporcao de intersecao
-### b. arredondamento %>%
+      666666666
+      ### a. substituir CENTROID pela proporcao de intersecao
+      ### b. arredondamento %>%
       ###  mutate_at(vars(matches("pop|renda|moradores|cor|idade")), round)
       
       # Summarize
-      hex_pop <- setDT(hex_pop)[, .(cor_branca   = sum(round(cor_branca,0), na.rm = TRUE),
-                                    cor_amarela  = sum(round(cor_amarela,0), na.rm = TRUE),
-                                    cor_indigena = sum(round(cor_indigena,0), na.rm = TRUE),
-                                    cor_negra    = sum(round(cor_negra,0), na.rm = TRUE),
+      hex_pop <- setDT(hex_pop)[, .(cor_branca   = as.numeric(sum(round(cor_branca,0), na.rm = TRUE)),
+                                    cor_amarela  = as.numeric(sum(round(cor_amarela,0), na.rm = TRUE)),
+                                    cor_indigena = as.numeric(sum(round(cor_indigena,0), na.rm = TRUE)),
+                                    cor_negra    = as.numeric(sum(round(cor_negra,0), na.rm = TRUE)),
                                     # age variables
-                                    idade_0a5   = sum(idade_0a5   , na.rm = TRUE),
-                                    idade_6a14 =  sum(idade_6a14 , na.rm = TRUE),
-                                    idade_15a18 = sum(idade_15a18 , na.rm = TRUE),
-                                    idade_19a24 = sum(idade_19a24 , na.rm = TRUE),
-                                    idade_25a39 = sum(idade_25a39 , na.rm = TRUE),
-                                    idade_40a69 = sum(idade_40a69 , na.rm = TRUE),
-                                    idade_70 =    sum(idade_70 , na.rm = TRUE),
+                                    idade_0a5   = as.numeric(sum(idade_0a5   , na.rm = TRUE)),
+                                    idade_6a14 =  as.numeric(sum(idade_6a14 , na.rm = TRUE)),
+                                    idade_15a18 = as.numeric(sum(idade_15a18 , na.rm = TRUE)),
+                                    idade_19a24 = as.numeric(sum(idade_19a24 , na.rm = TRUE)),
+                                    idade_25a39 = as.numeric(sum(idade_25a39 , na.rm = TRUE)),
+                                    idade_40a69 = as.numeric(sum(idade_40a69 , na.rm = TRUE)),
+                                    idade_70 =    as.numeric(sum(idade_70 , na.rm = TRUE)),
                                     # total pop and income 
-                                    pop_total    = sum(round(pop_total,0), na.rm = TRUE),
-                                    pop_homens    = sum(round(pop_homens,0), na.rm = TRUE),
-                                    pop_mulheres    = sum(round(pop_mulheres,0), na.rm = TRUE),
-                                    renda_total  = sum(renda, na.rm = TRUE)), 
+                                    pop_total    = as.numeric(sum(round(pop_total,0), na.rm = TRUE)),
+                                    pop_homens   = as.numeric(sum(round(pop_homens,0), na.rm = TRUE)),
+                                    pop_mulheres = as.numeric(sum(round(pop_mulheres,0), na.rm = TRUE)),
+                                    renda_total  = as.numeric(sum(renda, na.rm = TRUE))), 
                                 by = id_hex ]
       
       # Calcular quintil e decil de renda
@@ -166,14 +167,14 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       
       # Agrupar empregos
       # join espacial 
-      hex_rais <- hex_muni %>% st_join(empregos_filtrado)
+      hex_rais <- hex_muni %>% st_join(empregos_filtrado) %>% setDT()
       
       # Summarize
-      hex_rais <- setDT(hex_rais)[, .(empregos_baixa = sum(baixo, na.rm = TRUE),
-                                      empregos_media = sum(medio, na.rm = TRUE),
-                                      empregos_alta  = sum(alto, na.rm = TRUE),
-                                      empregos_total = sum(alto, medio, baixo, na.rm = TRUE)), 
-                                  by = id_hex ]
+      hex_rais <- hex_rais[, .(empregos_baixa = sum(baixo, na.rm = TRUE),
+                               empregos_media = sum(medio, na.rm = TRUE),
+                               empregos_alta  = sum(alto, na.rm = TRUE),
+                               empregos_total = sum(alto, medio, baixo, na.rm = TRUE)), 
+                           by = id_hex ]
       
       
       # setDT(hex_muni)[, empregos_total := sum(empregos_alta, empregos_media, empregos_baixa), by=id_hex]
@@ -196,22 +197,15 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       
       
       
-      
       # agrupar educacao
       # join espacial 
       hex_escolas <- hex_muni %>% st_join(escolas_filtrado) %>% setDT()
       
-      # # Dummy para nivel de educacao em cada hexagono
-      #   hex_escolas[, edu_infantil := ifelse( mat_infantil > 0, 1, 0) ]
-      #   hex_escolas[, edu_fundamental := ifelse( mat_fundamental > 0, 1, 0) ]      
-      #   hex_escolas[, edu_medio := ifelse( mat_medio > 0, 1, 0) ]      
-      hex_escolas[, edu_total := ifelse( is.na(co_entidade), 0, 1) ]
-      
       # Summarize
-      hex_escolas <- hex_escolas[, .(edu_total       = sum(edu_total, na.rm = T),
-                                     edu_infantil    = sum(mat_infantil, na.rm = T),
+      hex_escolas <- hex_escolas[, .(edu_infantil    = sum(mat_infantil, na.rm = T),
                                      edu_fundamental = sum(mat_fundamental, na.rm = T),
-                                     edu_medio       = sum(mat_medio, na.rm = T)), 
+                                     edu_medio       = sum(mat_medio, na.rm = T),
+                                     edu_total       = sum(mat_infantil, mat_fundamental, mat_medio, na.rm = TRUE)), 
                                  by = id_hex ]
       
       
@@ -242,7 +236,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # Aplica funcao para cada municipio
   if (munis == "all") {
     
-    x = munis_df$abrev_muni
+    x = munis_list$munis_metro[ano_metro == ano]$abrev_muni
     
   } else (x = munis)
   

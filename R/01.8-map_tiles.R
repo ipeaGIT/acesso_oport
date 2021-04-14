@@ -6,7 +6,7 @@
 source('./R/fun/setup.R')
 source("R/fun/crop_ggmap.R")
 
-devtools::install_github('kauebraga/ceramic')
+# devtools::install_github('kauebraga/ceramic')
 
 # 2) MAPBOX MAP TILES --------------------------------
 
@@ -26,7 +26,7 @@ baixar_map_tile_ceramic <- function(ano, munis = "all") {
   
   
   # Criar pasta para salvar arquivos
-  dir.create(sprintf("../data/maptiles_crop/%s/mapbox", ano), recursive = TRUE)
+  dir.create(sprintf("../../data/acesso_oport/maptiles_crop/%s/mapbox", ano), recursive = TRUE)
   
   baixar_map_tile_ceramic_muni <- function(sigla_muni) {
     
@@ -59,11 +59,11 @@ baixar_map_tile_ceramic <- function(ano, munis = "all") {
   
   if (munis == "all") {
     
-    x = munis_df$abrev_muni
+    x = munis_list$munis_metro[ano_metro == ano]$abrev_muni
     
   } else (x = munis)
   
-  lapply(munis_df$abrev_muni, baixar_map_tile_ceramic_muni)
+  lapply(x, baixar_map_tile_ceramic_muni)
     
 }
 
@@ -71,4 +71,6 @@ baixar_map_tile_ceramic <- function(ano, munis = "all") {
 
 # 2.2) Aplicar funcao -----------------------------------------------------------------------------
 
+baixar_map_tile_ceramic(ano = 2017)
+baixar_map_tile_ceramic(ano = 2018)
 baixar_map_tile_ceramic(ano = 2019)
