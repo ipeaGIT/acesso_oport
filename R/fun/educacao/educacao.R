@@ -63,14 +63,14 @@ educacao_filter <- function(ano, download = FALSE) {
                TP_ETAPA_ENSINO == 39 ~ ""               , # - Curso Técnico - Concomitante
                TP_ETAPA_ENSINO == 40 ~ ""               , # - Curso Técnico - Subsequente
                TP_ETAPA_ENSINO == 68 ~ ""               , # - Curso FIC Concomitante
-               TP_ETAPA_ENSINO == 65 ~ "mat_fundamental", # - EJA - Ensino Fundamental - Projovem Urbano
-               TP_ETAPA_ENSINO == 67 ~ "mat_medio"      , # - Curso FIC integrado na modalidade EJA  - Nível Médio
-               TP_ETAPA_ENSINO == 69 ~ "mat_fundamental", # - EJA - Ensino Fundamental -  Anos iniciais
-               TP_ETAPA_ENSINO == 70 ~ "mat_fundamental", # - EJA - Ensino Fundamental -  Anos finais
-               TP_ETAPA_ENSINO == 71 ~ "mat_medio"      , # - EJA - Ensino Médio
-               TP_ETAPA_ENSINO == 72 ~ "mat_fundamental", # - EJA - Ensino Fundamental  - Anos iniciais e Anos finais4
-               TP_ETAPA_ENSINO == 73 ~ "mat_fundamental", # - Curso FIC integrado na modalidade EJA - Nível Fundamental (EJA integrada à Educação Profissional de Nível Fundamental)
-               TP_ETAPA_ENSINO == 74 ~ "mat_medio"       # - Curso Técnico Integrado na Modalidade EJA (EJA integrada à Educação Profissional de Nível Médio)
+               TP_ETAPA_ENSINO == 65 ~ ""               , # - EJA - Ensino Fundamental - Projovem Urbano
+               TP_ETAPA_ENSINO == 67 ~ ""               , # - Curso FIC integrado na modalidade EJA  - Nível Médio
+               TP_ETAPA_ENSINO == 69 ~ ""               , # - EJA - Ensino Fundamental -  Anos iniciais
+               TP_ETAPA_ENSINO == 70 ~ ""               , # - EJA - Ensino Fundamental -  Anos finais
+               TP_ETAPA_ENSINO == 71 ~ ""               , # - EJA - Ensino Médio
+               TP_ETAPA_ENSINO == 72 ~ ""               , # - EJA - Ensino Fundamental  - Anos iniciais e Anos finais4
+               TP_ETAPA_ENSINO == 73 ~ ""               , # - Curso FIC integrado na modalidade EJA - Nível Fundamental (EJA integrada à Educação Profissional de Nível Fundamental)
+               TP_ETAPA_ENSINO == 74 ~ ""                 # - Curso Técnico Integrado na Modalidade EJA (EJA integrada à Educação Profissional de Nível Médio)
              )]
   
   # table(matriculas$mat_tipo, useNA = "always")
@@ -130,6 +130,7 @@ educacao_filter <- function(ano, download = FALSE) {
                  # "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
                  # "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND",
                  "IN_LOCAL_FUNC_UNID_PRISIONAL", "IN_LOCAL_FUNC_PRISIONAL_SOCIO", # escolas prisionais
+                 "IN_REGULAR",
                  "TP_DEPENDENCIA", "TP_SITUACAO_FUNCIONAMENTO"), 
                ifelse(ano == 2017, "NU_FUNCIONARIOS", "QT_FUNCIONARIOS"))
   
@@ -154,6 +155,11 @@ educacao_filter <- function(ano, download = FALSE) {
   
   # only active
   escolas_munis <- escolas_munis[tp_situacao_funcionamento == 1]
+  
+  # selecionar somente escola com ensino regular
+  escolas_munis <- escolas_munis[in_regular == 1]
+  
+  
   
   # Identifica codigo das escolas priosionais
   escolas_prisionais <- subset(escolas_munis, in_local_func_unid_prisional ==1 | in_local_func_prisional_socio ==1)$co_entidade
