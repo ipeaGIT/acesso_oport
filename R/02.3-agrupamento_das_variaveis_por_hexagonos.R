@@ -101,6 +101,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     por_resolucao <- function(muni_res) {
       # muni_res <- '09'
+      # muni_res <- '08'
       
       # endereco do hexagono na resolucao
       hexf <- sprintf("../../data/acesso_oport/hex_municipio/%s/hex_%s_%s_%s.rds", ano, sigla_muni, muni_res, ano)
@@ -113,7 +114,6 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       hex_pop <- hex_muni %>% st_join(centroide_pop)
       
       
-      666666666
       ### a. substituir CENTROID pela proporcao de intersecao
       ### b. arredondamento %>%
       ###  mutate_at(vars(matches("pop|renda|moradores|cor|idade")), round)
@@ -200,15 +200,25 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       # agrupar educacao
       # join espacial 
       hex_escolas <- hex_muni %>% st_join(escolas_filtrado) %>% setDT()
+      hex_escolas <- hex_escolas[!is.na(co_entidade)]
       
       # Summarize
-      hex_escolas <- hex_escolas[, .(edu_infantil    = sum(mat_infantil, na.rm = T),
-                                     edu_fundamental = sum(mat_fundamental, na.rm = T),
-                                     edu_medio       = sum(mat_medio, na.rm = T),
-                                     edu_total       = sum(mat_infantil, mat_fundamental, mat_medio, na.rm = TRUE)), 
-                                 by = id_hex ]
+      hex_escolas[, ':='(edu_infantil    = fifelse(mat_infantil    == 0, 0, 1),
+                         edu_fundamental = fifelse(mat_fundamental == 0, 0, 1),
+                         edu_medio       = fifelse(mat_medio == 0, 0, 1))]
+      
+      hex_escolas <- hex_escolas[, .(edu_infantil      = sum(edu_infantil, na.rm = TRUE),
+                                       edu_fundamental = sum(edu_fundamental, na.rm = TRUE),
+                                       edu_medio       = sum(edu_medio, na.rm = TRUE),
+                                       edu_total       = .N,
+                                       mat_infantil    = sum(mat_infantil, na.rm = T),
+                                       mat_fundamental = sum(mat_fundamental, na.rm = T),
+                                       mat_medio       = sum(mat_medio, na.rm = T),
+                                       mat_total       = sum(mat_infantil, mat_fundamental, mat_medio, na.rm = TRUE)),
+                                   by = id_hex]
       
       
+      # summary(hex_escolas$edu_total)
       
       # Junta todos os dados agrupados por hexagonos
       hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
@@ -226,6 +236,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       # Salva grade de hexagonos com todas informacoes de uso do soloe
       dir_output <- sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_%s_%s.rds", ano, sigla_muni, muni_res, ano)
       readr::write_rds(hex_muni_fim, dir_output)
+      
     }
     
     # Aplicar funcao para cada resolucao

@@ -13,11 +13,12 @@ educacao_filter <- function(ano, download = FALSE) {
   # 1) Abrir e juntar dados de matriculas ------------------------------------
   matriculas <- lapply(list.files(sprintf("../../data-raw/censo_escolar/%s", ano), 
                                   pattern = "MATRICULA", full.names = TRUE),
-                       fread, select = c("CO_ENTIDADE", "TP_DEPENDENCIA", "TP_ETAPA_ENSINO", "IN_REGULAR")) %>%
+                       fread, select = c("CO_ENTIDADE", "TP_DEPENDENCIA", "TP_ETAPA_ENSINO", 
+                                         "IN_REGULAR", "IN_PROFISSIONALIZANTE")) %>%
     rbindlist()
   
   # selecionar somente matriculas regulares
-  matriculas <- matriculas[IN_REGULAR == 1]
+  matriculas <- matriculas[IN_REGULAR == 1 | IN_PROFISSIONALIZANTE == 1]
   # selecionar somente matriculas em escolas publicas
   matriculas <- matriculas[TP_DEPENDENCIA %in% c(1, 2, 3)]
   
@@ -26,58 +27,58 @@ educacao_filter <- function(ano, download = FALSE) {
   # categorias a serem escolhidas e re-categorizadas
   # checar arquivo Dicionário de Dados da Educaç╞o Básica 2017.excel na mesma pasta
   matriculas[,
-             mat_tipo := case_when(
-               TP_ETAPA_ENSINO == 1  ~ "mat_infantil"   , # - Educação Infantil - Creche
-               TP_ETAPA_ENSINO == 2  ~ "mat_infantil"   , # - Educação Infantil - Pré-escola
-               TP_ETAPA_ENSINO == 4  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 1ª Série
-               TP_ETAPA_ENSINO == 5  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 2ª Série
-               TP_ETAPA_ENSINO == 6  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 3ª Série
-               TP_ETAPA_ENSINO == 7  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 4ª Série
-               TP_ETAPA_ENSINO == 8  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 5ª Série
-               TP_ETAPA_ENSINO == 9  ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 6ª Série
-               TP_ETAPA_ENSINO == 10 ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 7ª Série
-               TP_ETAPA_ENSINO == 11 ~ "mat_fundamental", # - Ensino Fundamental de 8 anos - 8ª Série
-               TP_ETAPA_ENSINO == 14 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 1º Ano
-               TP_ETAPA_ENSINO == 15 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 2º Ano
-               TP_ETAPA_ENSINO == 16 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 3º Ano
-               TP_ETAPA_ENSINO == 17 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 4º Ano
-               TP_ETAPA_ENSINO == 18 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 5º Ano
-               TP_ETAPA_ENSINO == 19 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 6º Ano
-               TP_ETAPA_ENSINO == 20 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 7º Ano
-               TP_ETAPA_ENSINO == 21 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 8º Ano
-               TP_ETAPA_ENSINO == 41 ~ "mat_fundamental", # - Ensino Fundamental de 9 anos - 9º Ano
-               TP_ETAPA_ENSINO == 25 ~ "mat_medio"      , # - Ensino Médio - 1ª Série
-               TP_ETAPA_ENSINO == 26 ~ "mat_medio"      , # - Ensino Médio - 2ª Série
-               TP_ETAPA_ENSINO == 27 ~ "mat_medio"      , # - Ensino Médio - 3ª Série
-               TP_ETAPA_ENSINO == 28 ~ "mat_medio"      , # - Ensino Médio - 4ª Série
-               TP_ETAPA_ENSINO == 29 ~ "mat_medio"      , # - Ensino Médio - Não Seriada
-               TP_ETAPA_ENSINO == 30 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 1ª Série
-               TP_ETAPA_ENSINO == 31 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 2ª Série
-               TP_ETAPA_ENSINO == 32 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 3ª Série
-               TP_ETAPA_ENSINO == 33 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 4ª Série
-               TP_ETAPA_ENSINO == 34 ~ "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) Não Seriada
-               TP_ETAPA_ENSINO == 35 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 1ª Série
-               TP_ETAPA_ENSINO == 36 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 2ª Série
-               TP_ETAPA_ENSINO == 37 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 3ª Série
-               TP_ETAPA_ENSINO == 38 ~ "mat_medio"      , # - Ensino Médio - Normal/Magistério 4ª Série
-               TP_ETAPA_ENSINO == 39 ~ ""               , # - Curso Técnico - Concomitante
-               TP_ETAPA_ENSINO == 40 ~ ""               , # - Curso Técnico - Subsequente
-               TP_ETAPA_ENSINO == 68 ~ ""               , # - Curso FIC Concomitante
-               TP_ETAPA_ENSINO == 65 ~ ""               , # - EJA - Ensino Fundamental - Projovem Urbano
-               TP_ETAPA_ENSINO == 67 ~ ""               , # - Curso FIC integrado na modalidade EJA  - Nível Médio
-               TP_ETAPA_ENSINO == 69 ~ ""               , # - EJA - Ensino Fundamental -  Anos iniciais
-               TP_ETAPA_ENSINO == 70 ~ ""               , # - EJA - Ensino Fundamental -  Anos finais
-               TP_ETAPA_ENSINO == 71 ~ ""               , # - EJA - Ensino Médio
-               TP_ETAPA_ENSINO == 72 ~ ""               , # - EJA - Ensino Fundamental  - Anos iniciais e Anos finais4
-               TP_ETAPA_ENSINO == 73 ~ ""               , # - Curso FIC integrado na modalidade EJA - Nível Fundamental (EJA integrada à Educação Profissional de Nível Fundamental)
-               TP_ETAPA_ENSINO == 74 ~ ""                 # - Curso Técnico Integrado na Modalidade EJA (EJA integrada à Educação Profissional de Nível Médio)
+             mat_tipo := fcase(
+               TP_ETAPA_ENSINO == 1 , "mat_infantil"   , # - Educação Infantil - Creche
+               TP_ETAPA_ENSINO == 2 , "mat_infantil"   , # - Educação Infantil - Pré-escola
+               TP_ETAPA_ENSINO == 4 , "mat_fundamental", # - Ensino Fundamental de 8 anos - 1ª Série
+               TP_ETAPA_ENSINO == 5 , "mat_fundamental", # - Ensino Fundamental de 8 anos - 2ª Série
+               TP_ETAPA_ENSINO == 6 , "mat_fundamental", # - Ensino Fundamental de 8 anos - 3ª Série
+               TP_ETAPA_ENSINO == 7 , "mat_fundamental", # - Ensino Fundamental de 8 anos - 4ª Série
+               TP_ETAPA_ENSINO == 8 , "mat_fundamental", # - Ensino Fundamental de 8 anos - 5ª Série
+               TP_ETAPA_ENSINO == 9 , "mat_fundamental", # - Ensino Fundamental de 8 anos - 6ª Série
+               TP_ETAPA_ENSINO == 10, "mat_fundamental", # - Ensino Fundamental de 8 anos - 7ª Série
+               TP_ETAPA_ENSINO == 11, "mat_fundamental", # - Ensino Fundamental de 8 anos - 8ª Série
+               TP_ETAPA_ENSINO == 14, "mat_fundamental", # - Ensino Fundamental de 9 anos - 1º Ano
+               TP_ETAPA_ENSINO == 15, "mat_fundamental", # - Ensino Fundamental de 9 anos - 2º Ano
+               TP_ETAPA_ENSINO == 16, "mat_fundamental", # - Ensino Fundamental de 9 anos - 3º Ano
+               TP_ETAPA_ENSINO == 17, "mat_fundamental", # - Ensino Fundamental de 9 anos - 4º Ano
+               TP_ETAPA_ENSINO == 18, "mat_fundamental", # - Ensino Fundamental de 9 anos - 5º Ano
+               TP_ETAPA_ENSINO == 19, "mat_fundamental", # - Ensino Fundamental de 9 anos - 6º Ano
+               TP_ETAPA_ENSINO == 20, "mat_fundamental", # - Ensino Fundamental de 9 anos - 7º Ano
+               TP_ETAPA_ENSINO == 21, "mat_fundamental", # - Ensino Fundamental de 9 anos - 8º Ano
+               TP_ETAPA_ENSINO == 41, "mat_fundamental", # - Ensino Fundamental de 9 anos - 9º Ano
+               TP_ETAPA_ENSINO == 25, "mat_medio"      , # - Ensino Médio - 1ª Série
+               TP_ETAPA_ENSINO == 26, "mat_medio"      , # - Ensino Médio - 2ª Série
+               TP_ETAPA_ENSINO == 27, "mat_medio"      , # - Ensino Médio - 3ª Série
+               TP_ETAPA_ENSINO == 28, "mat_medio"      , # - Ensino Médio - 4ª Série
+               TP_ETAPA_ENSINO == 29, "mat_medio"      , # - Ensino Médio - Não Seriada
+               TP_ETAPA_ENSINO == 30, "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 1ª Série
+               TP_ETAPA_ENSINO == 31, "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 2ª Série
+               TP_ETAPA_ENSINO == 32, "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 3ª Série
+               TP_ETAPA_ENSINO == 33, "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) 4ª Série
+               TP_ETAPA_ENSINO == 34, "mat_medio"      , # - Curso Técnico Integrado (Ensino Médio Integrado) Não Seriada
+               TP_ETAPA_ENSINO == 35, "mat_medio"      , # - Ensino Médio - Normal/Magistério 1ª Série
+               TP_ETAPA_ENSINO == 36, "mat_medio"      , # - Ensino Médio - Normal/Magistério 2ª Série
+               TP_ETAPA_ENSINO == 37, "mat_medio"      , # - Ensino Médio - Normal/Magistério 3ª Série
+               TP_ETAPA_ENSINO == 38, "mat_medio"      , # - Ensino Médio - Normal/Magistério 4ª Série
+               TP_ETAPA_ENSINO == 39, "mat_medio"      , # - Curso Técnico - Concomitante
+               TP_ETAPA_ENSINO == 40, "mat_medio"      , # - Curso Técnico - Subsequente
+               TP_ETAPA_ENSINO == 68, NA_character_    , # - Curso FIC Concomitante
+               TP_ETAPA_ENSINO == 65, NA_character_    , # - EJA - Ensino Fundamental - Projovem Urbano
+               TP_ETAPA_ENSINO == 67, NA_character_    , # - Curso FIC integrado na modalidade EJA  - Nível Médio
+               TP_ETAPA_ENSINO == 69, NA_character_    , # - EJA - Ensino Fundamental -  Anos iniciais
+               TP_ETAPA_ENSINO == 70, NA_character_    , # - EJA - Ensino Fundamental -  Anos finais
+               TP_ETAPA_ENSINO == 71, NA_character_    , # - EJA - Ensino Médio
+               TP_ETAPA_ENSINO == 72, NA_character_    , # - EJA - Ensino Fundamental  - Anos iniciais e Anos finais4
+               TP_ETAPA_ENSINO == 73, NA_character_    , # - Curso FIC integrado na modalidade EJA - Nível Fundamental (EJA integrada à Educação Profissional de Nível Fundamental)
+               TP_ETAPA_ENSINO == 74, NA_character_    # - Curso Técnico Integrado na Modalidade EJA (EJA integrada à Educação Profissional de Nível Médio)
              )]
   
   # table(matriculas$mat_tipo, useNA = "always")
   
-  # tirar os que nao sao etapa de ensino e agrupar
-  matriculas <- matriculas[mat_tipo != ""]
+  # tirar NAs
   matriculas <- matriculas[!is.na(mat_tipo)]
+  # agrupar por escola e tipo de matricula
   matriculas_group <- matriculas[, .(.N), by = .(CO_ENTIDADE, mat_tipo)]
   
   # transformar para formato largo
@@ -130,7 +131,7 @@ educacao_filter <- function(ano, download = FALSE) {
                  # "IN_ESP_EXCLUSIVA_EJA_MEDIO","IN_ESP_EXCLUSIVA_EJA_PROF","IN_COMUM_PROF",
                  # "IN_ESP_EXCLUSIVA_PROF","IN_COMUM_EJA_FUND","IN_ESP_EXCLUSIVA_EJA_FUND",
                  "IN_LOCAL_FUNC_UNID_PRISIONAL", "IN_LOCAL_FUNC_PRISIONAL_SOCIO", # escolas prisionais
-                 "IN_REGULAR",
+                 "IN_REGULAR", "IN_PROFISSIONALIZANTE", "IN_EJA",
                  "TP_DEPENDENCIA", "TP_SITUACAO_FUNCIONAMENTO"), 
                ifelse(ano == 2017, "NU_FUNCIONARIOS", "QT_FUNCIONARIOS"))
   
@@ -157,9 +158,7 @@ educacao_filter <- function(ano, download = FALSE) {
   escolas_munis <- escolas_munis[tp_situacao_funcionamento == 1]
   
   # selecionar somente escola com ensino regular
-  escolas_munis <- escolas_munis[in_regular == 1]
-  
-  
+  escolas_munis <- escolas_munis[in_regular == 1 | in_profissionalizante == 1]
   
   # Identifica codigo das escolas priosionais
   escolas_prisionais <- subset(escolas_munis, in_local_func_unid_prisional ==1 | in_local_func_prisional_socio ==1)$co_entidade
@@ -172,7 +171,8 @@ educacao_filter <- function(ano, download = FALSE) {
 
   # 3) trazer matriculas -------------------------------------------------------
 
-  escolas_fim_mat <- left_join(
+  # usando inner_join para manter apenas escolas com matriculas que nao sejam EJA
+  escolas_fim_mat <- inner_join(
     escolas_fim, 
     matriculas_group_wide,
     by = c("co_entidade" = "CO_ENTIDADE"),
