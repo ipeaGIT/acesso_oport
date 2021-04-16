@@ -106,7 +106,7 @@ organizar_base_acess <- function(ano) {
              
              # Selecionar variaveis de acessibilidade
              modo = mode, pico, 
-             starts_with("CMA"), starts_with("TMI"),
+             starts_with("CMA"), starts_with("CMP"), starts_with("TMI"),
              # Selecionar a geometria
              geometry) %>%
       
@@ -120,7 +120,7 @@ organizar_base_acess <- function(ano) {
       # arredondar renda per capita para 1 casas decimais
       mutate(R001 = round(R001, 1)) %>%
       # arredondar acessibilidade para 4 casas decimais
-      mutate_at(vars(matches("CMA|TMI")), round, digits = 4) %>%
+      mutate_at(vars(matches("CMA|CMP|TMI")), round, digits = 4) %>%
       
       # renomear os modos
       mutate(modo = case_when(
@@ -130,7 +130,7 @@ organizar_base_acess <- function(ano) {
       )) %>%
       
       # filtrar cidades que so tem ativo que porventura tenham tp
-      mutate(ok = ifelse(sigla_muni %in% munis_df[modo == "ativo"]$abrev_muni & modo == "tp", 1, 0)) %>%
+      mutate(ok = ifelse(sigla_muni %in% munis_list$munis_modo[ano_modo == ano & modo == "ativo"]$abrev_muni & modo == "tp", 1, 0)) %>%
       filter(is.na(ok) | ok == 0) %>%
       select(-ok) %>%
       
