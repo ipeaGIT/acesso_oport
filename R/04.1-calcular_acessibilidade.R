@@ -44,7 +44,13 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   hexagonos_sf <- readr::read_rds(dir_hex) 
   
   # Filtrar apenas colunas com info demograficas na origem
-  hex_orig <- setDT(hexagonos_sf)[, .(id_hex, pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, renda_total, renda_capita, quintil, decil)]
+  hex_orig <- hexagonos_sf %>% select(id_hex, 
+                                      # variaveis de populacao - cor
+                                      pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, 
+                                      # variaveis de populacao - idade
+                                      matches("idade_"),
+                                      # variaveis de renda
+                                      renda_total, renda_capita, quintil, decil) %>% setDT()
   
   # Filtrar apenas colunas com info de uso do solo no destino
   hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_total, empregos_baixa, empregos_media, empregos_alta,  
@@ -54,8 +60,14 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   # Merge dados de origem na matrix de tempo de viagem
   ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
-                              c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra','renda_total','renda_capita','quintil','decil') :=
-                                list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, i.renda_total, i.renda_capita, i.quintil, i.decil)]
+                              c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra',
+                                "idade_0a5", "idade_6a14", "idade_15a18", "idade_19a24",    
+                                "idade_25a39", "idade_40a69", "idade_70",
+                                'renda_total','renda_capita','quintil','decil') :=
+                                list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, 
+                                     i.idade_0a5, i.idade_6a14, i.idade_15a18, i.idade_19a24,    
+                                     i.idade_25a39, i.idade_40a69, i.idade_70,    
+                                     i.renda_total, i.renda_capita, i.quintil, i.decil)]
   
   # Merge dados de destino na matrix de tempo de viagem
   ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
@@ -175,8 +187,10 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
       tt_sigla == 3 ~ 45,
       tt_sigla == 4 ~ 60
     )) %>%
-    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
-    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+    mutate(junto_tp_t = paste0(acess_sigla, atividade_sigla, tt_tp, "T")) %>%
+    mutate(junto_tp_p = paste0(acess_sigla, atividade_sigla, tt_tp, 'P')) %>%
+    mutate(junto_ativo_t = paste0(acess_sigla, atividade_sigla, tt_ativo, "T")) %>%
+    mutate(junto_ativo_p = paste0(acess_sigla, atividade_sigla, tt_ativo, "P")) %>%
     mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
                                       atividade_sigla == "TQ" ~ "empregos_match_quintil",
                                       atividade_sigla == "TD" ~ "empregos_match_decil",
@@ -207,51 +221,69 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   # gerar o codigo
   # para tp
-  codigo_cma_tp <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-                           grid_cma$junto_tp, 
-                           grid_cma$atividade_nome, 
-                           grid_cma$tt_tp,
-                           grid_cma$atividade_total)
+  codigo_cma_tp <- c(
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+            grid_cma$junto_tp_t, 
+            grid_cma$atividade_nome, 
+            grid_cma$tt_tp
+    ),
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+            grid_cma$junto_tp_p, 
+            grid_cma$atividade_nome, 
+            grid_cma$tt_tp,
+            grid_cma$atividade_total)
+  )
+  
   
   # para ativo
-  codigo_cma_ativo <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-                              grid_cma$junto_ativo, 
-                              grid_cma$atividade_nome, 
-                              grid_cma$tt_ativo,
-                              grid_cma$atividade_total)
-  
+  codigo_cma_ativo <- c(
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+            grid_cma$junto_ativo_t, 
+            grid_cma$atividade_nome, 
+            grid_cma$tt_ativo
+    ),
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+            grid_cma$junto_ativo_p, 
+            grid_cma$atividade_nome, 
+            grid_cma$tt_ativo,
+            grid_cma$atividade_total)
+  )
   
   # dar nomes às variaveis
-  to_make_cma_tp <- setNames(codigo_cma_tp, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
+  to_make_cma_tp <-    setNames(codigo_cma_tp,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
   to_make_cma_ativo <- setNames(codigo_cma_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_ativo))
   
   
   # so aplicar a acessibilidade para os modos da cidade
-  modo_year <- sprintf("modo_%s", ano)
-  modo <- munis_df[abrev_muni == sigla_muni][[modo_year]]
+  # modo_year <- sprintf("modo_%s", ano)
+  modo <- munis_list$munis_modo[abrev_muni == sigla_muni & ano_modo == ano]$modo
   
   if (modo == "todos") {
     
     # para transporte publico
     acess_cma_tp <- ttmatrix[mode == "transit",
-                             lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
-                             , by=.(city, mode, origin, pico, quintil, decil)]
+                               lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
+                               , by=.(city, mode, origin, pico, quintil, decil)]
     
     # para modos ativos
     acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
-                                lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                                , by=.(city, mode, origin, pico, quintil, decil)]
-    
+                                  lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+                                  , by=.(city, mode, origin, pico, quintil, decil)]
     
     # juntar os cma
-    acess_cma <- rbind(acess_cma_tp, acess_cma_ativo, fill = TRUE)
+    acess_cma <- rbind(acess_cma_tp, acess_cma_ativo,
+                       fill = TRUE)
     
   } else {
     
     # so para modos ativos
     acess_cma <- ttmatrix[, 
-                          lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                          , by=.(city, mode, origin, pico, quintil, decil)]
+                            lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+                            , by=.(city, mode, origin, pico, quintil, decil)]
     
   }
   
@@ -264,6 +296,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   acess_cmp <- "CMP"
   atividade_cmp <- c("PT", "PB", "PA", "PI", "PN")
+  # atividade_cmp <- c("PT", "PB", "PA", "PI", "PN", "I1", "I2", "I3", "I4", "I5", "I6", "I7")
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
   
@@ -282,8 +315,10 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
       tt_sigla == 3 ~ 45,
       tt_sigla == 4 ~ 60
     )) %>%
-    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
-    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+    mutate(junto_tp_t = paste0(acess_sigla, atividade_sigla, tt_tp, "T")) %>%
+    mutate(junto_tp_p = paste0(acess_sigla, atividade_sigla, tt_tp, 'P')) %>%
+    mutate(junto_ativo_t = paste0(acess_sigla, atividade_sigla, tt_ativo, "T")) %>%
+    mutate(junto_ativo_p = paste0(acess_sigla, atividade_sigla, tt_ativo, "P")) %>%
     mutate(atividade_nome = case_when(atividade_sigla == "PT" ~ "pop_total",
                                       atividade_sigla == "PB" ~ "cor_branca",
                                       atividade_sigla == "PA" ~ "cor_amarela",
@@ -301,17 +336,37 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   
   # gerar o codigo
-  codigo_cmp_tp <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-                           grid_cmp$junto_tp, 
-                           grid_cmp$atividade_nome, 
-                           grid_cmp$tt_tp,
-                           grid_cmp$atividade_total)
+  # para tp 
+  codigo_cmp_tp <- c(
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+            grid_cmp$junto_tp_t, 
+            grid_cmp$atividade_nome, 
+            grid_cmp$tt_tp
+    ),
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+            grid_cmp$junto_tp_p, 
+            grid_cmp$atividade_nome, 
+            grid_cmp$tt_tp,
+            grid_cmp$atividade_total)
+  )
   
-  codigo_cmp_ativo <- sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-                              grid_cmp$junto_ativo, 
-                              grid_cmp$atividade_nome, 
-                              grid_cmp$tt_ativo,
-                              grid_cmp$atividade_total)
+  # para ativo
+  codigo_cmp_ativo <- c(
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+            grid_cmp$junto_ativo_t, 
+            grid_cmp$atividade_nome, 
+            grid_cmp$tt_ativo
+    ),
+    
+    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
+            grid_cmp$junto_ativo_p, 
+            grid_cmp$atividade_nome, 
+            grid_cmp$tt_ativo,
+            grid_cmp$atividade_total)
+  )
   
   
   # gerar os nomes das variaveis
@@ -430,9 +485,15 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
 }
 
 # 2. APLICAR PARA TODOS AS CIDADADES --------------------------------------------------------------
-calcular_acess_muni("for", ano = 2017)
+plan(multiprocess)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, calcular_acess_muni, ano = 2017)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, calcular_acess_muni, ano = 2018)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, calcular_acess_muni, ano = 2019)
+
+a <- read_rds(sprintf("../../data/acesso_oport/output_access/%s/%s/acess_%s_%s.rds", 2017, 'otp', 'for', '2017'))
 
 
+colnames(a)[colnames(a) %like% "CMP"]
 
 
 
