@@ -43,14 +43,8 @@ construir_graph_muni <- function(sigla_muni, ano, otp = "../../otp/programs/otp-
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-lapply(munis_df$abrev_muni, construir_graph_muni, ano = 2017)
-lapply(munis_df$abrev_muni, construir_graph_muni, ano = 2018)
-lapply(munis_df$abrev_muni, construir_graph_muni, ano = 2019)
-
-construir_graph_muni('poa', 2018)
-construir_graph_muni('poa', 2017)
-construir_graph_muni('for', 2017)
-construir_graph_muni('spo', 2019)
-construir_graph_muni('cam', 2019)
+lapply(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, construir_graph_muni, ano = 2017)
+lapply(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, construir_graph_muni, ano = 2018)
+lapply(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, construir_graph_muni, ano = 2019)
 
 

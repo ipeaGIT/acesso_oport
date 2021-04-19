@@ -84,15 +84,10 @@ gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
 
 # aplicar funcao ------------------------------------------------------------------------------
 
-gerar_ttmatrix_mediana_muni("for", ano = 2017)
-gerar_ttmatrix_mediana_muni("cam", ano = 2019)
-gerar_ttmatrix_mediana_muni("sal", ano = 2019)
-gerar_ttmatrix_mediana_muni("spo", ano = 2019)
 
-plan(multiprocess)
-purrr::map(munis_df$abrev_muni[-2], gerar_ttmatrix_mediana_muni, ano = 2017)
-purrr::map(munis_df$abrev_muni[-2], gerar_ttmatrix_mediana_muni, ano = 2018)
-purrr::map(munis_df$abrev_muni[-2], gerar_ttmatrix_mediana_muni, ano = 2019)
+purrr::map(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, gerar_ttmatrix_mediana_muni, ano = 2017)
+purrr::map(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, gerar_ttmatrix_mediana_muni, ano = 2018)
+purrr::map(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, gerar_ttmatrix_mediana_muni, ano = 2019)
 
 
 
@@ -280,4 +275,6 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-walk(munis_df$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2019)

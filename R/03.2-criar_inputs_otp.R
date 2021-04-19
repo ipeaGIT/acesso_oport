@@ -88,15 +88,15 @@ purrr::walk(dir(sprintf("../../otp/py/%s", '2017'), full.names = TRUE, recursive
 
 # para as cidades que tem todos os modos de transporte (as que contem GTFS) (tp + ativo) --
 # pico
-walk(munis_df[modo_2017 == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2017 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2017, from = 6, until = 8, every = 15, modo = "todos")  
 
 # fora pico, # apenas modo transporte publico
-walk(munis_df[modo_2017 == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2017 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2017, from = 14, until = 16, every = 15, modo = "tp")  
 
 # para as cidades sem gtfs, sera somente transporte ativo ---
-walk(munis_df[modo_2017 == 'ativo']$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2017 & modo == "ativo"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2017, modo = "ativo") 
 
 
@@ -111,15 +111,15 @@ purrr::walk(dir(sprintf("../../otp/py/%s", '2018'), full.names = TRUE, recursive
 
 # para as cidades que tem todos os modos de transporte (as que contem GTFS) (tp + ativo) --
 # pico
-walk(munis_df[modo_2018 == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2018 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2018, from = 6, until = 8, every = 15, modo = "todos")  
 
 # fora pico, # apenas modo transporte publico
-walk(munis_df[modo_2018 == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2018 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2018, from = 14, until = 16, every = 15, modo = "tp")  
 
 # para as cidades sem gtfs, sera somente transporte ativo ---
-walk(munis_df[modo_2018 == 'ativo']$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2018 & modo == "ativo"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2018, modo = "ativo") 
 
 
@@ -133,15 +133,15 @@ purrr::walk(dir(sprintf("../../otp/py/%s", '2019'), full.names = TRUE, recursive
 
 # para as cidades que tem todos os modos de transporte (as que contem GTFS) (tp + ativo) --
 # pico
-walk(munis_df[modo_2019 == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2019 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2019, from = 6, until = 8, every = 15, modo = "todos")  
 
 # fora pico, # apenas modo transporte publico
-walk(munis_df[modo_2019 == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2019 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2019, from = 14, until = 16, every = 15, modo = "tp")  
 
 # para as cidades sem gtfs, sera somente transporte ativo ---
-walk(munis_df[modo_2019 == 'ativo']$abrev_muni, criar_script_python_paral_modes_muni,
+walk(munis_list$munis_modo[ano_modo == 2019 & modo == "ativo"]$abrev_muni, criar_script_python_paral_modes_muni,
        ano = 2019, modo = "ativo") 
 
 

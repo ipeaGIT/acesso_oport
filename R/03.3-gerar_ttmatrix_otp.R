@@ -32,9 +32,9 @@ gerar_tt_matrix_muni <- function(sigla_muni, ano) {
 }
 
 # Aplica funcao para todas as cidades
-purrr::walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2017)
-purrr::walk(munis_df$abrev_muni, gerar_tt_matrix_muni, ano = 2018)
-purrr::walk(rev(munis_df$abrev_muni), gerar_tt_matrix_muni, ano = 2019)
+purrr::walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, gerar_tt_matrix_muni, ano = 2017)
+purrr::walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, gerar_tt_matrix_muni, ano = 2018)
+purrr::walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, gerar_tt_matrix_muni, ano = 2019)
 
 # tempo para as 20 cidades, 17 horarios de partida
 # 97635.94 sec elapsed
