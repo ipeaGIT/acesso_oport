@@ -60,6 +60,12 @@ organizar_base_acess <- function(ano) {
     hex_dt <- left_join(setDT(hex_agreg_muni), setDT(acess_muni)[, -"geometry", with =F], 
                         by=c("id_hex", "quintil", "decil"))
     
+    
+    # TODO: dividir bases:
+    # - 1 arquivo com as atividaes(saude educacao etc)
+    # - 1 arquivo de acessibilidade para transporte publico
+    # - 1 arquivo de acessibilidade para modos ativos
+    
     hex_dt_fim <- hex_dt %>%
       select(sigla_muni = muni, nome_muni, cod_muni, id_hex, 
              
@@ -75,11 +81,11 @@ organizar_base_acess <- function(ano) {
              P007  = idade_10a14, 
              P008  = idade_15a19, 
              P009  = idade_20a29,  
-             P010 = idade_30a39, 
-             P011 = idade_40a49, 
-             P012 = idade_50a59, 
-             P013 = idade_60a69, 
-             P014 = idade_70   , 
+             P010  = idade_30a39, 
+             P011  = idade_40a49, 
+             P012  = idade_50a59, 
+             P013  = idade_60a69, 
+             P014  = idade_70   , 
              
              # Selecionar variveis de renda
              R001 = renda_capita, 

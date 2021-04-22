@@ -1,5 +1,10 @@
+# Esse script cria e aplica um funcao que roda o feedvalidator para o GTFS
+# de cada cidade e ano
+# Os GTFS devem estar na pasta ../../data-raw/gtfs/cidade/ano
+
 # carregar bibliotecas
 source('./R/fun/setup.R')
+
 
 # FUNCAO!!!!!!!! ----------------------------------------------------------
 
@@ -32,3 +37,5 @@ run_validator("cam", 2018)
 run_validator("bho", 2019)
 run_validator("cur", 2019)
 run_validator("poa", 2019)
+
+run_validator("for", 2021)

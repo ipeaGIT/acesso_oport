@@ -1,5 +1,5 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.3.3 Criacao de graphs no OpenTripPlanner
+###### 0.3.1 Criacao de graphs no OpenTripPlanner
 
 # Programa OpenTripPlanner.jar deve ser baixado manual desse link
 # https://repo1.maven.org/maven2/org/opentripplanner/otp/1.4.0/
