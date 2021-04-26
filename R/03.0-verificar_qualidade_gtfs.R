@@ -38,4 +38,4 @@ run_validator("bho", 2019)
 run_validator("cur", 2019)
 run_validator("poa", 2019)
 
-run_validator("for", 2021)
+run_validator("for", 2020)

@@ -28,7 +28,7 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
   
   # funcao que aplica por resolucao  
   gerar_por_resolucao <- function(muni_res) {
-    # muni_res <- dir_muni[1]
+    # muni_res <- dir_muni[2]
     
     
     # Endereco do hexagono
@@ -67,8 +67,9 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
 }
 
 
-walk(munis_df$abrev_muni, gerar_pontos_OTP_muni, ano = 2017)
-walk(munis_df$abrev_muni, gerar_pontos_OTP_muni, ano = 2018)
+walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, gerar_pontos_OTP_muni, ano = 2017)
+walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, gerar_pontos_OTP_muni, ano = 2018)
+walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, gerar_pontos_OTP_muni, ano = 2019)
 
 
 

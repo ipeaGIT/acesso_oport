@@ -9,7 +9,7 @@ source('./R/fun/setup.R')
 #### 1) Funcao pra rodar scripts em python no OTP e calcular matriz de tempo de viagem -----------------------
 gerar_tt_matrix_muni <- function(sigla_muni, ano) {
   
-  # sigla_muni <- "for"; ano <- 2019
+  # sigla_muni <- "nat"; ano <- 2019
   
   # status message
   message('Woking on city ', sigla_muni, ' at year ', ano)
@@ -22,7 +22,7 @@ gerar_tt_matrix_muni <- function(sigla_muni, ano) {
   
   # Funcao para chamar OTP
   chama_otp <- function(x){
-    comando <- sprintf("cd ../../otp && java8 -jar programs/jython.jar -Dpython.path=programs/otp-1.4.0-shaded.jar py/%s/%s/%s", ano, sigla_muni, x)
+    comando <- sprintf("cd ../../otp && java -jar programs/jython.jar -Dpython.path=programs/otp-1.5.0-shaded.jar py/%s/%s/%s", ano, sigla_muni, x)
     shell(comando)
   }
   
@@ -75,7 +75,7 @@ juntar_output_OTP_muni <- function(sigla_muni, ano = 2019){
   path_out <- sprintf("E:/data/output_ttmatrix/%s/otp/%s/ttmatrix_%s_%s_%s.csv", ano, sigla_muni, sigla_muni,'pt', ano)
   
   # ler, empilhar e salvar arquivos
-  plan(multiprocess)
+  plan(multisession)
   # furrr::future_map(files, data.table::fread) %>%
   furrr::future_map(files, fread, .progress = TRUE) %>%
     rbindlist() %>%
