@@ -15,7 +15,8 @@ source('./R/fun/setup.R')
 # FUNCAO PARA CONSTRUIR GRAPH (SO RODAR UMA VEZ!) -------------------------
 # graph.obj é salvo na pasta './otp/graphs/cidade
 
-construir_graph_muni <- function(sigla_muni, ano, otp = "../../otp/programs/otp-1.4.0-shaded.jar",
+construir_graph_muni <- function(sigla_muni, ano, 
+                                 otp = "../../otp/programs/otp-1.5.0-shaded.jar",
                                  memory = 12000) {
   
   if (file.exists(sprintf("../../otp/graphs/%s/%s/Graph.obj", ano, sigla_muni))) {
@@ -27,7 +28,7 @@ construir_graph_muni <- function(sigla_muni, ano, otp = "../../otp/programs/otp-
   
   message(paste0("Criando Graph da cidade ",sigla_muni, " para o ano ", ano, "\n"))
   
-  text <- paste0("java8 -Xmx", memory, "M -jar \"", otp, "\" --build \"", 
+  text <- paste0("java -Xmx", memory, "M -jar \"", otp, "\" --build \"", 
                  dir, "/graphs/", router, "\"")
   
   options(max.print = 10000000)
