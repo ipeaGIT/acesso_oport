@@ -11,13 +11,15 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   # sigla_muni <- 'bho-flat'; ano <- 2019
   # sigla_muni <- 'sal-flat'; ano <- 2019
   
-  file.remove(dir("../../data/acesso_oport/temp/", full.names = TRUE))
+  # file.remove(dir("../../data/acesso_oport/temp/", full.names = TRUE))
   
   message(sprintf("working on %s", sigla_muni))
   
   # Leitura do gtfs para pasta temporaria
   path_zip <- sprintf("../../otp/graphs/%s/%s", ano, sigla_muni)
   file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)
+  
+  library(gtfsio)
   
   if (length(file_zip) == 0) {
     
@@ -26,15 +28,15 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   } else if(length(file_zip) == 2) {
     
     
-    unzip(file_zip[1], files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
-    file.rename(from = "../../data/acesso_oport/temp/calendar.txt", 
-                to = "../../data/acesso_oport/temp/calendar1.txt")
-    unzip(file_zip[2], files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
-    file.rename(from = "../../data/acesso_oport/temp/calendar.txt", 
-                to = "../../data/acesso_oport/temp/calendar2.txt")
+    # unzip(file_zip[1], files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
+    # file.rename(from = "../../data/acesso_oport/temp/calendar.txt", 
+    #             to = "../../data/acesso_oport/temp/calendar1.txt")
+    # unzip(file_zip[2], files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
+    # file.rename(from = "../../data/acesso_oport/temp/calendar.txt", 
+    #             to = "../../data/acesso_oport/temp/calendar2.txt")
     
     # Le calendario 1
-    calendar1 <- data.table::fread("../../data/acesso_oport/temp/calendar1.txt") %>%
+    calendar1 <- gtfsio::import_gtfs(file_zip[1], files = "calendar")$calendar %>%
       mutate(end_date = as.character(end_date)) %>%
       mutate(start_date = as.character(start_date)) %>%
       mutate(end_date = as.Date(end_date, tryFormats = c("%Y-%m-%d", "%Y%m%d"))) %>%
@@ -48,7 +50,7 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
       mutate(start_date = as.Date(start_date, tryFormats = c("%Y-%m-%d", "%Y%m%d")))
     
     # Le calendario 2
-    calendar2 <- data.table::fread("../../data/acesso_oport/temp/calendar2.txt") %>%
+    calendar2 <- gtfsio::import_gtfs(file_zip[1], files = "calendar")$calendar %>%
       mutate(end_date = as.character(end_date)) %>%
       mutate(start_date = as.character(start_date)) %>%
       mutate(end_date = as.Date(end_date, tryFormats = c("%Y-%m-%d", "%Y%m%d"))) %>%
@@ -62,10 +64,17 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
       mutate(start_date = as.Date(start_date, tryFormats = c("%Y-%m-%d", "%Y%m%d")))
     
     calendar1_interval <- interval(calendar1$start_date, calendar1$end_date)
+    # calendar1_interval <- interval(as.Date("2018-01-01"), as.Date("2018-01-02"))
     calendar2_interval <- interval(calendar2$start_date, calendar2$end_date)
     
     
     intersect_intervals <- lubridate::intersect(calendar1_interval, calendar2_interval)
+    
+    if (is.na(int_start(intersect_intervals))) {
+      
+      stop("Uma data de intesercao entre os GTFS nao foi encontrada.\n Modifique manualmente a data para criar uma intersecao")
+      
+    }
     
     
     # Criar data frame com todos os dias dentro do intervalo de operacao do GTFS, e
@@ -87,10 +96,10 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   } else if(length(file_zip) == 1) {
     
     
-    unzip(file_zip, files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
+    # unzip(file_zip, files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
     
     # Le calendario
-    calendar <- data.table::fread("../../data/acesso_oport/temp/calendar.txt") %>%
+    calendar <- gtfsio::import_gtfs(file_zip, files = "calendar") %>%
       mutate(end_date = as.character(end_date)) %>%
       mutate(start_date = as.character(start_date)) %>%
       mutate(end_date = as.Date(end_date, tryFormats = c("%Y-%m-%d", "%Y%m%d"))) %>%
