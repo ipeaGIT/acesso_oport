@@ -93,59 +93,11 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                                               empregos_baixa + empregos_media)]
   
   
-  ### formato final para disponibilizar dados publicamente
-  # # Construir base dos dados de populacao, renda e uso do solo
-  # vars_df <- hexagonos_sf %>%
-  #   select(id_hex, 
-  #          # Selecionar variaveis de populacao
-  #          P001 = pop_total, P002 = cor_branca, P003 = cor_negra, P004 = cor_indigena, P005 = cor_amarela,
-  #          # Selecionar variveis de renda
-  #          R001 = renda_capita, R002 = quintil, R003 = decil,
-  #          # Selecionar atividades de trabalho
-  #          T001 = empregos_total, T002 = empregos_baixa, T003 = empregos_media, T004 = empregos_baixa,
-  #          # Selecionar atividades de educacao
-  #          E001 = edu_total, E002 = edu_infantil, E003 = edu_fundamental, E004 = edu_medio,
-  #          # Selecionar atividades de saude (por enquanto so saude total)
-  #          S001 = saude_total)
-  
-  
-  # Calcular totais para cidades
-  # populacao
-  ttmatrix[, total_pop := sum(hexagonos_sf$pop_total, na.rm=T)]
-  ttmatrix[, total_branca := sum(hexagonos_sf$cor_branca, na.rm=T)]
-  ttmatrix[, total_amarela := sum(hexagonos_sf$cor_amarela, na.rm=T)]
-  ttmatrix[, total_indigena := sum(hexagonos_sf$cor_indigena, na.rm=T)]
-  ttmatrix[, total_negra  := sum(hexagonos_sf$cor_negra, na.rm=T)]
-  
-  # saude
-  ttmatrix[, total_saude := sum(hexagonos_sf$saude_total, na.rm=T)]
-  ttmatrix[, total_saude_baixa := sum(hexagonos_sf$saude_baixa, na.rm=T)]
-  ttmatrix[, total_saude_media := sum(hexagonos_sf$saude_media, na.rm=T)]
-  ttmatrix[, total_saude_alta := sum(hexagonos_sf$saude_alta, na.rm=T)]
-  
-  # educacao
-  ttmatrix[, total_edu  := sum(hexagonos_sf$edu_total, na.rm=T)]
-  ttmatrix[, total_edu_infantil  := sum(hexagonos_sf$edu_infantil, na.rm=T)]
-  ttmatrix[, total_edu_fundamental  := sum(hexagonos_sf$edu_fundamental, na.rm=T)]
-  ttmatrix[, total_edu_medio  := sum(hexagonos_sf$edu_medio, na.rm=T)]
-  
-  # empregos
-  # criar totais dos empregos
-  total_empregos_media_baixa <- sum(c(hexagonos_sf$empregos_media, hexagonos_sf$empregos_baixa), na.rm=T)
-  total_empregos_media_alta <- sum(c(hexagonos_sf$empregos_media, hexagonos_sf$empregos_alta), na.rm=T)
-  
-  # colocar o total de empregos da cidade de cada classificacao
-  ttmatrix[, total_empregos := sum(hexagonos_sf$empregos_total, na.rm=T)]
-  ttmatrix[, total_empregos_match_decil := ifelse(decil>5, total_empregos_media_alta, 
-                                                  total_empregos_media_baixa)]
-  ttmatrix[, total_empregos_match_quintil := ifelse(quintil>=3, total_empregos_media_alta, 
-                                                    total_empregos_media_baixa)]
   
   # Dicionario de variaveis:
   # Acessibilidade:
   # - CMA = Acessibilidade Cumulativa Ativa
   # - CMP = Acessibilidade Cumulativa Passiva
-  # - CPT = Acessibilidade considerando Competitividade ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!!!!!!
   # - TMI = Acessibilidade de Tempo Mínimo à Oportunidade
   # Atividades:
   # - PT ~ "pop_total"
@@ -190,10 +142,8 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
       tt_sigla == 3 ~ 45,
       tt_sigla == 4 ~ 60
     )) %>%
-    mutate(junto_tp_t = paste0(acess_sigla, atividade_sigla, tt_tp, "T")) %>%
-    mutate(junto_tp_p = paste0(acess_sigla, atividade_sigla, tt_tp, 'P')) %>%
-    mutate(junto_ativo_t = paste0(acess_sigla, atividade_sigla, tt_ativo, "T")) %>%
-    mutate(junto_ativo_p = paste0(acess_sigla, atividade_sigla, tt_ativo, "P")) %>%
+    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
+    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
     mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
                                       atividade_sigla == "TQ" ~ "empregos_match_quintil",
                                       atividade_sigla == "TD" ~ "empregos_match_decil",
@@ -204,22 +154,6 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                                       atividade_sigla == "ET" ~ "edu_total",
                                       atividade_sigla == "EF" ~ "edu_fundamental",
                                       atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil")) %>%
-    # adicionar uma variavel com o total de oportunidades da atividade em questao
-    mutate(atividade_total = case_when(
-      atividade_sigla == "TT" ~ "total_empregos",
-      atividade_sigla == "TQ" ~ "total_empregos_match_quintil",
-      atividade_sigla == "TD" ~ "total_empregos_match_decil",
-      atividade_sigla == "ST" ~ "total_saude",
-      atividade_sigla == "SB" ~ "total_saude_baixa",
-      atividade_sigla == "SM" ~ "total_saude_media",
-      atividade_sigla == "SA" ~ "total_saude_alta",
-      atividade_sigla == "ET" ~ "total_edu",
-      atividade_sigla == "EI" ~ "total_edu_infantil",
-      atividade_sigla == "EF" ~ "total_edu_fundamental",
-      atividade_sigla == "EM" ~ "total_edu_medio"
-      
-    ))
   
   
   # gerar o codigo
@@ -227,16 +161,10 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   codigo_cma_tp <- c(
     
     sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
-            grid_cma$junto_tp_t, 
+            grid_cma$junto_tp, 
             grid_cma$atividade_nome, 
             grid_cma$tt_tp
-    ),
-    
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-            grid_cma$junto_tp_p, 
-            grid_cma$atividade_nome, 
-            grid_cma$tt_tp,
-            grid_cma$atividade_total)
+    )
   )
   
   
@@ -244,16 +172,10 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   codigo_cma_ativo <- c(
     
     sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
-            grid_cma$junto_ativo_t, 
+            grid_cma$junto_ativo, 
             grid_cma$atividade_nome, 
             grid_cma$tt_ativo
-    ),
-    
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-            grid_cma$junto_ativo_p, 
-            grid_cma$atividade_nome, 
-            grid_cma$tt_ativo,
-            grid_cma$atividade_total)
+    )
   )
   
   # dar nomes às variaveis
@@ -318,57 +240,34 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
       tt_sigla == 3 ~ 45,
       tt_sigla == 4 ~ 60
     )) %>%
-    mutate(junto_tp_t = paste0(acess_sigla, atividade_sigla, tt_tp, "T")) %>%
-    mutate(junto_tp_p = paste0(acess_sigla, atividade_sigla, tt_tp, 'P')) %>%
-    mutate(junto_ativo_t = paste0(acess_sigla, atividade_sigla, tt_ativo, "T")) %>%
-    mutate(junto_ativo_p = paste0(acess_sigla, atividade_sigla, tt_ativo, "P")) %>%
+    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
+    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+    66666 adicionar as idades
     mutate(atividade_nome = case_when(atividade_sigla == "PT" ~ "pop_total",
                                       atividade_sigla == "PB" ~ "cor_branca",
                                       atividade_sigla == "PA" ~ "cor_amarela",
                                       atividade_sigla == "PI" ~ "cor_indigena",
-                                      atividade_sigla == "PN" ~ "cor_negra")) %>%
-    # adicionar uma variavel com o total de oportunidades da atividade em questao
-    mutate(atividade_total = case_when(
-      atividade_sigla == "PT" ~ "total_pop",
-      atividade_sigla == "PB" ~ "total_branca",
-      atividade_sigla == "PA" ~ "total_amarela",
-      atividade_sigla == "PI" ~ "total_indigena",
-      atividade_sigla == "PN" ~ "total_negra",
-      
-    ))
-  
+                                      atividade_sigla == "PN" ~ "cor_negra"))
   
   # gerar o codigo
   # para tp 
   codigo_cmp_tp <- c(
     
     sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
-            grid_cmp$junto_tp_t, 
+            grid_cmp$junto_tp, 
             grid_cmp$atividade_nome, 
             grid_cmp$tt_tp
-    ),
-    
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-            grid_cmp$junto_tp_p, 
-            grid_cmp$atividade_nome, 
-            grid_cmp$tt_tp,
-            grid_cmp$atividade_total)
+    )
   )
   
   # para ativo
   codigo_cmp_ativo <- c(
     
     sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
-            grid_cmp$junto_ativo_t, 
+            grid_cmp$junto_ativo, 
             grid_cmp$atividade_nome, 
             grid_cmp$tt_ativo
-    ),
-    
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T)/first(%s))", 
-            grid_cmp$junto_ativo_p, 
-            grid_cmp$atividade_nome, 
-            grid_cmp$tt_ativo,
-            grid_cmp$atividade_total)
+    )
   )
   
   
@@ -617,6 +516,9 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                     all.x = TRUE) %>%
     # Transformar para sf
     st_sf()
+  
+  
+  6666666 identificar o ano
   
   # 8) Salvar output --------------------------------------
   
