@@ -123,7 +123,8 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cma <- "CMA"
-  atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
+  atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM",
+                     "MT", "MI", "MF", "MM")
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
   
@@ -154,7 +155,11 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                                       atividade_sigla == "ET" ~ "edu_total",
                                       atividade_sigla == "EF" ~ "edu_fundamental",
                                       atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil"))
+                                      atividade_sigla == "EI" ~ "edu_infantil",
+                                      atividade_sigla == "MT" ~ "mat_total",
+                                      atividade_sigla == "MF" ~ "mat_fundamental",
+                                      atividade_sigla == "MM" ~ "mat_medio",
+                                      atividade_sigla == "MI" ~ "mat_infantil"))
   
   
   # gerar o codigo
