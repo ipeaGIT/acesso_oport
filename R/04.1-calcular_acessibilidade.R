@@ -154,6 +154,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                                       atividade_sigla == "ET" ~ "edu_total",
                                       atividade_sigla == "EF" ~ "edu_fundamental",
                                       atividade_sigla == "EM" ~ "edu_medio",
+                                      atividade_sigla == "EI" ~ "edu_infantil"))
   
   
   # gerar o codigo
@@ -220,8 +221,8 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cmp <- "CMP"
-  atividade_cmp <- c("PT", "PB", "PA", "PI", "PN")
-  # atividade_cmp <- c("PT", "PB", "PA", "PI", "PN", "I1", "I2", "I3", "I4", "I5", "I6", "I7")
+  # atividade_cmp <- c("PT", "PB", "PA", "PI", "PN")
+  atividade_cmp <- c("PT", "PB", "PA", "PI", "PN", "I1", "I2", "I3", "I4", "I5", "I6", "I7")
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
   
@@ -242,12 +243,18 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     )) %>%
     mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
     mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
-    66666 adicionar as idades
     mutate(atividade_nome = case_when(atividade_sigla == "PT" ~ "pop_total",
                                       atividade_sigla == "PB" ~ "cor_branca",
                                       atividade_sigla == "PA" ~ "cor_amarela",
                                       atividade_sigla == "PI" ~ "cor_indigena",
-                                      atividade_sigla == "PN" ~ "cor_negra"))
+                                      atividade_sigla == "PN" ~ "cor_negra",
+                                      atividade_sigla == "I1" ~ "idade_0a5", 
+                                      atividade_sigla == "I2" ~ "idade_6a14", 
+                                      atividade_sigla == "I3" ~ "idade_15a18", 
+                                      atividade_sigla == "I4" ~ "idade_19a24",    
+                                      atividade_sigla == "I5" ~ "idade_25a39", 
+                                      atividade_sigla == "I6" ~ "idade_40a69", 
+                                      atividade_sigla == "I7" ~ "idade_70"))
   
   # gerar o codigo
   # para tp 
