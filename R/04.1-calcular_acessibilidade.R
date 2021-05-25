@@ -365,9 +365,10 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # 
   
   
+  
+  
   # 6) Calcular acessibilidade BFCA ---------------
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  
   
   acess_bfc <- "BFC"
   atividade_bfc <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM",
@@ -416,7 +417,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     
     
     
-    # filtrar A matrix de viagem até os hospitais com leitos e respiradores
+    # filtrar A matrix de viagem até cada atividade
     hex_dest_filter <- hex_dest[get(grid_bfc1$atividade_nome[1]) >= 1]
     ttmatrix_hosp <- ttmatrix[destination %in% hex_dest_filter$id_hex]
     
@@ -444,6 +445,11 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                         impedance4 = mgaus_f(tt_median, 180)) ]
     
     
+    # somar populacao de referencia de cada atividade
+    ttmatrix_hosp[, pop_ref := sum( paste0()), by=origin]
+    666666666666666666666666
+    
+    
     # summary(ttmatrix_hosp$impedance1)
     
     # calculate weights i (normalized impedance by origin id)
@@ -462,10 +468,14 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     
     ## Step 1 - reaportion the demand to each hospital proportionally to weight i
     ttmatrix_hosp1 <- copy(ttmatrix_hosp)
-    ttmatrix_hosp1[, pop_served1 := sum(pop_total * wi1, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served2 := sum(pop_total * wi2, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served3 := sum(pop_total * wi3, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served4 := sum(pop_total * wi4, na.rm = TRUE), by= .(destination, mode, pico)]
+    
+    
+    
+    
+    ttmatrix_hosp1[, pop_served1 := sum(pop_ref * wi1, na.rm = TRUE), by= .(destination, mode, pico)]
+    ttmatrix_hosp1[, pop_served2 := sum(pop_ref * wi2, na.rm = TRUE), by= .(destination, mode, pico)]
+    ttmatrix_hosp1[, pop_served3 := sum(pop_ref * wi3, na.rm = TRUE), by= .(destination, mode, pico)]
+    ttmatrix_hosp1[, pop_served4 := sum(pop_ref * wi4, na.rm = TRUE), by= .(destination, mode, pico)]
     summary(ttmatrix_hosp1$pop_served1)
     
     ## Step 2 - calculate provider-to-population ration (ppr) at each destination
