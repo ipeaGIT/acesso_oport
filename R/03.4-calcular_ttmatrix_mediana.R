@@ -14,7 +14,7 @@ source('./R/fun/setup.R')
 # As matrizes sao tratadas, agregadas nos periodos pico e fora-pico fazendo a mediana do tempo de viagme
 # Em seguida sao juntos todos os modos
 
-# sigla_muni <- 'bel'; ano <- 2019
+# sigla_muni <- 'bho'; ano <- 2019
 
 gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
   
@@ -43,8 +43,8 @@ gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
   # # ttmatrix_allmodes <- lapply(X=tt_files, FUN= readr::read_rds) %>% data.table::rbindlist(fill = T)
   
   # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
-  # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~1 metro/sec = ~3.6 km/h)
-  # bike: 110s equivale ao tempo necessario para cruzar um hexagono a de pe (~3.3 metros/sec = ~12 km/h)
+  # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a de pe (~1 metro/sec = ~3.6 km/h)
+  # bike: 110s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~3.3 metros/sec = ~12 km/h)
   ttmatrix_allmodes[, travel_time := as.numeric(travel_time)]
   ttmatrix_allmodes[mode=='bike', travel_time := fifelse(origin == destination, 110, travel_time)]
   ttmatrix_allmodes[mode == "walk", travel_time := fifelse(origin == destination, 350, travel_time)]
@@ -70,7 +70,7 @@ gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
   
   # TO-DO: dar um order(origin) no data.table
   
-  # salvar (agora vai ser 'ttmatrix_mediana' em vez de 'ttmatrix_agregada')
+  # salvar 
   path_out <- sprintf("E:/data/ttmatrix_mediana/%s/otp/ttmatrix_mediana_%s_%s.rds", ano, sigla_muni, ano)
   
   write_rds(ttmatrix_median, path_out)
@@ -103,17 +103,35 @@ purrr::map(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, gerar_ttmatrix_
 
 # Primeiro, sao identificados hexagos que nao foram roteados pelo OTP (etapa 1)
 # Segundo, a verificacao eh feita pegando todos os hexagonos que conseguem acessar menos de 10 hex (etapa 2)
-# p/ transporte publico. O ponto de roteamento desses hexagonos sao alocados para o hexagono mais proximo 
+# p/ bike. O ponto de roteamento desses hexagonos sao alocados para o hexagono mais proximo 
 # que nao tenha menos que 10 hex de acess.
 
-# sigla_muni <- 'for'; ano <- 2017
+# sigla_muni <- 'for'; ano <- 2017; engine <- "r5"
+# sigla_muni <- 'for'; ano <- 2017; engine <- "otp"
+# sigla_muni <- 'nat'; ano <- 2017; engine <- "r5"
 
-identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
+identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano, engine = "otp") {
   # status message
   message('Woking on city ', sigla_muni, ' at year ', ano)
   
+  
+  # if(engine == "r5") {
+  #   
+  #   ttmatrix_allmodes <- read_rds(sprintf("E:/data/ttmatrix_mediana/%s/%s/ttmatrix_mediana_%s_%s_r5.rds",
+  #                                       ano, engine, sigla_muni, ano))
+  #   
+  # } else {
+    
+  ttmatrix_allmodes <- read_rds(sprintf("E:/data/ttmatrix_mediana/%s/%s/ttmatrix_mediana_%s_%s_%s.rds", 
+                                        ano, engine, sigla_muni, ano, engine))
+    
+  # }
+  
   # abrir matrix da cidade
-  ttmatrix_allmodes <- read_rds(sprintf("E:/data/ttmatrix_mediana/%s/otp/ttmatrix_mediana_%s_%s.rds", ano, sigla_muni, ano))
+  # ttmatrix_allmodes <- read_rds(sprintf("E:/data/ttmatrix_mediana/%s/r5/ttmatrix_mediana_%s_%s.rds", ano, sigla_muni, ano))
+  
+  
+  # ttmatrix_allmodes[destination == "8980104cc0fffff" & pico == 1] %>% View()
   
   # Para fazer o teste, pegar so um modo e so hora pico! 
   # Pegar so pico
@@ -121,13 +139,13 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   
   # Se tiver so ativo, pegar so bike; se tiver todos, pegar tp
   # if (subset(munis_df, abrev_muni == sigla_muni)$modo == "ativo") {
-    
-    ttmatrix_teste <- ttmatrix_teste[mode == "bike"]
-    
+  
+  ttmatrix_teste <- ttmatrix_teste[mode == "bike"]
+  
   # } else {
-    
-    # ttmatrix_teste <- ttmatrix_teste[mode == "bike"]
-    
+  
+  # ttmatrix_teste <- ttmatrix_teste[mode == "bike"]
+  
   # }
   
   # abrir os pontos da resolucao 09 ~~~~
@@ -157,24 +175,30 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   ttmatrix_teste[, var := 1]
   
   # Calcular acess para 90 minutos
-  acess <- ttmatrix_teste[,
+  acess_origin <- ttmatrix_teste[,
                           .(acess = (sum(var[which(tt_median <= 90)], na.rm = T))),
                           by=.(city, origin)]
+  # rename id column
+  setnames(acess_origin, "origin", "id_hex")
+  
+  acess_dest <- ttmatrix_teste[,
+                          .(acess = (sum(var[which(tt_median <= 90)], na.rm = T))),
+                          by=.(city, destination)]
+  setnames(acess_dest, "destination", "id_hex")
+  
   
   # Trazer a geolocalizacao dos hex
-  hex <- read_rds(sprintf("../../data/acesso_oport/hex_municipio/%s/hex_%s_09_%s.rds", ano, sigla_muni, ano))
+  # hex <- read_rds(sprintf("../../data/acesso_oport/hex_municipio/%s/hex_%s_09_%s.rds", ano, sigla_muni, ano))
   
   # Juntar com o acess
-  acess_hex <- left_join(acess, hex, by = c("origin" = "id_hex")) %>% st_sf()
-  
+  # acess_hex <- left_join(acess, hex, by = c("origin" = "id_hex")) %>% st_sf()
   
   # extrair hexagonos que nao consigam acessar mais que 10 hexagonos
-  acess_prob <- acess_hex %>% 
-    filter(acess < 10) %>%
-    # transformar para pontos
-    st_centroid()
+  acess_prob <- rbind(acess_origin[acess < 10],
+                      acess_dest[acess < 10]) %>%
+    distinct(id_hex, .keep_all = TRUE)
   
-  hex_problematicos_etapa2 <- acess_prob$origin
+  hex_problematicos_etapa2 <- acess_prob$id_hex
   
   
   
@@ -186,77 +210,137 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
     filter(id_hex %in% c(hex_problematicos_etapa1, hex_problematicos_etapa2))
   
   
+  
+  # usar pacote h3jsr para identificar vizinhos
+  # h3jsr::get_kring_list("89818a596b7ffff", ring_size = 2)
+  
+  
+  
   # Primeiro, identificar os hexagonos que nao sao problematicos
   # Transformar os hexagonos para centroides e lon lat
   # pegar hexagonos nao problematicos
-  acess_nprob <- acess_hex %>%
-    # filtrar so hexagonos nao problematicos
-    filter(origin %nin% points_prob$id_hex) %>%
-    # criar id
-    mutate(id = 1:n())
+  # acess_nprob <- acess_hex %>%
+  #   # filtrar so hexagonos nao problematicos
+  #   filter(origin %nin% points_prob$id_hex) %>%
+  #   # criar id
+  #   mutate(id = 1:n())
   
   
-  acess_nprob_centroides <- acess_nprob %>%
-    # transformar para pontos
-    st_centroid() %>%
-    # transformar para lon lat
-    sfc_as_cols()
-  
-  # pegar os pontos mais proximos nao-problematicos dos problematicos
-  uui <- RANN::nn2(select(acess_nprob_centroides, lon, lat), 
-                   select(points_prob, X, Y), 1)
-  
-  # entao identificar quais sao esses hexagonos
-  points_corrigidos <- points_prob %>% 
-    # # tirar a geometria: ela agora sera nova dos outros hexagonos!
-    # st_set_geometry(NULL) %>%
-    mutate(id = uui$nn.idx) %>%
-    # trazer tambem a distancia
-    mutate(dist = uui$nn.dists * 111320) %>%
-    # filtrar distancia maxima para o hexagono nao problematico: 1 KM!
-    filter(dist < 1000) %>%
-    # eu so preciso do id para trazer as coordenadas do acess_nprob!
-    select(id_hex, id) %>%
-    # trazer o id completo do hex
-    left_join(acess_nprob_centroides %>% select(origin, id), by = "id") %>%
-    # renomear colunas do hexagonos
-    rename(hex_problema = id_hex, hex_blueprint = origin)
+  # acess_nprob_centroides <- acess_nprob %>%
+  #   # transformar para pontos
+  #   st_centroid() %>%
+  #   # transformar para lon lat
+  #   sfc_as_cols()
+  # 
+  # # pegar os pontos mais proximos nao-problematicos dos problematicos
+  # uui <- RANN::nn2(select(acess_nprob_centroides, lon, lat), 
+  #                  select(points_prob, X, Y), 1)
+  # 
+  # # entao identificar quais sao esses hexagonos
+  # points_corrigidos <- points_prob %>% 
+  #   # # tirar a geometria: ela agora sera nova dos outros hexagonos!
+  #   # st_set_geometry(NULL) %>%
+  #   mutate(id = uui$nn.idx) %>%
+  #   # trazer tambem a distancia
+  #   mutate(dist = uui$nn.dists * 111320) %>%
+  #   # filtrar distancia maxima para o hexagono nao problematico: 1 KM!
+  #   filter(dist < 1000) %>%
+  #   # eu so preciso do id para trazer as coordenadas do acess_nprob!
+  #   select(id_hex, id) %>%
+  #   # trazer o id completo do hex
+  #   left_join(acess_nprob_centroides %>% select(origin, id), by = "id") %>%
+  #   # renomear colunas do hexagonos
+  #   rename(hex_problema = id_hex, hex_blueprint = origin)
   
   
   # 4) Corrigir os hexagonos problematicos nas matrizes originais de tempo de viagem ---------------
   
   
-  # # separar na base os problematicos e nao problematicos
-  # esses sao os hex que vao ser utilizados para a correcao dos problematicos
-  ttmatrix_allmodes_blueprint <- setDT(ttmatrix_allmodes)[origin %in%  points_corrigidos$hex_blueprint |
-                                                            destination %in% points_corrigidos$hex_blueprint]
-  
+  # # # separar na base os problematicos e nao problematicos
+  # # esses sao os hex que vao ser utilizados para a correcao dos problematicos
+  # ttmatrix_allmodes_blueprint <- setDT(ttmatrix_allmodes)[origin %in%  points_corrigidos$hex_blueprint |
+  #                                                           destination %in% points_corrigidos$hex_blueprint]
+  # 
   # esses sao os hex que NAO vao ser utilizados para a correcao dos problematicos
-  ttmatrix_allmodes_nprob <- setDT(ttmatrix_allmodes)[!(origin %in%  points_corrigidos$hex_problema |
-                                                          destination %in% points_corrigidos$hex_problema)]
+  ttmatrix_allmodes_nprob <- setDT(ttmatrix_allmodes)[!(origin %in%  points_prob$id_hex |
+                                                          destination %in% points_prob$id_hex)]
   
   
   # funcao para corrigir os hexagonos nas ttmatrix 
   
   corrigir_hex_ttmatrix <- function(hex_prob) {
     
-    # hex_prob <- points_corrigidos$hex_problema[17]
+    # hex_prob <- "89818a593cfffff" # nat
+    # hex_prob <- "8980104e91bffff" # for
+    # hex_prob <- "89801048d37ffff" # for
     
-    # qual id correto correspondente
-    hex_correto <- subset(points_corrigidos, hex_problema==hex_prob)$hex_blueprint
+    # ver quais sao os vizinhos desse hexagono
+    # ring_size = 2 vai me trazer todos os hex vizinhos ate o nivel 2, isso da 37 vizinhos
     
-    # subset de todas origem e destino com id correto
-    temp_tt <- setDT(ttmatrix_allmodes_blueprint)[ origin == hex_correto | destination==hex_correto]
+    hex_prob_vizinhos <- h3jsr::get_kring(hex_prob, ring_size = 3)[[1]][-1]
     
-    # Substituir id correto pelo id q deu errado
-    temp_tt[, origin := fifelse(origin==hex_correto, hex_prob, origin) ]
-    temp_tt[, destination := fifelse(destination==hex_correto, hex_prob, destination) ]
+    # garantir que os vizinhos nao sao problematicos
+    hex_prob_vizinhos <- hex_prob_vizinhos[hex_prob_vizinhos %nin% points_prob]
+    
+    # garantir que os vizinhos estejam dentro da matriz de tempo de viagem da cidade
+    # podem acontecer dois casos em que o(s) hex(s) vizinho(s) esteja(m) fora da matriz:
+    # 1) o hex problematico ser de borda/perto mar e tem varios vizinhos na cidade vizinha
+    # ou no oceano
+    # 2) o hex vizinho nao ter pop/atividade e nao ter entrado pro OTP
+    hex_prob_vizinhos <- hex_prob_vizinhos[hex_prob_vizinhos %in% ttmatrix_allmodes$origin]
+    
+    # pegar so os 10 primeiros vizinhos
+    hex_prob_vizinhos <- hex_prob_vizinhos[1:10] %>% na.omit()
+    
+    # ATENCAO: eh necessario corrigir o hex tanto pra quando ele eh origem na matriz
+    # como pra quando ele eh destino na matrix
+    
+    # para a origem:
+    # filtrar entao somente a matrix para os hexagonos vizinhos que nao sao problematicos - origem
+    ttmatrix_allmodes_blueprint_origin <- ttmatrix_allmodes[origin %in% hex_prob_vizinhos]
+    
+    # essses hexagonos de origem agora serao representados somente por um hex, o problematico - origem
+    ttmatrix_allmodes_blueprint_origin$origin <- hex_prob
+    
+    # calcular entao a media do tempo de viagem, que vai representar o novo tt do hex prob - origem
+    ttmatrix_allmodes_blueprint_origin_mean <- ttmatrix_allmodes_blueprint_origin[, .(tt_median = mean(tt_median, na.rm = TRUE)),
+                                                                                  by = .(city, mode, origin, destination, pico)]
+    
+    # para o destino:
+    # filtrar entao somente a matrix para os hexagonos vizinhos que nao sao problematicos - destino
+    ttmatrix_allmodes_blueprint_dest <- ttmatrix_allmodes[destination %in% hex_prob_vizinhos]
+    
+    # essses hexagonos de destino agora serao representados somente por um hex, o problematico - destino
+    ttmatrix_allmodes_blueprint_dest$destination <- hex_prob
+    
+    # calcular entao a media do tempo de viagem, que vai representar o novo tt do hex prob - destino
+    ttmatrix_allmodes_blueprint_dest_mean <- ttmatrix_allmodes_blueprint_dest[, .(tt_median = mean(tt_median, na.rm = TRUE)),
+                                                                                  by = .(city, mode, origin, destination, pico)]
+    
+    
+    # juntar as matrizes de quando eh origem e de quando eh destino
+    ttmatrix_allmodes_blueprint_fim <- rbind(ttmatrix_allmodes_blueprint_origin_mean, ttmatrix_allmodes_blueprint_dest_mean)
+    
+    nrow(ttmatrix_allmodes_blueprint_fim)
+    nrow(distinct(ttmatrix_allmodes_blueprint_fim, origin, destination, mode, pico))
+    
+    # # qual id correto correspondente
+    # hex_correto <- subset(points_corrigidos, hex_problema==hex_prob)$hex_blueprint
+    # 
+    # # subset de todas origem e destino com id correto
+    # temp_tt <- setDT(ttmatrix_allmodes_blueprint)[ origin == hex_correto | destination==hex_correto]
+    # 
+    # # Substituir id correto pelo id q deu errado
+    # temp_tt[, origin := fifelse(origin==hex_correto, hex_prob, origin) ]
+    # temp_tt[, destination := fifelse(destination==hex_correto, hex_prob, destination) ]
+    
+    return(ttmatrix_allmodes_blueprint_fim)
     
   }  
   
   
   # aplicar funcao para cada hex problematico
-  ttmatrix_hex_prob_corrigidos <- lapply(points_corrigidos$hex_problema, corrigir_hex_ttmatrix) %>%
+  ttmatrix_hex_prob_corrigidos <- lapply(points_prob$id_hex, corrigir_hex_ttmatrix) %>%
     rbindlist()
   
   
@@ -266,7 +350,6 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
                             ttmatrix_hex_prob_corrigidos)
   
   # salvar output corrigido
-  # TO DO: mudar para 'ttmatrix_mediana_fix'
   write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_mediana_fix/%s/ttmatrix_mediana_fix_%s_%s.rds", ano, sigla_muni, ano))
   
   
