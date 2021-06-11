@@ -25,7 +25,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   if(engine == "r5") {
     
-    ttmatrix_median <- read_rds(sprintf("E:/data/output_ttmatrix/2017/r5/ttmatrix_for_pt_2017.csv",
+    ttmatrix_median <- read_rds(sprintf("E:/data/output_ttmatrix/%s/%s/ttmatrix_%s_pt_%s.csv",
                                         ano, engine, sigla_muni, ano))
     
   } else {
@@ -44,13 +44,13 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   hexagonos_sf <- readr::read_rds(dir_hex) 
   
   # Filtrar apenas colunas com info demograficas na origem
-  hex_orig <- hexagonos_sf %>% select(id_hex, 
-                                      # variaveis de populacao - cor
-                                      pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, 
-                                      # variaveis de populacao - idade
-                                      matches("idade_"),
-                                      # variaveis de renda
-                                      renda_total, renda_capita, quintil, decil) %>% setDT()
+  hex_orig <- hexagonos_sf %>% dplyr::select(id_hex, 
+                                             # variaveis de populacao - cor
+                                             pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, 
+                                             # variaveis de populacao - idade
+                                             matches("idade_"),
+                                             # variaveis de renda
+                                             renda_total, renda_capita, quintil, decil) %>% setDT()
   
   # Filtrar apenas colunas com info de uso do solo no destino
   hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_total, empregos_baixa, empregos_media, empregos_alta,  
@@ -365,14 +365,14 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # 
   
   
-  
-  
   # 6) Calcular acessibilidade BFCA ---------------
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+  
   
   acess_bfc <- "BFC"
   atividade_bfc <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM",
                      "MT", "MI", "MF", "MM")
+  
   # criar dummy para tt
   tt_sigla <- c(1, 2, 3, 4)
   
@@ -384,42 +384,84 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
       tt_sigla == 2 ~ 40,
       tt_sigla == 3 ~ 100,
       tt_sigla == 4 ~ 180
-    )) %>%
-    mutate(junto_ativo_p = paste0(acess_sigla, atividade_sigla, tt)) %>%
-    mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
-                                      atividade_sigla == "TQ" ~ "empregos_match_quintil",
-                                      atividade_sigla == "TD" ~ "empregos_match_decil",
-                                      atividade_sigla == "ST" ~ "saude_total",
-                                      atividade_sigla == "SB" ~ "saude_baixa",
-                                      atividade_sigla == "SM" ~ "saude_media",
-                                      atividade_sigla == "SA" ~ "saude_alta",
-                                      atividade_sigla == "ET" ~ "edu_total",
-                                      atividade_sigla == "EF" ~ "edu_fundamental",
-                                      atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil",
-                                      atividade_sigla == "MT" ~ "mat_total",
-                                      atividade_sigla == "MF" ~ "mat_fundamental",
-                                      atividade_sigla == "MM" ~ "mat_medio",
-                                      atividade_sigla == "MI" ~ "mat_infantil"
-                                      )) 
+    )) %>% 
+    mutate(junto = paste0(acess_sigla, atividade_sigla, tt)) %>%
+    setDT()
+  
+  
+  # identificar as variaveis de atividade que vao ser utilizadas
+  grid_bfc[, atividade_nome := fcase(atividade_sigla == "TT", "empregos_total",
+                                     atividade_sigla == "TQ", "empregos_match_quintil",
+                                     atividade_sigla == "TD", "empregos_match_decil",
+                                     atividade_sigla == "ST", "saude_total",
+                                     atividade_sigla == "SB", "saude_baixa",
+                                     atividade_sigla == "SM", "saude_media",
+                                     atividade_sigla == "SA", "saude_alta",
+                                     atividade_sigla == "ET", "edu_total",
+                                     atividade_sigla == "EF", "edu_fundamental",
+                                     atividade_sigla == "EM", "edu_medio",
+                                     atividade_sigla == "EI", "edu_infantil",
+                                     atividade_sigla == "MT", "mat_total",
+                                     atividade_sigla == "MF", "mat_fundamental",
+                                     atividade_sigla == "MM", "mat_medio",
+                                     atividade_sigla == "MI", "mat_infantil")]
+  
+  
+  # identificar as variaveis de populacao que vao ser utilizadas para cada atividade
+  grid_bfc[, pop_nome := fcase(atividade_sigla == "TT", list("pop_total"),
+                               atividade_sigla == "TQ", list("pop_total"),
+                               atividade_sigla == "TD", list("pop_total"),
+                               atividade_sigla == "ST", list("pop_total"),
+                               atividade_sigla == "SB", list("pop_total"),
+                               atividade_sigla == "SM", list("pop_total"),
+                               atividade_sigla == "SA", list("pop_total"),
+                               
+                               # a definicao das idades por nivel de ensino vai ser 
+                               # limitada pelos intervalos de idade disponiveis
+                               # fonte: https://pt.wikipedia.org/wiki/Idade_escolar
+                               # educacao total: pop de 0 a 20 anos
+                               atividade_sigla == "ET", list(c("idade_0a5", "idade_6a14", "idade_15a18", 'idade_19a24')),
+                               # educacao infantil: pop de 0 a 6 anos
+                               atividade_sigla == "EI", list("idade_0a5"),
+                               # educacao fund.: pop de 6 a 15 anos
+                               atividade_sigla == "EF", list(c("idade_6a14", "idade_15a18")),
+                               # educacao media: pop de 15 a 18 anos
+                               atividade_sigla == "EM", list(c("idade_15a18", "idade_19a24")), 
+                               
+                               # a mesma regra se aplica para as matriculas
+                               atividade_sigla == "MT", list(c("idade_0a5", "idade_6a14", "idade_15a18", 'idade_19a24')),
+                               atividade_sigla == "MI", list("idade_0a5"),
+                               atividade_sigla == "MF", list(c("idade_6a14", "idade_15a18")),
+                               atividade_sigla == "MM", list(c("idade_15a18", "idade_19a24"))
+  )]
+  
   
   
   # calculate bfca
   # atividade <- "saude_alta"
-  # tt <- 4
-  # modo <- "tp"
+  # atividade <- "saude_total"
+  # atividade <- "edu_medio"
+  # atividade <- "edu_total"
   calculate_bfc <- function(atividade) {
     
+    
+    # subset the grid of this activity
     grid_bfc1 <- filter(grid_bfc, atividade_nome == atividade)
-    # grid_bfc1 <- filter(grid_bfc, atividade_nome == atividade, tt_sigla == 1)
     
-    # if (modo == 'tp') grid_bfc1 <- grid_bfc1 %>% rename(tt = tt_tp, junto = junto_tp_t) else grid_bfc1 <- grid_bfc1 %>% rename(tt = tt_ativo, junto = junto_ativo_t)
+    # get variables names that will compose the population (it depends on the activity)
+    # if there more than one pop_name, it will be sumed up
+    pop_target <- grid_bfc1$pop_nome %>% .[[1]] %>% unlist() %>% paste0(collapse = " + ")
     
-    
-    
-    # filtrar A matrix de viagem até cada atividade
+    # filtrar A matrix de viagem até os hospitais com atividades
     hex_dest_filter <- hex_dest[get(grid_bfc1$atividade_nome[1]) >= 1]
     ttmatrix_hosp <- ttmatrix[destination %in% hex_dest_filter$id_hex]
+    
+    
+    # a <- ttmatrix[origin == "8980104030fffff"]
+    # table(a$mode)
+    # ttmatrix_hosp[origin == "8980104030fffff"] %>% View()
+    
+    # hexagonos_sf %>% filter(id_hex =='8980104030fffff') %>% st_sf() %>% mapview()
     
     # calculate impedance (choose one)
     
@@ -444,39 +486,50 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                         impedance3 = mgaus_f(tt_median, 100),
                         impedance4 = mgaus_f(tt_median, 180)) ]
     
+    # PARA ST
+    # 8980104526fffff: esse hexagono tem 2 hospitais e esta localizado em uma area isolada,
+    # onde o hex vizinho 8980104ec9bffff demora 50 minutos de onibus para chegar nele
+    # isso faz com que esse hexagono tenha um bfca muito maior que os seus vizinhos,
+    # pq os 2 hospitais que estao ali vao servir quase que somente a populacao que ali mora
     
-    # somar populacao de referencia de cada atividade
-    ttmatrix_hosp[, pop_ref := sum( paste0()), by=origin]
-    666666666666666666666666
+    ttmatrix_hosp[origin %in% c("8980104526fffff", "8980104ec9bffff") & 
+                    destination == "8980104526fffff" & mode == "transit" & pico == 1] %>%
+      View()
+    ttmatrix_hosp[destination == "8980104526fffff" & mode == "transit" & pico == 1] %>%
+      View()
     
+    # PARA ET
+    # 8980104cc0fffff: esse hexagono tem 1 escola e esta localizado em uma area isolada,
+    # curiosamente, so 2 ghexagonos conseguem acessar este (1 deles eh ele mesmo)
+    # isso eh problema da ttmatrix original
+    ttmatrix[destination == "8980104cc0fffff" & mode == "transit" & pico == 1] %>%
+      View()
+    ttmatrix_hosp[destination == "8980104cc0fffff" & mode == "transit" & pico == 1] %>%
+      View()
+    hexagonos_sf %>% filter(id_hex =='8980104cc0fffff') %>% st_sf() %>% mapview()
     
-    # summary(ttmatrix_hosp$impedance1)
     
     # calculate weights i (normalized impedance by origin id)
     ttmatrix_hosp[, wi1 := impedance1/sum(impedance1), by= .(origin, mode, pico)]
     ttmatrix_hosp[, wi2 := impedance2/sum(impedance2), by= .(origin, mode, pico)]
     ttmatrix_hosp[, wi3 := impedance3/sum(impedance3), by= .(origin, mode, pico)]
     ttmatrix_hosp[, wi4 := impedance4/sum(impedance4), by= .(origin, mode, pico)]
-    summary(ttmatrix_hosp$wi1)
+    # summary(ttmatrix_hosp$wi1)
     
     # calculate weights j (normalized impedance by destination)
     ttmatrix_hosp[, wj1 := impedance1/sum(impedance1), by=.(destination, mode, pico)]
     ttmatrix_hosp[, wj2 := impedance2/sum(impedance2), by=.(destination, mode, pico)]
     ttmatrix_hosp[, wj3 := impedance3/sum(impedance3), by=.(destination, mode, pico)]
     ttmatrix_hosp[, wj4 := impedance4/sum(impedance4), by=.(destination, mode, pico)]
-    summary(ttmatrix_hosp$wj1)
+    # summary(ttmatrix_hosp$wj1)
     
     ## Step 1 - reaportion the demand to each hospital proportionally to weight i
     ttmatrix_hosp1 <- copy(ttmatrix_hosp)
-    
-    
-    
-    
-    ttmatrix_hosp1[, pop_served1 := sum(pop_ref * wi1, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served2 := sum(pop_ref * wi2, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served3 := sum(pop_ref * wi3, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served4 := sum(pop_ref * wi4, na.rm = TRUE), by= .(destination, mode, pico)]
-    summary(ttmatrix_hosp1$pop_served1)
+    ttmatrix_hosp1[, pop_served1 := sum((eval(parse(text = pop_target))) * wi1, na.rm = TRUE), by= .(destination, mode, pico)]
+    ttmatrix_hosp1[, pop_served2 := sum((eval(parse(text = pop_target))) * wi2, na.rm = TRUE), by= .(destination, mode, pico)]
+    ttmatrix_hosp1[, pop_served3 := sum((eval(parse(text = pop_target))) * wi3, na.rm = TRUE), by= .(destination, mode, pico)]
+    ttmatrix_hosp1[, pop_served4 := sum((eval(parse(text = pop_target))) * wi4, na.rm = TRUE), by= .(destination, mode, pico)]
+    # summary(ttmatrix_hosp1$pop_served1)
     
     ## Step 2 - calculate provider-to-population ration (ppr) at each destination
     ttmatrix_hosp1[, ':='(ppr1 = get(grid_bfc1$atividade_nome)[1] / pop_served1,
@@ -484,29 +537,126 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                           ppr3 = get(grid_bfc1$atividade_nome)[1] / pop_served3,
                           ppr4 = get(grid_bfc1$atividade_nome)[1] / pop_served4), 
                    by= .(destination, mode, pico)]
-    summary(ttmatrix_hosp1$ppr)
+    # summary(ttmatrix_hosp1$ppr)
+    
+    # ttmatrix_hosp1[origin == "8980104030fffff"] %>% View()
+    
+    # teste: checar hex problematicos
+    bfca_high <- ttmatrix_hosp1[origin == "8980104526fffff" & mode == "transit" & pico == 1, 
+                                .(origin, destination, pop_total, 
+                                  wi1, wi2, wi3, wi4,
+                                  wj1, wj2, wj3, wj4,
+                                  pop_served1, pop_served2, pop_served3, pop_served4,
+                                  ppr1,
+                                  ppr2,
+                                  ppr3,
+                                  ppr4
+                                )]
+    
+    bfca_low <- ttmatrix_hosp1[origin == "8980104ec9bffff" & mode == "transit" & pico == 1,
+                               .(origin, destination, pop_total, 
+                                 wi1, wi2, wi3, wi4,
+                                 wj1, wj2, wj3, wj4,
+                                 pop_served1, pop_served2, pop_served3, pop_served4,
+                                 ppr1,
+                                 ppr2,
+                                 ppr3,
+                                 ppr4)]
+    
+    # as origens e destinos sao iguais?
+    setdiff(bfca_high$origin, bfca_low$origin) # SIM
+    
+    # os ppr sao iguais?
+    summary(bfca_high$ppr1/bfca_low$ppr1)  # SIM
+    summary(bfca_high$ppr2/bfca_low$ppr2) # SIM
+    summary(bfca_high$ppr3/bfca_low$ppr3) # SIM
+    summary(bfca_high$ppr4/bfca_low$ppr4) # SIM
+    
+    # qual a diferenca nos wi?
+    summary(bfca_high$wi1/bfca_low$wi1)
+    summary(bfca_high$wi2/bfca_low$wi2)
+    summary(bfca_high$wi3/bfca_low$wi3)
+    summary(bfca_high$wi4/bfca_low$wi4)
+    
+    # qual a diferenca nos wj?
+    summary(bfca_high$wj1/bfca_low$wj1)
+    summary(bfca_high$wj2/bfca_low$wj2)
+    summary(bfca_high$wj3/bfca_low$wj3)
+    summary(bfca_high$wj4/bfca_low$wj4)
+    
+    # qual a diferenca nos pop_served?
+    summary(bfca_high$pop_served1/bfca_low$pop_served1)
+    summary(bfca_high$pop_served2/bfca_low$pop_served2)
+    summary(bfca_high$pop_served3/bfca_low$pop_served3)
+    summary(bfca_high$pop_served4/bfca_low$pop_served4)
+    
+    
+    bfca_comp <- left_join(bfca_high, bfca_low,
+                           by = c("destination"),
+                           suffix = c("_high", "_low")) %>%
+      select(destination, starts_with("pop_total"),
+             starts_with("wi1"),
+             starts_with("wi2"),
+             starts_with("wi3"),
+             starts_with("wi4"),
+             starts_with("wj1"),
+             starts_with("wj2"),
+             starts_with("wj3"),
+             starts_with("wj4")
+             
+             
+      )
     
     
     ## Step 3 - reaportion ppr at each origin proportionally to weight j
-    bfca <- ttmatrix_hosp1[, .(BFCA1 = round(sum(ppr1 * wj1, na.rm=T), 6),
-                               BFCA2 = round(sum(ppr2 * wj2, na.rm=T), 6),
-                               BFCA3 = round(sum(ppr3 * wj3, na.rm=T), 6),
-                               BFCA4 = round(sum(ppr4 * wj4, na.rm=T), 6)),
+    bfca_high1 <- bfca_high[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
+                                BFCA2 = sum(ppr2 * wj2, na.rm=T),
+                                BFCA3 = sum(ppr3 * wj3, na.rm=T),
+                                BFCA4 = sum(ppr4 * wj4, na.rm=T)),
+                            by= .(city, origin, mode, pico)]
+    ## Step 3 - reaportion ppr at each origin proportionally to weight j
+    bfca_low1 <- bfca_low[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
+                              BFCA2 = sum(ppr2 * wj2, na.rm=T),
+                              BFCA3 = sum(ppr3 * wj3, na.rm=T),
+                              BFCA4 = sum(ppr4 * wj4, na.rm=T)),
+                          by= .(city, origin, mode, pico)]
+    
+    
+    
+    ## Step 3 - reaportion ppr at each origin proportionally to weight j
+    bfca <- ttmatrix_hosp1[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
+                               BFCA2 = sum(ppr2 * wj2, na.rm=T),
+                               BFCA3 = sum(ppr3 * wj3, na.rm=T),
+                               BFCA4 = sum(ppr4 * wj4, na.rm=T)),
                            by= .(city, origin, mode, pico)]
     # rename BFCA
-    colnames(bfca) <- c("city", "origin", "modo", "pico", grid_bfc1$junto)
+    colnames(bfca) <- c("city", "origin", "mode", "pico", grid_bfc1$junto)
     # summary(bfca$BFCA)*10000
     
     return(bfca)
+    
+    
+    # esses hexagonos sao vizinhos mas o bfca esta do lado extremo dos dois
+    hexagonos_sf %>% filter(id_hex == "8980104526fffff") %>% st_sf() %>% mapview() + # high for BFCST100
+      mapview(hexagonos_sf %>% filter(id_hex == "8980104ec9bffff") %>% st_sf()) # low for BFCST100
     
   }
   
   
   # apply fun to calculate bfca
   acess_bfc <- lapply(unique(grid_bfc$atividade_nome), calculate_bfc)
-  acess_bfc <- acess_bfc %>% reduce(full_join, by = c("city", "origin", "modo", "pico"))
+  # o nome das colunas de bfca eh diferente para cada um dos df, e a ideia eh
+  # que as colunas de bfca fiquem em formato largo
+  # para isso, eh preciso fazer a juncao de todas as bases pelas variaveis em comum
+  # a funcao 'reduce' aplica um funcao (no nosso caso, full_join) interativamente,
+  # sempre aplicando a funcao com o resultado da aplicacao anterior
+  acess_bfc <- acess_bfc %>% reduce(full_join, by = c("city", "origin", "mode", "pico"))
   
-  
+  # ATENCAO
+  # algumas origens nao vao ter valores calculados do BFCA, e isso acontece princiaplamente
+  # para caminhada e bike
+  # isso acontece pq esses hex nao conseguem acessar nenhuma atividade que esteja
+  # dentro do tempo limite de viagem do roteamento, que eh 90 mins para walk e bike
   
   
   
@@ -518,6 +668,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   acess <- merge(acess_cma, acess_cmp,
                  all.x = TRUE,
                  by.x = c("city", "mode", "origin", "pico"),
+                 # como o cmp eh calculado para os destinos, o join eh para destination
                  by.y = c("city", "mode", "destination", "pico"))
   
   acess <- merge(acess, acess_tmi,
@@ -540,7 +691,9 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     st_sf()
   
   
-  6666666 identificar o ano
+  # identificar o ano
+  acess_sf <- acess_sf %>%
+    mutate(ano = ano)
   
   # 8) Salvar output --------------------------------------
   
@@ -567,6 +720,31 @@ colnames(a)[colnames(a) %like% "CMP"]
 
 
 
+teste_viz_bfca <- acess_sf %>% 
+  filter(mode == "transit", pico == 1) %>%
+  mutate_at(vars(starts_with("BFC")), ~ . * 10000)
+
+qtles <- quantile(na.omit(teste_viz_bfca$BFCET100), probs = seq(0, 1, 0.1))
+mapview(teste_viz_bfca, zcol = "BFCET100", at = qtles)
+
+teste_viz_bfca %>% select(origin, BFCET100) %>% View()
+
+# testepara BFCET100
+hexagonos_sf %>% filter(id_hex == "8980104c097ffff") %>% st_sf() %>% mapview()
+hex_orig %>% filter(id_hex == "8980104c097ffff") %>% View()
+hex_dest %>% filter(id_hex == "8980104c097ffff") %>% View()
+qtles <- quantile(na.omit(teste_viz_bfca$BFCST100), probs = seq(0, 1, 0.1))
+mapview(teste_viz_bfca, zcol = "BFCST100", at = qtles)
+
+hexagonos_sf %>% filter(id_hex == "8980104cc0fffff") %>% st_sf() %>% mapview()
+hex_orig %>% filter(id_hex == "8980104cc0fffff") %>% View()
+hex_dest %>% filter(id_hex == "8980104cc0fffff") %>% View()
+qtles <- quantile(na.omit(teste_viz_bfca$BFCST100), probs = seq(0, 1, 0.1))
+mapview(teste_viz_bfca, zcol = "BFCST100", at = qtles)
 
 
 
+hex_orig %>% filter(id_hex == "8980104526fffff") # high for BFCST100
+hex_orig %>% filter(id_hex == "8980104ec9bffff") # low for BFCST100
+hex_orig %>% filter(id_hex == "8980104ec93ffff")
+hex_orig %>% filter(id_hex == "89801045267ffff")
