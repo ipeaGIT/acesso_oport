@@ -420,19 +420,19 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                                # limitada pelos intervalos de idade disponiveis
                                # fonte: https://pt.wikipedia.org/wiki/Idade_escolar
                                # educacao total: pop de 0 a 20 anos
-                               atividade_sigla == "ET", list(c("idade_0a5", "idade_6a14", "idade_15a18", 'idade_19a24')),
+                               atividade_sigla == "ET", list(c("idade_0a5", "idade_6a14", "idade_15a18")),
                                # educacao infantil: pop de 0 a 6 anos
                                atividade_sigla == "EI", list("idade_0a5"),
                                # educacao fund.: pop de 6 a 15 anos
-                               atividade_sigla == "EF", list(c("idade_6a14", "idade_15a18")),
+                               atividade_sigla == "EF", list(c("idade_6a14")),
                                # educacao media: pop de 15 a 18 anos
-                               atividade_sigla == "EM", list(c("idade_15a18", "idade_19a24")), 
+                               atividade_sigla == "EM", list(c("idade_15a18")), 
                                
                                # a mesma regra se aplica para as matriculas
-                               atividade_sigla == "MT", list(c("idade_0a5", "idade_6a14", "idade_15a18", 'idade_19a24')),
+                               atividade_sigla == "MT", list(c("idade_0a5", "idade_6a14", "idade_15a18")),
                                atividade_sigla == "MI", list("idade_0a5"),
-                               atividade_sigla == "MF", list(c("idade_6a14", "idade_15a18")),
-                               atividade_sigla == "MM", list(c("idade_15a18", "idade_19a24"))
+                               atividade_sigla == "MF", list(c("idade_6a14")),
+                               atividade_sigla == "MM", list(c("idade_15a18"))
   )]
   
   
@@ -456,13 +456,6 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     hex_dest_filter <- hex_dest[get(grid_bfc1$atividade_nome[1]) >= 1]
     ttmatrix_hosp <- ttmatrix[destination %in% hex_dest_filter$id_hex]
     
-    
-    # a <- ttmatrix[origin == "8980104030fffff"]
-    # table(a$mode)
-    # ttmatrix_hosp[origin == "8980104030fffff"] %>% View()
-    
-    # hexagonos_sf %>% filter(id_hex =='8980104030fffff') %>% st_sf() %>% mapview()
-    
     # calculate impedance (choose one)
     
     # gaussian
@@ -485,29 +478,6 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                         impedance2 = mgaus_f(tt_median, 40),
                         impedance3 = mgaus_f(tt_median, 100),
                         impedance4 = mgaus_f(tt_median, 180)) ]
-    
-    # PARA ST
-    # 8980104526fffff: esse hexagono tem 2 hospitais e esta localizado em uma area isolada,
-    # onde o hex vizinho 8980104ec9bffff demora 50 minutos de onibus para chegar nele
-    # isso faz com que esse hexagono tenha um bfca muito maior que os seus vizinhos,
-    # pq os 2 hospitais que estao ali vao servir quase que somente a populacao que ali mora
-    
-    ttmatrix_hosp[origin %in% c("8980104526fffff", "8980104ec9bffff") & 
-                    destination == "8980104526fffff" & mode == "transit" & pico == 1] %>%
-      View()
-    ttmatrix_hosp[destination == "8980104526fffff" & mode == "transit" & pico == 1] %>%
-      View()
-    
-    # PARA ET
-    # 8980104cc0fffff: esse hexagono tem 1 escola e esta localizado em uma area isolada,
-    # curiosamente, so 2 ghexagonos conseguem acessar este (1 deles eh ele mesmo)
-    # isso eh problema da ttmatrix original
-    ttmatrix[destination == "8980104cc0fffff" & mode == "transit" & pico == 1] %>%
-      View()
-    ttmatrix_hosp[destination == "8980104cc0fffff" & mode == "transit" & pico == 1] %>%
-      View()
-    hexagonos_sf %>% filter(id_hex =='8980104cc0fffff') %>% st_sf() %>% mapview()
-    
     
     # calculate weights i (normalized impedance by origin id)
     ttmatrix_hosp[, wi1 := impedance1/sum(impedance1), by= .(origin, mode, pico)]
@@ -539,89 +509,6 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                    by= .(destination, mode, pico)]
     # summary(ttmatrix_hosp1$ppr)
     
-    # ttmatrix_hosp1[origin == "8980104030fffff"] %>% View()
-    
-    # teste: checar hex problematicos
-    bfca_high <- ttmatrix_hosp1[origin == "8980104526fffff" & mode == "transit" & pico == 1, 
-                                .(origin, destination, pop_total, 
-                                  wi1, wi2, wi3, wi4,
-                                  wj1, wj2, wj3, wj4,
-                                  pop_served1, pop_served2, pop_served3, pop_served4,
-                                  ppr1,
-                                  ppr2,
-                                  ppr3,
-                                  ppr4
-                                )]
-    
-    bfca_low <- ttmatrix_hosp1[origin == "8980104ec9bffff" & mode == "transit" & pico == 1,
-                               .(origin, destination, pop_total, 
-                                 wi1, wi2, wi3, wi4,
-                                 wj1, wj2, wj3, wj4,
-                                 pop_served1, pop_served2, pop_served3, pop_served4,
-                                 ppr1,
-                                 ppr2,
-                                 ppr3,
-                                 ppr4)]
-    
-    # as origens e destinos sao iguais?
-    setdiff(bfca_high$origin, bfca_low$origin) # SIM
-    
-    # os ppr sao iguais?
-    summary(bfca_high$ppr1/bfca_low$ppr1)  # SIM
-    summary(bfca_high$ppr2/bfca_low$ppr2) # SIM
-    summary(bfca_high$ppr3/bfca_low$ppr3) # SIM
-    summary(bfca_high$ppr4/bfca_low$ppr4) # SIM
-    
-    # qual a diferenca nos wi?
-    summary(bfca_high$wi1/bfca_low$wi1)
-    summary(bfca_high$wi2/bfca_low$wi2)
-    summary(bfca_high$wi3/bfca_low$wi3)
-    summary(bfca_high$wi4/bfca_low$wi4)
-    
-    # qual a diferenca nos wj?
-    summary(bfca_high$wj1/bfca_low$wj1)
-    summary(bfca_high$wj2/bfca_low$wj2)
-    summary(bfca_high$wj3/bfca_low$wj3)
-    summary(bfca_high$wj4/bfca_low$wj4)
-    
-    # qual a diferenca nos pop_served?
-    summary(bfca_high$pop_served1/bfca_low$pop_served1)
-    summary(bfca_high$pop_served2/bfca_low$pop_served2)
-    summary(bfca_high$pop_served3/bfca_low$pop_served3)
-    summary(bfca_high$pop_served4/bfca_low$pop_served4)
-    
-    
-    bfca_comp <- left_join(bfca_high, bfca_low,
-                           by = c("destination"),
-                           suffix = c("_high", "_low")) %>%
-      select(destination, starts_with("pop_total"),
-             starts_with("wi1"),
-             starts_with("wi2"),
-             starts_with("wi3"),
-             starts_with("wi4"),
-             starts_with("wj1"),
-             starts_with("wj2"),
-             starts_with("wj3"),
-             starts_with("wj4")
-             
-             
-      )
-    
-    
-    ## Step 3 - reaportion ppr at each origin proportionally to weight j
-    bfca_high1 <- bfca_high[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
-                                BFCA2 = sum(ppr2 * wj2, na.rm=T),
-                                BFCA3 = sum(ppr3 * wj3, na.rm=T),
-                                BFCA4 = sum(ppr4 * wj4, na.rm=T)),
-                            by= .(city, origin, mode, pico)]
-    ## Step 3 - reaportion ppr at each origin proportionally to weight j
-    bfca_low1 <- bfca_low[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
-                              BFCA2 = sum(ppr2 * wj2, na.rm=T),
-                              BFCA3 = sum(ppr3 * wj3, na.rm=T),
-                              BFCA4 = sum(ppr4 * wj4, na.rm=T)),
-                          by= .(city, origin, mode, pico)]
-    
-    
     
     ## Step 3 - reaportion ppr at each origin proportionally to weight j
     bfca <- ttmatrix_hosp1[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
@@ -635,10 +522,6 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     
     return(bfca)
     
-    
-    # esses hexagonos sao vizinhos mas o bfca esta do lado extremo dos dois
-    hexagonos_sf %>% filter(id_hex == "8980104526fffff") %>% st_sf() %>% mapview() + # high for BFCST100
-      mapview(hexagonos_sf %>% filter(id_hex == "8980104ec9bffff") %>% st_sf()) # low for BFCST100
     
   }
   
@@ -712,39 +595,3 @@ furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, calcula
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, calcular_acess_muni, ano = 2018)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, calcular_acess_muni, ano = 2019)
 
-a <- read_rds(sprintf("../../data/acesso_oport/output_access/%s/%s/acess_%s_%s.rds", 2017, 'otp', 'for', '2017'))
-
-
-colnames(a)[colnames(a) %like% "CMP"]
-
-
-
-
-teste_viz_bfca <- acess_sf %>% 
-  filter(mode == "transit", pico == 1) %>%
-  mutate_at(vars(starts_with("BFC")), ~ . * 10000)
-
-qtles <- quantile(na.omit(teste_viz_bfca$BFCET100), probs = seq(0, 1, 0.1))
-mapview(teste_viz_bfca, zcol = "BFCET100", at = qtles)
-
-teste_viz_bfca %>% select(origin, BFCET100) %>% View()
-
-# testepara BFCET100
-hexagonos_sf %>% filter(id_hex == "8980104c097ffff") %>% st_sf() %>% mapview()
-hex_orig %>% filter(id_hex == "8980104c097ffff") %>% View()
-hex_dest %>% filter(id_hex == "8980104c097ffff") %>% View()
-qtles <- quantile(na.omit(teste_viz_bfca$BFCST100), probs = seq(0, 1, 0.1))
-mapview(teste_viz_bfca, zcol = "BFCST100", at = qtles)
-
-hexagonos_sf %>% filter(id_hex == "8980104cc0fffff") %>% st_sf() %>% mapview()
-hex_orig %>% filter(id_hex == "8980104cc0fffff") %>% View()
-hex_dest %>% filter(id_hex == "8980104cc0fffff") %>% View()
-qtles <- quantile(na.omit(teste_viz_bfca$BFCST100), probs = seq(0, 1, 0.1))
-mapview(teste_viz_bfca, zcol = "BFCST100", at = qtles)
-
-
-
-hex_orig %>% filter(id_hex == "8980104526fffff") # high for BFCST100
-hex_orig %>% filter(id_hex == "8980104ec9bffff") # low for BFCST100
-hex_orig %>% filter(id_hex == "8980104ec93ffff")
-hex_orig %>% filter(id_hex == "89801045267ffff")
