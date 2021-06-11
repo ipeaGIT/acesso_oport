@@ -89,9 +89,7 @@ geocode_filter <- function(ano, atividade) {
     path_out <- sprintf("../../data/acesso_oport/%s/%s/%s_%s_geocoded_filter.rds", 
                         atividade, ano, atividade, ano) 
     
-  }
-  
-  else if (atividade == "rais") {
+  } else if (atividade == "rais") {
     
     # rename id
     data <- rename(data, id_estab = id) %>% setDT()

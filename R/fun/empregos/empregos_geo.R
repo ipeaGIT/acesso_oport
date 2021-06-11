@@ -623,8 +623,10 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # cidades
   # identifica-las atraves do shape dos municipios e refazer geocode do google considerando so CEP
   
+  code_munis <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% unlist()
+  
   # 6.1) Carregar shape dos munis
-  shps <- purrr::map_dfr(munis_df$code_muni, geobr::read_municipality) %>% as_tibble() %>% st_sf()
+  shps <- purrr::map_dfr(code_munis, geobr::read_municipality) %>% as_tibble() %>% st_sf()
   
   
   # 6.2) Identificar os estabs que estao fora dos municipios
@@ -835,7 +837,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     # 11.5) Trazer entao os estabs geocoded do ano anterior
     
     # 11.5.1) Get previous geocode
-    rais_ano_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode.rds", ano-1, ano-1))
+    rais_ano_anterior <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", ano-1, ano-1))
     rais_ano_anterior <- rais_ano_anterior %>% select(id_estab, lon, lat, 
                                           SearchedAddress, MatchedAddress,
                                           PrecisionDepth, type_input_galileo, geocode_engine)
