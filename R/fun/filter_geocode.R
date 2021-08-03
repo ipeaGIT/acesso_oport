@@ -9,17 +9,17 @@
 # - From gmaps (https://developers.google.com/maps/documentation/geocoding/overview#Types):
 # 'airport'
 # 'amusement_park'
-# 'bus_station'
-# 'establishment'
+# 'bus_station' ----------------------- to be removed
+# 'establishment'  ----------------------- to be removed
 # 'intersection'
-# 'neighborhood'
-# 'political'
-# 'post_box'
+# 'neighborhood'  ----------------------- to be removed
+# 'political' ----------------------- to be removed
+# 'post_box'  ----------------------- to be removed
 # 'street_number'
 # 'premise'
-# 'subpremise'
+# 'subpremise'  ----------------------- to be removed
 # 'town_square'
-# 'postal_code'
+# 'postal_code' ----------------------- to be removed
 # 'route': only when cep from the input matches the cep from the output
 
 
