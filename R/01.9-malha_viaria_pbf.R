@@ -71,7 +71,7 @@ filtrar_malha_viaria_br(year = 2020)
 
 extrai_malha_viaria <- function(muni, year) {
   ## encontrar bounding box da cidade, a partir do grid de topografia
-  topo_file <- sprintf("../../data/acesso_oport/topografia3/%s/topografia3_%s.tif", muni, muni)
+  topo_file <- sprintf("../../data/acesso_oport/topografia/%s/topografia_%s.tif", muni, muni)
   topo_raster <- raster::raster(topo_file)
   
   muni_bbox <- raster::extent(topo_raster)
@@ -107,8 +107,9 @@ extrai_malha_viaria <- function(muni, year) {
   tictoc::toc()
 }
 
+ano = 2020
 purrr::walk(munis_list$munis_metro[ano_metro == ano]$abrev_muni, extrai_malha_viaria, year = 2020)
 system.time(extrai_malha_viaria(muni = "poa", year = 2020))
 
-
+extrai_malha_viaria("poa", 2020)
 
