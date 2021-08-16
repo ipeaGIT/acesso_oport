@@ -15,6 +15,7 @@ source('./R/fun/setup.R')
 # Em seguida sao juntos todos os modos
 
 # sigla_muni <- 'bho'; ano <- 2019
+# sigla_muni <- 'man'; ano <- 2019
 
 gerar_ttmatrix_mediana_muni <- function(sigla_muni, ano) {
   
@@ -109,6 +110,7 @@ purrr::map(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, gerar_ttmatrix_
 # sigla_muni <- 'for'; ano <- 2017; engine <- "r5"
 # sigla_muni <- 'for'; ano <- 2017; engine <- "otp"
 # sigla_muni <- 'nat'; ano <- 2017; engine <- "r5"
+# sigla_muni <- 'man'; ano <- 2019; engine <- "otp"
 
 identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano, engine = "otp") {
   # status message
