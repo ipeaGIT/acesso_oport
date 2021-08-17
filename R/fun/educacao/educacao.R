@@ -1,5 +1,5 @@
 
-
+# source('./R/fun/setup.R')
 
 #' A funcao 'educacao_filter':
 #' 1) Lê os dados do censo escolar (que foram baixadas do site do INEP, base de escolas) e faz filtros selecionando
@@ -168,9 +168,9 @@ educacao_filter <- function(ano, download = FALSE) {
   escolas_fim$in_local_func_unid_prisional <- NULL
   escolas_fim$in_local_func_prisional_socio <- NULL
   
-
+  
   # 3) trazer matriculas -------------------------------------------------------
-
+  
   # usando inner_join para manter apenas escolas com matriculas que nao sejam EJA
   escolas_fim_mat <- inner_join(
     escolas_fim, 
@@ -192,7 +192,7 @@ educacao_filter <- function(ano, download = FALSE) {
       select(co_entidade, code_muni = co_municipio, no_entidade, 
              mat_infantil, mat_fundamental, mat_medio, 
              nu_funcionarios
-             )
+      )
     
     
   } else {
@@ -201,7 +201,7 @@ educacao_filter <- function(ano, download = FALSE) {
     escolas_fim_mat <- escolas_fim_mat %>%
       select(co_entidade, code_muni = co_municipio, no_entidade, 
              mat_infantil, mat_fundamental, mat_medio
-             )
+      )
     
   }
   
@@ -216,6 +216,41 @@ educacao_filter <- function(ano, download = FALSE) {
 }
 
 
+
+# trazer geocode do streetmap ---------------------------------------------
+
+escolas_bring_geocode <- function(ano) {
+  
+  # abrir escolas com geocode do streetmap
+  escolas_coords <- fread("../../data/geocode/educacao/escolas_output_geocode_com_bairro.csv",
+                          encoding = "UTF-8")
+  
+  # abrir escolas filter
+  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano))
+  
+  # select columns
+  escolas_coords <- escolas_coords %>% 
+    select(co_entidade, endereco, Addr_type, Score, lon = lon_output, lat = lat_output)
+  
+  
+  # join!
+  escolas_geo <- merge(
+    escolas,
+    escolas_coords,
+    by = "co_entidade",
+    all.x = TRUE
+  ) %>% mutate(co_entidade = as.character(co_entidade)) %>% setDT()
+  
+  
+  # table(escolas_geo$Addr_type, useNA = "always")
+  
+  # salvar
+  # save it
+  escolas_geo %>%
+    fwrite(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded.csv", ano, ano))
+  
+  
+}
 
 
 
@@ -240,20 +275,48 @@ educacao_filter <- function(ano, download = FALSE) {
 educacao_geocode <- function(ano, run_gmaps = FALSE) {
   
   
-  # 1) Trazer as coordenadas da escolas fornecidas pelo INEP -------------------------------------------
-  escolas_coords <- fread("../../data-raw/censo_escolar/coordenadas_geo/escolas_inep_2020.csv",
+  # 1) Trazer as coordenadas da escolas fornecidas pelo INEP e geocodigifacas pelo streetmap -------------------------------------------
+  escolas_coords <- fread("../../data/geocode/educacao/escolas_output_geocode_com_bairro.csv",
                           encoding = "UTF-8")
+  
+  
+  # trazer entao as coordenadas do gmaps do ano anterior
+  if (ano != 2017) {
+    
+    escolas_anterior <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/escolas/rais_%s_filter_geocoded_gmaps.rds", ano-1, ano-1))
+    # identificar estabs a serem atualizados
+    estabs_to_update <- rais_geocoded_filter[type_year_input %nin% c(paste0("new_estab_", ano))]$id_estab
+    # filtra entao esses do ano anteior
+    escolas_anterior <- escolas_anterior[co_entidade %in% estabs_to_update]
+    # juncao
+    rais_geocoded_filter[rais_anterior, on = "co_entidade",
+                         c("Addr_type", "lon", "lat", "geocode_engine") :=
+                           list(i.Addr_type, i.lon, i.lat, i.geocode_engine)]
+    
+  }
+  
+  # selecionar a coordenada a ser utilizada
+  # se a escola tiver sido georef com boa qualidade no streetmap ("PointAddress)", c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90
+  # usar streetmap
+  # senao, usar as coordenadas do inep
+  escolas_coords[, geocode_engine :=  fifelse(Status %in% c("T", "U"), "inep",
+                                              fifelse(Addr_type == "PointAddress", "streetmap",
+                                                      fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, "streetmap", "inep")))]
+  escolas_coords[, ':='(lon = fifelse(geocode_engine == "streetmap", lon_output, lon),
+                        lat = fifelse(geocode_engine == "streetmap", lat_output, lat))]
+  
   # abrir escolas filter
   escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter.rds", ano, ano))
   
   # reformat columns
   escolas_coords <- janitor::clean_names(escolas_coords)
   escolas_coords <- escolas_coords %>% 
-    select(co_entidade = codigo_inep, endereco, lon = longitude, lat = latitude)
+    select(co_entidade, endereco, addr_type, geocode_engine, lon, lat)
   
   
   # table(nchar(escolas$co_entidade))
   # table(nchar(escolas_coords$co_entidade))
+  # table(escolas_coords$addr_type)
   
   # 3) Join das escolas do censo escolar com as coords fornecidas pelo INEP ------------------------
   # join to create escolas geo
@@ -263,6 +326,8 @@ educacao_geocode <- function(ano, run_gmaps = FALSE) {
     by = "co_entidade",
     all.x = TRUE
   ) %>% mutate(co_entidade = as.character(co_entidade)) %>% setDT()
+  
+  # table(escolas_geo$addr_type)
   
   
   # 2) Separar somente as escolas para geocode que nao forem geocoded no ano anterior ----------
