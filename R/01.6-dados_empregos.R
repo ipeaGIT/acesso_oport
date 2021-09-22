@@ -23,13 +23,13 @@ rais_treat_outliers(2017)
 
 # 3) Realizar e trazer geocode dos estabelecimentos
 # realizar geocode
-rais_clean_estabs_raw(2017)
-rais_export_data_to_galileo(2017)
+# rais_clean_estabs_raw(2017)
+# rais_export_data_to_galileo(2017)
 
 ## Run Galileo to geocode the data before moving on to the next functions
 
-rais_check_new_estabs(2017)
-rais_gmaps_geocode(2017, run_gmaps = FALSE)
+# rais_check_new_estabs(2017)
+# rais_gmaps_geocode(2017, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2017)
 
@@ -74,6 +74,12 @@ rais_bring_schools(2018)
 # 5) Selecionar somente as obsservacoes com boa qualidade de geocode
 source("R/fun/filter_geocode.R")
 geocode_filter(ano = 2018, "rais")
+
+
+
+
+
+
 
 # Aplicar funcoes para o ano de 2019 -------------
 

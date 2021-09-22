@@ -48,12 +48,15 @@ rais_clean_estabs_raw <- function(ano) {
   # todo os estabs para 14 characetrs
   rais_filtro_2[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
+  # garantir que os cnpjs sao unicos
+  rais_filtro_2 <- rais_filtro_2 %>% distinct(id_estab, .keep_all = TRUE)
+  
   # 5) Selecionar colunas e salvar
   rais_filtro_2 %>%
     # fix uf and codemun
     select(id_estab, qt_vinc_ativos, logradouro, bairro, codemun, name_muni, uf, cep,
            lon, lat,
-           Addr_type, Score, Status, type_year_input) %>% 
+           Addr_type, Score, Status, matched_address, type_year_input) %>% 
     # save it
     fwrite(sprintf("../../data/acesso_oport/rais/%s/rais_%s_filter_geocoded.csv", ano, ano))
 }
@@ -93,6 +96,9 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # pad 14 digits of estabe id
   rais_geocoded_filter[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
   
+  # identify engine
+  rais_geocoded_filter[, geocode_engine := "streetmap"]
+  
   
   # trazer entao as coordenadas do gmaps do ano anterior
   if (ano != 2017) {
@@ -103,15 +109,18 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     # filtra entao esses do ano anteior
     rais_anterior <- rais_anterior[id_estab %in% estabs_to_update]
     # juncao
+    # table(rais_geocoded_filter$Addr_type, useNA = 'always')
+    # table(rais_geocoded_filter$geocode_engine, useNA = 'always')
+    # table(rais_anterior$geocode_engine, useNA = 'always')
     rais_geocoded_filter[rais_anterior, on = "id_estab",
-                         c("Addr_type", "lon", "lat", "geocode_engine") :=
-                           list(i.Addr_type, i.lon, i.lat, i.geocode_engine)]
+                         c("Addr_type", "matched_address", "lon", "lat", "geocode_engine") :=
+                           list(i.Addr_type, i.matched_address, i.lon, i.lat, i.geocode_engine)]
     
   }
   
   
-  # table(rais_galileo_output$PrecisionDepth, useNA = 'always')
-  # table(rais_galileo_output$type_input_galileo, useNA = 'always')
+  # table(rais_geocoded_filter$geocode_engine, useNA = 'always')
+  # table(rais_geocoded_filter$type_year_input, useNA = 'always')
   
   # extrair somente o que eh novo para cada ano
   if (ano != 2017) {
@@ -140,14 +149,6 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   estabs_problema <- rais_geocoded_filter_new[gmaps == TRUE]
   
   # # 3.2) Selecionar muitos stabs com as mesmas coordenadas 
-  # 
-  # #! adicionar checagem se streetmap retorna muitos endereços com mesmas coordenadas
-  # same_lat <- rais_geocoded_filter[, same_coords := paste0(lat,'-',lon)]
-  # same_lat <- rais_geocoded_filter[, N := .N, by = same_coords]
-  # same_lat <- same_lat[N  > 14]
-  # 
-  # # definir esses estabelecimentos
-  # rais_same_coords <- subset(estabs_problema_3estrelas, same_coords %in% same_lat$same_coords)
   
   
   message("Total of estabs to go to gmaps: ", unique(estabs_problema$id_estab) %>% length())
@@ -159,48 +160,6 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # 3.3) Registrar Google API Key
   my_api <- data.table::fread("../../data-raw/google_key.txt", header = TRUE)
   
-  # # 3.4) Rodar o geocode do gmaps
-  # seqlast <- function (from, to, by) 
-  # {
-  #   vec <- do.call(what = seq, args = list(from, to, by))
-  #   if ( tail(vec, 1) != to ) {
-  #     return(c(vec, to))
-  #   } else {
-  #     return(vec)
-  #   }
-  # }
-  
-  # bounds <- seqlast(1, nrow(enderecos), by = 20000)
-  # bounds <- Map(c, bounds[-length(bounds)], bounds[-1])
-  # 
-  # # create list with arguments
-  # run_gmaps_list_args <- list(
-  #   up = up,
-  #   down = down,
-  #   key1 = my_api[length(up)]
-  # )
-  # 
-  # run_gmaps <- function(bounds1, key1) {
-  #   
-  #   enderecos_go <- enderecos[bounds1[[1]]:bounds1[[2]]]
-  #   enderecos_go1 <- enderecos_go$fim
-  #   register_google(key = key1)
-  #   
-  #   # o ideal eh fazer a cada 10 mil, mas as vezes tenho menos de 10000
-  # 
-  #   coordenadas_google1_1 <- lapply(X=enderecos_go1[1:10000], ggmap::geocode, output = "all")
-  #   coordenadas_google1_2 <- lapply(X=enderecos_go1[10001:length(enderecos_go1)], ggmap::geocode, output = "all")
-  # 
-  #   # join them all together
-  #   coordenadas_google1 <- c(coordenadas_google1_1, coordenadas_google1_2)
-  #   # identify list names as id_estab
-  #   names(coordenadas_google1) <- enderecos_go$id_estab
-  #   # save
-  #   write_rds(coordenadas_google1,
-  #             sprintf("../../data/acesso_oport/rais/%s/geocode/gmaps/rais_geocode_%s_output_google_%s_%s.rds", ano, ano, up, down), compress = 'gz')
-  #   
-  #   
-  # }
   
   
   if (run_gmaps) {
@@ -264,7 +223,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
       
     } else {
       
-      register_google(key = my_api$key[1]) # rafa
+      register_google(key = my_api$key[6]) # joao_parga
       coordenadas_google_1 <- lapply(X=enderecos[1:10000], ggmap::geocode, output = "all")
       names(coordenadas_google_1) <- estabs_problema[1:10000]$id_estab
       write_rds(coordenadas_google_1, sprintf("../../data/acesso_oport/rais/%s/geocode/gmaps_temp1.rds", ano))
@@ -277,10 +236,14 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
       names(coordenadas_google_3) <- estabs_problema[20001:length(enderecos)]$id_estab
       write_rds(coordenadas_google_3, sprintf("../../data/acesso_oport/rais/%s/geocode/gmaps_temp3.rds", ano))
       
+      # join them all together
+      coordenadas_google <- c(coordenadas_google_1, coordenadas_google_2, coordenadas_google_3)
+      
       
       
       
     }
+    
     # identify list names as id_estab
     names(coordenadas_google) <- estabs_problema$id_estab
     # save
@@ -295,7 +258,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     
     names(coordenadas_google) <- str_pad(names(coordenadas_google), width = 14, pad = 0)
     
-    if (length(setdiff(estabs_problema$id_estab, names(coordenadas_google1))) > 0) {
+    if (length(setdiff(estabs_problema$id_estab, names(coordenadas_google))) > 0) {
       
       invisible(
         readline
@@ -342,7 +305,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
                                      NA))
     
     a <- data.table(
-      # MatchedAddress = ifelse(!is.null(x[["results"]][[1]][["formatted_address"]]), x[["results"]][[1]][["formatted_address"]], NA),
+      matched_address = ifelse(!is.null(x[["results"]][[1]][["formatted_address"]]), x[["results"]][[1]][["formatted_address"]], NA),
       # PrecisionDepth = ifelse(!is.null(x[["results"]][[1]][["address_components"]][[1]]$types[[1]]), x[["results"]][[1]][["address_components"]][[1]]$types[[1]], NA),
       Addr_type = precision_depth,
       lon = ifelse(!is.null(x[["results"]][[1]][["geometry"]][["location"]][["lng"]]), x[["results"]][[1]][["geometry"]][["location"]][["lng"]], NA),
@@ -350,6 +313,7 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
     )
     
   }
+  
   
   # 3.5) Rodar funcao que transforma todos os estabs georef em data.table
   estabs_problema_geocoded <- lapply(coordenadas_google, create_dt)
@@ -369,17 +333,21 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # 10) Substituir as coordenadas problematicas que estao na base do streetmap ----
   # pelas novas coordenadas que foram corrigidas pelo gmaps
   
-  # 10.1) Identificar geocode engine (essa info vai acabar sendo sunstituida quando
-  # necessario)
-  rais_geocoded_filter[, geocode_engine := "streetmap"]
-  # table(rais_geocoded_filter$Addr_type, useNA = 'always')
-  # table(rais_geocoded_filter$geocode_engine, useNA = 'always')
-  # table(rais_geocoded_filter$type_year_input, useNA = 'always')
+  # table(rais_geocoded_filter_new$Addr_type, useNA = 'always')
+  # table(rais_geocoded_filter_new$geocode_engine, useNA = 'always')
+  # table(rais_geocoded_filter_new$type_year_input, useNA = 'always')
   
+  # primeiro trazer as coordenadas do gmaps para as novas coordenadas
+  rais_geocoded_filter_new[estabs_problema_geocoded_dt, on = "id_estab",
+                           c("Addr_type", "matched_address", "lon", "lat", "geocode_engine") :=
+                             list(i.Addr_type, i.matched_address, i.lon, i.lat, i.geocode_engine)]
+  
+  
+  # depois, trazer essas para as coordendas completas do ano
   # 10.2) Fazer a substituicao
-  rais_geocoded_filter[estabs_problema_geocoded_dt, on = "id_estab",
-                       c("Addr_type", "lon", "lat", "geocode_engine") :=
-                         list(i.Addr_type, i.lon, i.lat, i.geocode_engine)]
+  rais_geocoded_filter[rais_geocoded_filter_new, on = "id_estab",
+                       c("Addr_type", "matched_address", "lon", "lat", "geocode_engine") :=
+                         list(i.Addr_type, i.matched_address, i.lon, i.lat, i.geocode_engine)]
   
   
   
@@ -388,9 +356,9 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # table(rais_geocoded_filter$type_year_input, useNA = 'always')
   
   
-  # # 10.3) Garantir que os enderecos sejam unicos
-  # rais_galileo_output_fixed <- distinct(rais_galileo_output_fixed, id_estab, .keep_all = TRUE)
-
+  # nrow(rais_geocoded_filter)
+  # nrow(distinct(rais_geocoded_filter, id_estab))
+  
   # 10.4) Salvar
   write_rds(rais_geocoded_filter, 
             sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_filter_geocoded_gmaps.rds", ano, ano), compress = 'gz')

@@ -262,7 +262,7 @@ rais_bring_geocode <- function(ano) {
   rais_estabs <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa2_corrigido.rds", ano, ano))
   
   # 2) Abrir a rais dos estabs georeferenciados
-  rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_estabs_geocode_completo.rds", ano, ano))
+  rais_estabs_geocode <- read_rds(sprintf("../../data/acesso_oport/rais/%s/geocode/rais_%s_filter_geocoded_gmaps.rds", ano, ano))
   
   # pad everyone to 14 characters
   rais_estabs[, id_estab := str_pad(id_estab, width = 14, pad = 0)]
