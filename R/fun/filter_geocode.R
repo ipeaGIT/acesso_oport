@@ -24,6 +24,7 @@
 
 
 # ano <- 2017; atividade <- 'educacao'
+# ano <- 2019; atividade <- 'educacao'
 # ano <- 2019; atividade <- 'saude'
 # ano <- 2018; atividade <- 'rais'
 

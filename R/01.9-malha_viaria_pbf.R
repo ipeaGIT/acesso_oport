@@ -22,6 +22,7 @@ library("raster")
 # checar e filtrar brazil-latest.osm.pbf ----------------------------------
 
 # year <- 2020
+# year <- 2014
 
 filtrar_malha_viaria_br <- function(year) {
  
@@ -68,6 +69,7 @@ filtrar_malha_viaria_br(year = 2020)
 
 
 # muni <- "poa"; year <- 2017
+# muni <- "goi"; year <- 2014
 
 extrai_malha_viaria <- function(muni, year) {
   ## encontrar bounding box da cidade, a partir do grid de topografia

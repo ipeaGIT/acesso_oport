@@ -13,13 +13,13 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   # 1) Abrir arquivos com as oportunidades -------------------------------------
   
   # 1.1) Saude
-  cnes_data <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_geocoded_filter.rds", ano, ano)) 
+  cnes_data <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter_geocoded_gmaps_gquality_corrected2.rds", ano, ano)) 
   
   # remove lat lon missing
   cnes_data <- cnes_data[!is.na(lat),] 
   
   # select columns
-  cnes_data <- cnes_data[, .(cnes, code_muni,
+  cnes_data <- cnes_data[, .(cnes, ibge,
                              health_low, health_med, health_high,
                              lon, lat)]
   
@@ -27,7 +27,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
   # 1.2) Escolas
-  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_geocoded_filter.rds", ano, ano))
+  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps_gquality_corrected2.rds", ano, ano))
   
   # remove lat lon missing
   escolas <- escolas[!is.na(lat),] 
@@ -39,7 +39,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
   # 1.3) Empregos
-  empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa5_censoEscolar_filter.rds", ano, ano))
+  empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_geocoded_gmaps_gquality_corrected.rds", ano, ano))
   
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
