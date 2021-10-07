@@ -1,9 +1,10 @@
 # Agrega informacoes demograficas e de uso do solo nos hexagonos
 
 # carregar bibliotecas -----------------------------------------------------------------------------
+sf::sf_use_s2(FALSE)
 source('./R/fun/setup.R')
 
-# ano <- 2018
+# ano <- 2019
 
 #' A funcao `agrupar_variaveis_hex` agrega as variaveis de emprego, educacao, saude
 #' e demograficas das grades estisticas para os hexagonos de cada cidade
@@ -85,15 +86,15 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     # Filtrar somente as atividades referentes a cada municipio e transforma em sf
     # para rais 2017
-    empregos_filtrado <- empregos[codemun == substr(cod_mun_ok, 1, 6)] %>%
+    empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok, 1, 6)] %>%
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # escolas
-    escolas_filtrado <- setDT(escolas)[code_muni == cod_mun_ok] %>% 
+    escolas_filtrado <- setDT(escolas)[code_muni %in% cod_mun_ok] %>% 
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # saude
-    cnes_filtrado <- setDT(cnes_data)[code_muni == substr(cod_mun_ok, 1, 6)] %>% st_sf()
+    cnes_filtrado <- setDT(cnes_data)[ibge %in% substr(cod_mun_ok, 1, 6)] %>% st_sf()
     
     
     
@@ -252,9 +253,10 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   } else (x = munis)
   
   # Parallel processing using future.apply
-  future::plan(future::multiprocess)
+  # future::plan(future::multiprocess)
   #options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
-  future.apply::future_lapply(X = x, FUN=agrupar_variaveis, future.packages=c('sf', 'dplyr', 'data.table', 'Hmisc'))
+  # future.apply::future_lapply(X = x, FUN=agrupar_variaveis)
+  walk(x, agrupar_variaveis)
   
   
 }
