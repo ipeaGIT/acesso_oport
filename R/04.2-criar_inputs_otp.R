@@ -16,53 +16,69 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
   # ano <- 2019
   
   # status message
-  message('Woking on city ', sigla_muni, ' at year ', ano, '\n')
+  message("Working on city ", sigla_muni, " at year ", ano, "\n")
   
+  # lista grades relativas ao municipio - um arquivo para res. 8 e outro pra 9
+  grades_muni <- paste0(
+    "../../data/acesso_oport/hex_agregados/", ano, "/",
+    list.files(
+      paste0("../../data/acesso_oport/hex_agregados/", ano),
+      pattern = sigla_muni
+    )
+  )
   
-  # Lista resolucoes disponiveis
-  dir <- dir(sprintf("../../data/acesso_oport/hex_agregados/%s", ano), pattern = sigla_muni)
-  res <- str_extract(dir, "\\d{2}(?=_)")
+  # gera r5r_core usado pra fazer o snap dos pontos
+  endereco_rede <- paste0("../../otp/graphs/", ano, "/", sigla_muni)
+  r5r_core <- r5r::setup_r5(endereco_rede, verbose = FALSE)
   
-  # Lista arquivos de hexagonos
-  dir_muni <- paste0("../../data/acesso_oport/hex_agregados/", ano, "/hex_agregado_", sigla_muni, "_", res, "_", ano, ".rds")
-  
-  # funcao que aplica por resolucao  
-  gerar_por_resolucao <- function(muni_res) {
+  # gera os pontos a serem utilizados para cada resolucao
+  gerar_por_resolucao <- function(endereco_grade) {
     # muni_res <- dir_muni[2]
     
+    # cria variavel dummy pra identificar se o hexagono tem populacao/oports
+    grade <- data.table::setDT(readRDS(endereco_grade))
+    grade[
+      , 
+      tem_pop_oport := 
+        pop_total > 0 | 
+        renda_total > 0 |
+        empregos_total > 0 | 
+        saude_total > 0 | 
+        edu_total > 0
+    ]
     
-    # Endereco do hexagono
-    dir_muni <- muni_res
+    # identifica resolucao utilizada
+    res <- str_extract(endereco_grade, "\\d{2}(?=_)")
     
-    # Identifica resolucao utilizada
-    res <- str_extract(dir_muni, "\\d{2}(?=_)")
+    # gera centroides e faz snap
+    # suprime warnings de calculo de centroides com lat long
+    suppressWarnings(
+      centroides <- sf::st_centroid(sf::st_as_sf(grade)) %>% rename(id = id_hex)
+    )
+    snaps <- r5r::find_snap(r5r_core, centroides)
     
+    # traz a informacao se o hexagono tem populacao/oportunidades e filtra os
+    # pontos a serem utilizados com base nisso
+    # mantem apenas os pontos cujo snap foi aceitavel (<= 452 metros, caiu no 
+    # maximo em um dos seus vizinhos imediatos) ou cujo snap foi ruim ou
+    # inexistente, mas que possuem alguma populacao/oportunidade
+    data.table::setnames(snaps, "point_id", "id_hex")
+    snaps[grade, on = "id_hex", tem_pop_oport := i.tem_pop_oport]
+    snaps <- snaps[distance <= 452 | tem_pop_oport]
     
-    # adiciona totais
-    # setDT(hex_muni)[, empregos_total := sum(empregos_alta, empregos_media, empregos_baixa), by=id_hex]
-    # setDT(hex_muni)[, edu_total := sum(edu_infantil, edu_fundamental, edu_medio), by=id_hex]
+    # mantem apenas as colunas de id, lat e lon, e renomeia lat e lon pra Y e X
+    snaps <- snaps[, .(id_hex, X = lon, Y = lat)]
     
-    
-    # Selecoina apenas hexagonos com ao menos uma atividade e gera os centroides
-    hex_centroides <- readr::read_rds(dir_muni) %>%
-      # Tirar hexagonos sem atividade
-      filter(!(pop_total == 0 & 
-                 renda_total == 0 & 
-                 empregos_total == 0 & 
-                 saude_total == 0 & 
-                 edu_total == 0)) %>%
-      select(id_hex) %>%
-      st_centroid() %>%
-      sfc_as_cols(names = c("X","Y")) # funcao (dentro de stup.R) que transforma sf em data.frame com lat/long em colunas separadas
-    
-    
-    # salvar centroids
-    dir_output <- sprintf("../../otp/points/%s/points_%s_%s_%s.csv", ano, sigla_muni, res, ano)
-    data.table::fwrite(hex_centroides, dir_output)
-    
+    # salva resultado
+    arquivo_resultado <- paste0(
+      "../../otp/points/", ano,
+      "/points_", sigla_muni, "_", res, "_", ano, ".csv"
+    )
+    data.table::fwrite(snaps, arquivo_resultado)
   }
   
-  walk(dir_muni, gerar_por_resolucao)
+  invisible(lapply(grades_muni, gerar_por_resolucao))
+  r5r::stop_r5(r5r_core)
   
 }
 
@@ -90,15 +106,15 @@ purrr::walk(dir(sprintf("../../otp/py/%s", '2017'), full.names = TRUE, recursive
 # para as cidades que tem todos os modos de transporte (as que contem GTFS) (tp + ativo) --
 # pico
 walk(munis_list$munis_modo[ano_modo == 2017 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2017, from = 6, until = 8, every = 15, modo = "todos")  
+     ano = 2017, from = 6, until = 8, every = 15, modo = "todos")  
 
 # fora pico, # apenas modo transporte publico
 walk(munis_list$munis_modo[ano_modo == 2017 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2017, from = 14, until = 16, every = 15, modo = "tp")  
+     ano = 2017, from = 14, until = 16, every = 15, modo = "tp")  
 
 # para as cidades sem gtfs, sera somente transporte ativo ---
 walk(munis_list$munis_modo[ano_modo == 2017 & modo == "ativo"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2017, modo = "ativo") 
+     ano = 2017, modo = "ativo") 
 
 
 
@@ -113,15 +129,15 @@ purrr::walk(dir(sprintf("../../otp/py/%s", '2018'), full.names = TRUE, recursive
 # para as cidades que tem todos os modos de transporte (as que contem GTFS) (tp + ativo) --
 # pico
 walk(munis_list$munis_modo[ano_modo == 2018 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2018, from = 6, until = 8, every = 15, modo = "todos")  
+     ano = 2018, from = 6, until = 8, every = 15, modo = "todos")  
 
 # fora pico, # apenas modo transporte publico
 walk(munis_list$munis_modo[ano_modo == 2018 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2018, from = 14, until = 16, every = 15, modo = "tp")  
+     ano = 2018, from = 14, until = 16, every = 15, modo = "tp")  
 
 # para as cidades sem gtfs, sera somente transporte ativo ---
 walk(munis_list$munis_modo[ano_modo == 2018 & modo == "ativo"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2018, modo = "ativo") 
+     ano = 2018, modo = "ativo") 
 
 
 
@@ -135,16 +151,12 @@ purrr::walk(dir(sprintf("../../otp/py/%s", '2019'), full.names = TRUE, recursive
 # para as cidades que tem todos os modos de transporte (as que contem GTFS) (tp + ativo) --
 # pico
 walk(munis_list$munis_modo[ano_modo == 2019 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2019, from = 6, until = 8, every = 15, modo = "todos")  
+     ano = 2019, from = 6, until = 8, every = 15, modo = "todos")  
 
 # fora pico, # apenas modo transporte publico
 walk(munis_list$munis_modo[ano_modo == 2019 & modo == "todos"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2019, from = 14, until = 16, every = 15, modo = "tp")  
+     ano = 2019, from = 14, until = 16, every = 15, modo = "tp")  
 
 # para as cidades sem gtfs, sera somente transporte ativo ---
 walk(munis_list$munis_modo[ano_modo == 2019 & modo == "ativo"]$abrev_muni, criar_script_python_paral_modes_muni,
-       ano = 2019, modo = "ativo") 
-
-
-
-
+     ano = 2019, modo = "ativo") 
