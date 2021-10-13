@@ -24,8 +24,6 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                              health_low, health_med, health_high,
                              lon, lat)]
   
-  cnes_data <- cnes_data %>% st_as_sf(coords = c("lon", "lat"), crs = 4326)
-  
   
   # 1.2) Escolas
   escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps_gquality_corrected2.rds", ano, ano))
@@ -47,6 +45,17 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   # select columns
   empregos <- empregos[, .(codemun, id_estab, baixo, medio, alto, lon, lat)]
+  
+  # 1.3) CRAS
+  cras <- read_rds(sprintf("../../data/acesso_oport/cras/cras_%s_geocoded.rds", ano))
+  
+  # remove lat lon missing
+  cras <- cras[!is.na(lat),] 
+  
+  # select columns
+  cras <- cras[, .(code_cras, code_muni,
+                   lon, lat)]
+  
   
   #' A funcao `agrupar_variaveis` agrupa as variaveis de uso do solo determinadas acima
   #'  nos hexagonos de cada um dos municipios
@@ -90,11 +99,16 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # escolas
-    escolas_filtrado <- setDT(escolas)[code_muni %in% cod_mun_ok] %>% 
+    escolas_filtrado <- escolas[code_muni %in% cod_mun_ok] %>%
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # saude
-    cnes_filtrado <- setDT(cnes_data)[ibge %in% substr(cod_mun_ok, 1, 6)] %>% st_sf()
+    cnes_filtrado <- cnes_data[ibge %in% substr(cod_mun_ok, 1, 6)] %>% 
+      st_as_sf(coords = c("lon", "lat"), crs = 4326)
+    
+    # cras
+    cras_filtrado <- cras[code_muni %in% cod_mun_ok] %>% 
+      st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     
     
@@ -209,23 +223,32 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                          edu_medio       = fifelse(mat_medio == 0, 0, 1))]
       
       hex_escolas <- hex_escolas[, .(edu_infantil      = sum(edu_infantil, na.rm = TRUE),
-                                       edu_fundamental = sum(edu_fundamental, na.rm = TRUE),
-                                       edu_medio       = sum(edu_medio, na.rm = TRUE),
-                                       edu_total       = .N,
-                                       mat_infantil    = sum(mat_infantil, na.rm = T),
-                                       mat_fundamental = sum(mat_fundamental, na.rm = T),
-                                       mat_medio       = sum(mat_medio, na.rm = T),
-                                       mat_total       = sum(mat_infantil, mat_fundamental, mat_medio, na.rm = TRUE)),
-                                   by = id_hex]
+                                     edu_fundamental = sum(edu_fundamental, na.rm = TRUE),
+                                     edu_medio       = sum(edu_medio, na.rm = TRUE),
+                                     edu_total       = .N,
+                                     mat_infantil    = sum(mat_infantil, na.rm = T),
+                                     mat_fundamental = sum(mat_fundamental, na.rm = T),
+                                     mat_medio       = sum(mat_medio, na.rm = T),
+                                     mat_total       = sum(mat_infantil, mat_fundamental, mat_medio, na.rm = TRUE)),
+                                 by = id_hex]
       
       
       # summary(hex_escolas$edu_total)
+      
+      # agrupar cras
+      hex_cras <- hex_muni %>% st_join(cras_filtrado) %>% setDT()
+      hex_cras[, cras_total := ifelse( is.na(code_cras), 0, 1) ]
+      
+      # summarise
+      hex_cras <- hex_cras[, .(cras_total = sum(cras_total, na.rm = TRUE)),
+                           by = id_hex]
       
       # Junta todos os dados agrupados por hexagonos
       hex_muni_fim <- left_join(hex_muni, hex_pop) %>%
         left_join(hex_rais) %>%
         left_join(hex_saude) %>%
-        left_join(hex_escolas)
+        left_join(hex_escolas) %>%
+        left_join(hex_cras)
       
       # substitui NAs por zeros
       hex_muni_fim[is.na(hex_muni_fim)] <- 0

@@ -34,3 +34,33 @@ source('./R/fun/cras/cras.R')
 
 # Aplicar funcao 
 purrr::walk(.x = c('2017', '2018', '2019'), .f = cras_geocode)
+
+
+
+# trazer entao geocode ----------------------------------------------------
+
+update_geocode_cras <- function(ano) {
+
+  # abrir cras do ano
+  cras <- fread(sprintf("../../data/acesso_oport/cras/cras_%s.csv", ano))
+
+  # abrir geocode
+  cras_geocode <- fread("../../data/acesso_oport/cras/geocode_cras.csv")
+  
+  
+  
+  cras[cras_geocode, on = "code_cras",
+       c("lon", "lat") :=
+         list(i.lon, i.lat)]
+  
+  
+  # output
+  write_rds(cras, sprintf("../../data/acesso_oport/cras/cras_%s_geocoded.rds", ano))
+  
+  
+}
+
+
+update_geocode_cras(2017)
+update_geocode_cras(2018)
+update_geocode_cras(2019)
