@@ -1,5 +1,5 @@
 
-atividade <- 'rais'
+# atividade <- 'rais'
 
 summary_geocode <- function(ano) {
   
@@ -20,7 +20,8 @@ summary_geocode <- function(ano) {
   antes_cidade <- antes %>% count(cidade, sort = TRUE) %>% slice(1:20)
   depois_cidade <- depois %>% count(cidade, sort = TRUE) %>% slice(1:20)
   comp_educacao <- left_join(antes_cidade, depois_cidade, by = "cidade", suffix = c("_antes", "_depois"))
-  comp_educacao <- comp_empregos %>% mutate(perc = n_depois/n_antes) %>% mutate(atividade = "educacao")
+  comp_educacao <- comp_educacao %>% mutate(perc = n_depois/n_antes) %>% mutate(atividade = "educacao") %>%
+    rename(name_muni = cidade)
     
   
 
@@ -31,7 +32,8 @@ summary_geocode <- function(ano) {
   antes_cidade <- antes %>% count( municipio, sort = TRUE) %>% slice(1:20)
   depois_cidade <- depois %>% count(municipio, sort = TRUE) %>% slice(1:20)
   comp_saude <- left_join(antes_cidade, depois_cidade, by = "municipio", suffix = c("_antes", "_depois"))
-  comp_saude <- comp_empregos %>% mutate(perc = n_depois/n_antes) %>% mutate(atividade = "saude")
+  comp_saude <- comp_saude %>% mutate(perc = n_depois/n_antes) %>% mutate(atividade = "saude") %>%
+    rename(name_muni = municipio)
     
   go <- rbind(comp_empregos, comp_educacao, comp_saude) %>%
     mutate(ano = ano)

@@ -239,7 +239,7 @@ educacao_filter <- function(ano, download = FALSE) {
 
 
 
-educacao_geocode <- function(run_gmaps = FALSE) {
+educacao_geocode <- function(ano1, run_gmaps = FALSE) {
   
   
   # 1) Trazer as coordenadas da escolas fornecidas pelo INEP e geocodigifacas pelo streetmap -------------------------------------------
@@ -258,6 +258,8 @@ educacao_geocode <- function(run_gmaps = FALSE) {
            matched_address, Status, Addr_type, Score, lon, lat) %>%
     setDT()
   
+  escolas_coords$cidade <- iconv(escolas_coords$cidade, from = "UTF-8", to = "ASCII//TRANSLIT") 
+  
   
   # identify engine
   escolas_coords[, geocode_engine := "streetmap"]
@@ -266,7 +268,8 @@ educacao_geocode <- function(run_gmaps = FALSE) {
   # 3.1) Selecionar estabs com baixa precisao
   escolas_coords[, gmaps := fifelse(Status %in% c("T", "U"), TRUE,
                                     fifelse(Addr_type == "PointAddress", FALSE,
-                                            fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, FALSE, TRUE)))]
+                                            fifelse(cidade %like% "Brasilia" & Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 75, FALSE,
+                                                    fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, FALSE, TRUE))))]
   
   estabs_problema <- escolas_coords[gmaps == TRUE]
   
@@ -327,6 +330,11 @@ educacao_geocode <- function(run_gmaps = FALSE) {
   # 3.6) Rbind as data.table
   estabs_problema_geocoded_dt <- rbindlist(estabs_problema_geocoded, idcol = "co_entidade",
                                            use.names = TRUE)
+  
+  
+  # make sure we only using the correct subset
+  estabs_problema_geocoded_dt <- estabs_problema_geocoded_dt[co_entidade %in% estabs_problema$co_entidade]
+  
   
   # 3.9) Identificar o tipo de problema
   estabs_problema_geocoded_dt[, geocode_engine := 'gmaps']

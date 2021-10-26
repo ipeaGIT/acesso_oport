@@ -13,26 +13,20 @@ source('./R/fun/setup.R')
 # sigla_muni <- "bho"; ano=2019
 # sigla_muni <- "spo"; ano=2019
 # sigla_muni <- "for"; ano=2019
+# sigla_muni <- "for"; ano=2017
 # sigla_muni <- "for"; ano = 2017; engine = 'otp'
 
 
-calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
+calcular_acess_muni <- function(sigla_muni, ano) {
   
   # status message
   message('Woking on city ', sigla_muni, ' at year ', ano,  '\n')
   
   # 1) Abrir tttmatrix ---------------------------------------------------
   
-  if(engine == "r5") {
-    
-    ttmatrix_median <- read_rds(sprintf("E:/data/output_ttmatrix/%s/%s/ttmatrix_%s_pt_%s.csv",
-                                        ano, engine, sigla_muni, ano))
-    
-  } else {
-    
-    ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_mediana_fix/%s/ttmatrix_mediana_fix_%s_%s.rds", ano, sigla_muni, ano))
-    
-  }
+  ttmatrix_median <- fread(sprintf("E:/data/output_ttmatrix/%s/r5/ttmatrix_%s_%s_r5.csv",
+                                      ano, ano, sigla_muni))
+  
   
   
   # 2) Agregar dados de uso do solo à ttmatrix --------------------------
@@ -84,11 +78,11 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # Calcular emprego com match qualitativo de renda e nivel de escolaridade do emprego 
   # high income people = jobs with high and med education
   # low income people = jobs with low and med education
-  ttmatrix[, empregos_match_decil := ifelse(decil>5, 
+  ttmatrix[, empregos_match_decil := fifelse(decil>5, 
                                             empregos_alta + empregos_media, 
                                             empregos_baixa + empregos_media)]
   
-  ttmatrix[, empregos_match_quintil := ifelse(quintil>=3, 
+  ttmatrix[, empregos_match_quintil := fifelse(quintil>=3, 
                                               empregos_alta + empregos_media, 
                                               empregos_baixa + empregos_media)]
   
@@ -166,7 +160,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # para tp
   codigo_cma_tp <- c(
     
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
             grid_cma$junto_tp, 
             grid_cma$atividade_nome, 
             grid_cma$tt_tp
@@ -177,7 +171,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # para ativo
   codigo_cma_ativo <- c(
     
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
             grid_cma$junto_ativo, 
             grid_cma$atividade_nome, 
             grid_cma$tt_ativo
@@ -265,7 +259,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # para tp 
   codigo_cmp_tp <- c(
     
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
             grid_cmp$junto_tp, 
             grid_cmp$atividade_nome, 
             grid_cmp$tt_tp
@@ -275,7 +269,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # para ativo
   codigo_cmp_ativo <- c(
     
-    sprintf("%s = (sum(%s[which(tt_median <= %s)], na.rm = T))", 
+    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
             grid_cmp$junto_ativo, 
             grid_cmp$atividade_nome, 
             grid_cmp$tt_ativo
@@ -341,7 +335,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   
   # gerar o codigo
-  codigo_tmi <- sprintf("%s = min(tt_median[which(%s >= 1)])", 
+  codigo_tmi <- sprintf("%s = min(travel_time[which(%s >= 1)])", 
                         grid_tmi$junto, 
                         grid_tmi$atividade_nome)
   
@@ -580,7 +574,7 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   
   # 8) Salvar output --------------------------------------
   
-  path_out <- sprintf("../../data/acesso_oport/output_access/%s/%s/acess_%s_%s.rds", ano, engine, sigla_muni, ano)
+  path_out <- sprintf("../../data/acesso_oport/output_access/%s/acess_%s_%s.rds", ano, ano, sigla_muni)
   write_rds(acess_sf, path_out)
   
   # gc colletc

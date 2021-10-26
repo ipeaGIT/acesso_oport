@@ -20,7 +20,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   cnes_data <- cnes_data[!is.na(lat),] 
   
   # select columns
-  cnes_data <- cnes_data[, .(cnes, ibge,
+  cnes_data <- cnes_data[, .(cnes, code_muni,
                              health_low, health_med, health_high,
                              lon, lat)]
   
@@ -38,13 +38,13 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
   # 1.3) Empregos
-  empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_geocoded_gmaps_gquality_corrected.rds", ano, ano))
+  empregos <- readr::read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_geocoded_gmaps_gquality_corrected_escola.rds", ano, ano))
   
   # remove lat lon missing
   empregos <- empregos[!is.na(lat), ]
   
   # select columns
-  empregos <- empregos[, .(codemun, id_estab, baixo, medio, alto, lon, lat)]
+  empregos <- empregos[, .(code_muni, id_estab, baixo, medio, alto, lon, lat)]
   
   # 1.3) CRAS
   cras <- read_rds(sprintf("../../data/acesso_oport/cras/cras_%s_geocoded.rds", ano))
@@ -95,7 +95,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     # Filtrar somente as atividades referentes a cada municipio e transforma em sf
     # para rais 2017
-    empregos_filtrado <- empregos[codemun %in% substr(cod_mun_ok, 1, 6)] %>%
+    empregos_filtrado <- empregos[code_muni %in% substr(cod_mun_ok, 1, 6)] %>%
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # escolas
@@ -103,7 +103,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # saude
-    cnes_filtrado <- cnes_data[ibge %in% substr(cod_mun_ok, 1, 6)] %>% 
+    cnes_filtrado <- cnes_data[code_muni %in% substr(cod_mun_ok, 1, 6)] %>% 
       st_as_sf(coords = c("lon", "lat"), crs = 4326)
     
     # cras

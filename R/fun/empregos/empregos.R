@@ -308,7 +308,8 @@ rais_bring_geocode <- function(ano) {
 rais_bring_schools <- function(ano) {
   
   # 1) Abrir RAIS corrigida
-  rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa3_geocoded.rds", ano, ano))
+  rais <- read_rds(sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_geocoded_gmaps_gquality_corrected.rds",
+                           ano, ano))
   
   # table(rais$PrecisionDepth, useNA = 'always')
   # table(rais$geocode_engine, useNA = 'always')
@@ -319,49 +320,50 @@ rais_bring_schools <- function(ano) {
   
   if (ano == 2017) {
     
-  escolas <- read_rds("../../data/acesso_oport/educacao/2017/educacao_2017_geocoded.rds") %>%
-    # Deletar escolas q nao foram localizadas
-    dplyr::filter(!is.na(lat)) %>%
-    # Selecionar variaveis
-    dplyr::select(id_estab = co_entidade, code_muni, lon, lat, 
-                  total_corrigido = nu_funcionarios,
-                  geocode_engine, PrecisionDepth)
+    escolas <- read_rds("../../data/acesso_oport/educacao/2017/educacao_2017_filter_geocoded_gmaps_gquality_corrected2.rds") %>%
+      # Deletar escolas q nao foram localizadas
+      dplyr::filter(!is.na(lat)) %>%
+      # Selecionar variaveis
+      dplyr::select(id_estab = co_entidade, code_muni, lon, lat, 
+                    total_corrigido = nu_funcionarios,
+                    geocode_engine, Addr_type)
     
   } else if (ano %in% c(2018, 2019)) {
     
-  escolas <- read_rds("../../data/acesso_oport/educacao/2018/educacao_2018_geocoded.rds") %>%
-    # Deletar escolas q nao foram localizadas
-    dplyr::filter(!is.na(lat)) %>%
-    # Selecionar variaveis
-    dplyr::select(id_estab = co_entidade, code_muni, lon, lat, 
-                  total_corrigido = nu_funcionarios,
-                  geocode_engine, PrecisionDepth)
+    escolas <- read_rds("../../data/acesso_oport/educacao/2018/educacao_2018_filter_geocoded_gmaps_gquality_corrected2.rds") %>%
+      # Deletar escolas q nao foram localizadas
+      dplyr::filter(!is.na(lat)) %>%
+      # Selecionar variaveis
+      dplyr::select(id_estab = co_entidade, code_muni, lon, lat, 
+                    total_corrigido = nu_funcionarios,
+                    geocode_engine, Addr_type)
     
   }
-    
+  
   
   
   # 3) Calcular a distribuicao de nivel de escolaridade da cidade
   rais_prop_escol <- rais %>%
-    group_by(codemun) %>%
+    group_by(code_muni) %>%
     summarise(prop_alto = sum(alto)/sum(total_corrigido),
               prop_medio = sum(medio)/sum(total_corrigido),
-              prop_baixo = sum(baixo)/sum(total_corrigido))
+              prop_baixo = sum(baixo)/sum(total_corrigido)) %>%
+    mutate(code_muni = as.character(code_muni))
   
   # 4) Trazer proporcoes para as escolas
   escolas_prop <- escolas %>%
     # ajeitar code_muni
-    mutate(codemun = substr(code_muni, 1, 6)) %>%
-    left_join(rais_prop_escol, by = "codemun") %>%
+    mutate(code_muni = substr(code_muni, 1, 6)) %>%
+    left_join(rais_prop_escol, by = "code_muni") %>%
     # multiplicar totais por composicao
     mutate(alto = round(prop_alto * total_corrigido),
            medio = round(prop_medio * total_corrigido),
            baixo = round(prop_baixo * total_corrigido)) %>%
-    select(id_estab, codemun, lon, lat, alto, medio, baixo, total_corrigido, 
-           geocode_engine, PrecisionDepth)
+    select(id_estab, code_muni, lon, lat, alto, medio, baixo, total_corrigido, 
+           geocode_engine, Addr_type)
   
   # 5) Criar classificaoes de geocode
-  setDT(escolas_prop)[, type_input_galileo := "inep_google"]
+  setDT(escolas_prop)[, type_year_input := "inep_google"]
   
   # 6) Juntar rais com escolas proporcionais
   rais2 <- rbind(rais, escolas_prop, fill = T)
@@ -377,7 +379,8 @@ rais_bring_schools <- function(ano) {
   
   
   # 7) Salvar
-  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_censoEscolar.rds", ano, ano))
+  write_rds(rais2, sprintf("../../data/acesso_oport/rais/%s/rais_%s_etapa4_geocoded_gmaps_gquality_corrected_escola.rds", ano, ano),
+            compress = "gz")
   
   
 }

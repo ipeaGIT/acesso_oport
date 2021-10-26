@@ -38,12 +38,18 @@ geocode_filter <- function(ano, atividade) {
     
   )
   
+  # rais: codemun
+  # educacao: code_muni
+  # saude: ibge
+  
   # 1) abrir dados ---------
   data <- read_rds(path_in) %>%
     # identificar a variabel que repreesnta a identificacao do estabelecimento
-    rename(id = 1)
+    rename(id = 1) %>%
+    # renomear variavel de codigo do municipio
+    rename_with(~ "code_muni", matches("codemun|ibge$"))
   
-  # table(data$PrecisionDepth, useNA = 'always')
+  
   
   
   
@@ -73,10 +79,35 @@ geocode_filter <- function(ano, atividade) {
   #                                     # these one are exclusive for educacao and saude
   #                                     'inep', 'cnes', 'PMAQ')) |
   #                (id %in% df_routes_cep_match$id)]
-  data <- data[(Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
-                                      'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
-                                      # these one are exclusive for educacao and saude
-                                      'inep', 'cnes', 'PMAQ'))]
+  # data <- data[(Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+  #                                'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+  #                                # these one are exclusive for educacao and saude
+  #                                'inep', 'cnes', 'PMAQ'))]
+  
+  
+  data[, keep := fifelse(
+    # se for brasilia, selecionar mais categorias no gmaps
+    code_muni %like% "530010" & Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+                                                'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+                                                'political', 'postal_code'), TRUE,
+    fifelse(Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+                              'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+                              # these one are exclusive for educacao and saude
+                              'inep', 'cnes', 'PMAQ'), TRUE, FALSE))]
+  
+  # data[code_muni %like% "530010" & Addr_type == "political"]
+  # data[code_muni %like% "530010" & Addr_type == "postal_code"]
+  # data[code_muni %like% "230440" & Addr_type == "postal_code"]
+  
+  
+  # data_bsb <- data[code_muni %like% "530010"]
+  
+  
+  # prop.table(table(data_bsb$keep))
+  
+  # filtrar somente os que vao ficar
+  data <- data[keep == TRUE]
+  
   
   
   # 3) Salvar --------------------------------------------------------------
@@ -111,6 +142,6 @@ geocode_filter <- function(ano, atividade) {
 }
 
 
-geocode_filter(2017, "educacao")
-geocode_filter(2018, "educacao")
-geocode_filter(2019, "educacao")
+# geocode_filter(2017, "educacao")
+# geocode_filter(2018, "educacao")
+# geocode_filter(2019, "educacao")

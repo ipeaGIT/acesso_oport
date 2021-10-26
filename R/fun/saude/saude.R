@@ -16,6 +16,8 @@ saude_filter <- function(ano) {
   cnes_geocoded <- fread(sprintf("../../data/geocode/cnes/%s/cnes_%s_raw_geocoded.csv", ano, ano),
                          colClasses = "character", encoding = "UTF-8")
   
+  message(nrow(cnes_geocoded))
+  
   
   # cnes_geocoded %>% filter(cnes %in% c("7698585",
   #                                      "9491473",
@@ -30,19 +32,26 @@ saude_filter <- function(ano) {
   cnes_filter0 <- cnes_geocoded[complex_nao_aplic_est == ""] 
   cnes_filter0 <- cnes_filter0[complex_nao_aplic_mun == ""]
   
+  message("filter0: ", nrow(cnes_filter0))
   
   # Filter 1: healthcare facilities operating with the public health system
   cnes_filter1 <- setDT(cnes_filter0)[ atende_sus == 'SIM']
   
+  message("filter1: ", nrow(cnes_filter1))
   
   # Filter 2: Pessoa juridica
-  cnes_filter2 <- cnes_filter1[ pessoa_fisica_ou_pessoa_juridi == 'PESSOA_JURÍDICA']
+  cnes_filter1$pessoa_fisica_ou_pessoa_juridi <- iconv(cnes_filter1$pessoa_fisica_ou_pessoa_juridi,
+                                                       from = "UTF-8", to = "ASCII//TRANSLIT")
+  cnes_filter2 <- cnes_filter1[ pessoa_fisica_ou_pessoa_juridi == 'PESSOA_JURIDICA']
+  
+  message("filter2: ", nrow(cnes_filter2))
   
   # filter 3: Only municipalities in the project
   code_munis <- munis_list$munis_metro[ano_metro == ano]$code_muni %>% 
     unlist() %>% substring(., 1, 6)
   cnes_filter3 <- cnes_filter2[ibge %in% code_munis]
   
+  message("filter3: ", nrow(cnes_filter3))
   
   # filter 4: Only atendimento hospitalar ou ambulatorial
   install_ambu <- ifelse(ano %in% c(2017, 2018), "X", "SIM")
@@ -107,13 +116,12 @@ saude_filter <- function(ano) {
             , compress = 'gz')
   
   
+  nrow(cnes_filter5)
+  
+  
 }
 
-
-
-
-
-
+# saude_filter(2017)
 
 
 #' A funcao saude_geocode' faz o geocode de hospitais com coordenadas problematicas e tem como output
@@ -197,7 +205,8 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   # 3.1) Selecionar estabs com baixa precisao
   cnes_geocoded_filter_new[, gmaps := fifelse(Status %in% c("T", "U"), TRUE,
                                               fifelse(Addr_type == "PointAddress", FALSE,
-                                                      fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, FALSE, TRUE)))]
+                                                      fifelse(cnes %like% "530010" & Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 75, FALSE,
+                                                              fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, FALSE, TRUE))))]
   
   estabs_problema <- cnes_geocoded_filter_new[gmaps == TRUE]
   
@@ -259,6 +268,10 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   estabs_problema_geocoded_dt <- rbindlist(estabs_problema_geocoded, idcol = "cnes",
                                            use.names = TRUE)
   
+  
+  # make sure we only using the correct subset
+  estabs_problema_geocoded_dt <- estabs_problema_geocoded_dt[cnes %in% estabs_problema$cnes]
+  
   # 3.9) Identificar o tipo de problema
   estabs_problema_geocoded_dt[, geocode_engine := 'gmaps']
   
@@ -284,8 +297,8 @@ saude_geocode <- function(ano, run_gmaps = FALSE) {
   # depois, trazer essas para as coordendas completas do ano
   # 10.2) Fazer a substituicao
   cnes_geocoded_filter[cnes_geocoded_filter_new, on = "cnes",
-                       c("Addr_type", "matched_address", "lon", "lat", "geocode_engine") :=
-                         list(i.Addr_type, i.matched_address, i.lon, i.lat, i.geocode_engine)]
+                       c("Addr_type", "matched_address", "lon", "lat", "geocode_engine", "gmaps") :=
+                         list(i.Addr_type, i.matched_address, i.lon, i.lat, i.geocode_engine, i.gmaps)]
   
   
   

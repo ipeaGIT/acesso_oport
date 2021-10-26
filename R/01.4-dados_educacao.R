@@ -11,7 +11,7 @@ source('./R/fun/educacao/educacao.R')
 lapply(X=2017:2019, FUN=educacao_filter)
 
 # 2) Aplicar funcao geocode ---------------
-lapply(X=2017:2019, FUN=educacao_geocode)
+educacao_geocode(run_gmaps = FALSE)
 
 # 3) Selecionar somente as obsservacoes com boa qualidade de geocode ----------
 source("R/fun/filter_geocode.R")

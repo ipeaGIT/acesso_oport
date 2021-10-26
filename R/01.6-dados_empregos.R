@@ -33,8 +33,6 @@ rais_treat_outliers(2017)
 # trazer geocode
 rais_bring_geocode(2017)
 
-# 4) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
-rais_bring_schools(2017)
 
 # 5) Selecionar somente as obsservacoes com boa qualidade de geocode
 source("R/fun/filter_geocode.R")
@@ -67,9 +65,6 @@ rais_check_new_estabs(2018)
 rais_gmaps_geocode(2018, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2018)
-
-# 4) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
-rais_bring_schools(2018)
 
 # 5) Selecionar somente as obsservacoes com boa qualidade de geocode
 source("R/fun/filter_geocode.R")
@@ -107,8 +102,6 @@ rais_gmaps_geocode(2019, run_gmaps = FALSE)
 # trazer geocode
 rais_bring_geocode(2019)
 
-# 4) Trazer informacoes de funcionarios de escolas publicas do censo escolar 
-rais_bring_schools(2019)
 
 # 5) Selecionar somente as obsservacoes com boa qualidade de geocode
 source("R/fun/filter_geocode.R")

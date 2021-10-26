@@ -42,10 +42,14 @@ correct_low_quality <- function(ano1) {
   table(cnes_data_low$geocode_engine, useNA = 'always')
   cnes_data_low_updated <- cnes_data_low[geocode_engine == "low_quality_corrected"]
   cnes_data_low_updated <- cnes_data_low_updated[!is.na(lon)] 
+  cnes_data_low_updated <- cnes_data_low_updated %>%
+    rename(code_muni = ibge) %>% setDT()
   
   # corrigir
   cnes_data_good <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter_geocoded_gmaps_gquality_corrected.rds", ano1, ano1)) 
   cnes_data_good[, ano := ano1]
+  cnes_data_good <- cnes_data_good %>% select(-keep) %>% setDT()
+  
   
   cnes_data_good_new <- rbind(cnes_data_good, 
                               cnes_data_low_updated
@@ -116,6 +120,7 @@ correct_low_quality <- function(ano1) {
   # corrigir
   escolas_data_good <- readr::read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps_gquality_corrected.rds", ano1, ano1)) 
   escolas_data_good[, ano := ano1]
+  escolas_data_good <- escolas_data_good %>% select(-keep) %>% setDT()
   
   escolas_data_good_new <- rbind(escolas_data_good, 
                                  escolas_low_aceitar

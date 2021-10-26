@@ -8,10 +8,14 @@ source('./R/fun/setup.R')
 source('./R/fun/saude/saude.R')
 
 # Aplicar funcao filtro
-lapply(X=2017:2019, FUN=saude_filter)
+saude_filter(2017)
+saude_filter(2018)
+saude_filter(2019)
 
 # Aplicar funcao geocode
-lapply(X=2017:2019, FUN=saude_geocode)
+saude_geocode(2017)
+saude_geocode(2018)
+saude_geocode(2019)
 
 # Selecionar somente as obsservacoes com boa qualidade de geocode
 source("R/fun/filter_geocode.R")

@@ -144,7 +144,10 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # 3.1) Selecionar estabs com baixa precisao
   rais_geocoded_filter_new[, gmaps := fifelse(Status %in% c("T", "U"), TRUE,
                                               fifelse(Addr_type == "PointAddress", FALSE,
-                                                      fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, FALSE, TRUE)))]
+                                                      fifelse(codemun %like% "530010" & Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 75, FALSE,
+                                                              fifelse(Addr_type %in% c("StreetAddress", "StreetAddressExt", "StreetName") & Score >= 90, FALSE, TRUE))))]
+  
+  # StreetAddress, StreetAddressExt e StreetName que tiverem nota >=75
   
   estabs_problema <- rais_geocoded_filter_new[gmaps == TRUE]
   
@@ -321,6 +324,9 @@ rais_gmaps_geocode <- function(ano, run_gmaps = FALSE) {
   # 3.6) Rbind as data.table
   estabs_problema_geocoded_dt <- rbindlist(estabs_problema_geocoded, idcol = "id_estab",
                                            use.names = TRUE)
+  
+  # make sure we only using the correct subset
+  estabs_problema_geocoded_dt <- estabs_problema_geocoded_dt[id_estab %in% estabs_problema$id_estab]
   
   # 3.9) Identificar o tipo de problema
   estabs_problema_geocoded_dt[, geocode_engine := 'gmaps']

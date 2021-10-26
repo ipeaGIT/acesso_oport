@@ -132,17 +132,17 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
 
 # apply function
 walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni,
-     gerar_tt_matrix_r5, ano = 2017)
+     calculate_ttmatrix, ano = 2017)
 
 
 
 walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni,
-     gerar_tt_matrix_r5, ano = 2018)
+     calculate_ttmatrix, ano = 2018)
 
 
 
 walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni,
-     gerar_tt_matrix_r5, ano = 2019)
+     calculate_ttmatrix, ano = 2019)
 
 
 
