@@ -25,6 +25,7 @@ criar_hexagonos <- function(ano, munis = "all") {
   # sigla_muni <- 'slz'
   # sigla_muni <- 'poa'
   # sigla_muni <- 'goi'; ano <- 2019
+  # sigla_muni <- 'bsb'; ano <- 2019
   
   shape_to_hexagon <- function(sigla_muni) {
     
