@@ -12,7 +12,7 @@ source("R/fun/setup.R")
 construir_graph_muni <- function(sigla_muni, ano) {
   
   
-  path <- sprintf("../../otp/graphs/%s/%s", ano, sigla_muni)
+  path <- sprintf("../../r5/network/%s/%s", ano, sigla_muni)
   r5r::setup_r5(data_path = path, use_elevation = TRUE, overwrite = TRUE)
   
 }

@@ -8,7 +8,6 @@ options(java.parameters = '-Xmx50G')
 source('./R/fun/setup.R')
 
 
-
 ### 1) Funcao para gerar pontos de origem e destino -----------------------------------
 
 gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
@@ -29,7 +28,7 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
   )
   
   # gera r5r_core usado pra fazer o snap dos pontos
-  endereco_rede <- paste0("../../otp/graphs/", ano, "/", sigla_muni)
+  endereco_rede <- paste0("../../r5/network/", ano, "/", sigla_muni)
   r5r_core <- r5r::setup_r5(endereco_rede, verbose = FALSE)
   
   # gera os pontos a serem utilizados para cada resolucao
@@ -76,7 +75,7 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
     
     # salva resultado
     arquivo_resultado <- paste0(
-      "../../otp/points/", ano,
+      "../../r5/points/", ano,
       "/points_", sigla_muni, "_", res, "_", ano, ".csv"
     )
     data.table::fwrite(snaps, arquivo_resultado)

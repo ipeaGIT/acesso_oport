@@ -10,7 +10,7 @@ source('./R/fun/setup.R')
 # que nao tenha menos que 10 hex de acess.
 
 # sigla_muni <- 'for'; ano <- 2017
-# sigla_muni <- 'for'; ano <- 2017
+# sigla_muni <- 'for'; ano <- 201
 # sigla_muni <- 'nat'; ano <- 2017
 # sigla_muni <- 'man'; ano <- 2019
 
@@ -23,12 +23,15 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   ttmatrix_allmodes <- fread(sprintf("E:/data/output_ttmatrix/%s/r5/ttmatrix_%s_%s_r5.csv", 
                                         ano, ano, sigla_muni))
   
-  # pegar so bike
-  ttmatrix_teste <- ttmatrix_teste[mode == "bike"]
+  # ttmatrix_allmodes <- read_rds("../../data/avaliacao_intervencoes/for/ttmatrix/antes/ttmatrix_bike.rds")
   
+  # pegar so bike
+  ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
+  # ttmatrix_teste <- ttmatrix_allmodes
   
   # abrir os pontos da resolucao 09 ~~~~
   points_file <- sprintf("../../otp/points/%s/points_%s_09_%s.csv", ano, sigla_muni, ano)
+  # points_file <- "../../data/avaliacao_intervencoes/r5/points/points_for_09_2019.csv"
   points <- fread(points_file)
   
   
@@ -36,7 +39,9 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   
   # checar os pontos na matrix ~~~~
   origem_matrix <- unique(ttmatrix_teste$origin)
+  # origem_matrix <- unique(ttmatrix_teste$fromId)
   destino_matrix <- unique(ttmatrix_teste$destination)
+  # destino_matrix <- unique(ttmatrix_teste$toId)
   
   ## quais origens e destinos ficaram fora? ~~~~
   origem_fora <- setdiff(points$id_hex, origem_matrix) 
@@ -56,14 +61,14 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   # Calcular acess para 90 minutos
   acess_origin <- ttmatrix_teste[,
                                  .(acess = (sum(var[which(travel_time <= 90)], na.rm = T))),
-                                 by=.(city, origin)]
+                                 by=.(fromId)]
   # rename id column
-  setnames(acess_origin, "origin", "id_hex")
+  setnames(acess_origin, "fromId", "id_hex")
   
   acess_dest <- ttmatrix_teste[,
                                .(acess = (sum(var[which(travel_time <= 90)], na.rm = T))),
-                               by=.(city, destination)]
-  setnames(acess_dest, "destination", "id_hex")
+                               by=.(toId)]
+  setnames(acess_dest, "toId", "id_hex")
   
   
   # extrair hexagonos que nao consigam acessar mais que 10 hexagonos
