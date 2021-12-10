@@ -1,6 +1,6 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.3.1 Criacao de graphs no R5R
-options(java.parameters = '-Xmx50G')
+options(java.parameters = '-Xmx100G')
 library(r5r)
 source("R/fun/setup.R")
 

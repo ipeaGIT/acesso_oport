@@ -1,7 +1,7 @@
 
 # load packages -----------------------------------------------------------
 source('./R/fun/setup.R')
-
+googlesheets4::gs4_auth(email = "kauebraga90@gmail.com")
 
 # copy new gtfs to r5r folders -------------------------
 
@@ -10,17 +10,30 @@ walk(sprintf("../../r5/network/2017/%s", munis_list$munis_df$abrev_muni), dir.cr
 walk(sprintf("../../r5/network/2018/%s", munis_list$munis_df$abrev_muni), dir.create)
 walk(sprintf("../../r5/network/2019/%s", munis_list$munis_df$abrev_muni), dir.create)
 
+# define gtfs name for each city
+gtfs_files <- googlesheets4::read_sheet("https://docs.google.com/spreadsheets/d/1CGTwsTQoek2dYdoP-syreEgZrQRAbBVBDA83fL9Tfo4/edit#gid=782011191",
+                                        sheet = "gtfs_files")
+gtfs_files <- gtfs_files %>% mutate(gtfs_path = sprintf("../../data-raw/gtfs/%s/%s/%s", sigla_muni, ano, gtfs))
+
 # sigla_muni1 <- "for"; ano1 <- 2017
+# sigla_muni1 <- "rec"; ano1 <- 2019
+# sigla_muni1 <- "spo"; ano1 <- 2019
 copy_gtfs <- function(sigla_muni1, ano1) {
+  gtfs_files1 <- gtfs_files %>% filter(ano == ano1 & sigla_muni == sigla_muni1)
   
-  # define gtfs name for each city
-  gtfs_files <- fread("../../r5/gtfs_files.csv")
-  gtfs_files <- gtfs_files[ano == ano1 & sigla_muni == sigla_muni1]
+  # delete any gtfs
+  if (dir.exists(sprintf("../../r5/network/%s/%s", ano1, sigla_muni1))) {
+    
+    a <- dir(sprintf("../../r5/network/%s/%s", ano1, sigla_muni1), pattern = ".zip$", full.names = TRUE)
+    file.remove(a)
+    
+    
+  }
   
   # copy gtfs updated ---------------------
   dir.create(sprintf("../../r5/network/%s/%s", ano1, sigla_muni1))
   # copy
-  purrr::walk(gtfs_files$gtfs_path_updated,
+  purrr::walk(gtfs_files1$gtfs_path,
               file.copy,
               to = sprintf("../../r5/network/%s/%s", ano1, sigla_muni1),
               overwrite = TRUE)

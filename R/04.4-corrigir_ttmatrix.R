@@ -10,7 +10,7 @@ source('./R/fun/setup.R')
 # que nao tenha menos que 10 hex de acess.
 
 # sigla_muni <- 'for'; ano <- 2017
-# sigla_muni <- 'for'; ano <- 201
+# sigla_muni <- 'for'; ano <- 2018
 # sigla_muni <- 'nat'; ano <- 2017
 # sigla_muni <- 'man'; ano <- 2019
 
@@ -27,6 +27,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   
   # pegar so bike
   ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
+  # ttmatrix_teste <- ttmatrix_allmodes[mode == "transit" & pico == 1]
   # ttmatrix_teste <- ttmatrix_allmodes
   
   # abrir os pontos da resolucao 09 ~~~~
@@ -61,19 +62,19 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   # Calcular acess para 90 minutos
   acess_origin <- ttmatrix_teste[,
                                  .(acess = (sum(var[which(travel_time <= 90)], na.rm = T))),
-                                 by=.(fromId)]
+                                 by=.(origin)]
   # rename id column
-  setnames(acess_origin, "fromId", "id_hex")
+  setnames(acess_origin, "origin", "id_hex")
   
   acess_dest <- ttmatrix_teste[,
                                .(acess = (sum(var[which(travel_time <= 90)], na.rm = T))),
-                               by=.(toId)]
-  setnames(acess_dest, "toId", "id_hex")
+                               by=.(destination)]
+  setnames(acess_dest, "destination", "id_hex")
   
   
-  # extrair hexagonos que nao consigam acessar mais que 10 hexagonos
-  acess_prob <- rbind(acess_origin[acess < 10],
-                      acess_dest[acess < 10]) %>%
+  # extrair hexagonos que nao consigam acessar mais que 20 hexagonos
+  acess_prob <- rbind(acess_origin[acess < 20],
+                      acess_dest[acess < 20]) %>%
     distinct(id_hex, .keep_all = TRUE)
   
   hex_problematicos_etapa2 <- acess_prob$id_hex
@@ -87,6 +88,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   points_prob <- points %>%
     filter(id_hex %in% c(hex_problematicos_etapa1, hex_problematicos_etapa2))
   
+  fwrite(points_prob, sprintf("E:/data/ttmatrix_fixed/%s/points_prob/points_prob_%s_%s.csv", ano, ano, sigla_muni))
   
   # 4) Corrigir os hexagonos problematicos nas matrizes originais de tempo de viagem ---------------
   
@@ -106,26 +108,33 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   corrigir_hex_ttmatrix <- function(hex_prob) {
     
     # hex_prob <- "89818a593cfffff" # nat
-    # hex_prob <- "8980104e91bffff" # for
+    # hex_prob <- "8980104e90bffff" # for
     # hex_prob <- "89801048d37ffff" # for
+    # hex_prob <- "8980104e973ffff" # for 8980104e973ffff
     
     # ver quais sao os vizinhos desse hexagono
-    # ring_size = 2 vai me trazer todos os hex vizinhos ate o nivel 2, isso da 37 vizinhos
+    # ring_size = 3 vai me trazer todos os hex vizinhos ate o nivel 3, isso da 36 vizinhos
     
     hex_prob_vizinhos <- h3jsr::get_kring(hex_prob, ring_size = 3)[[1]][-1]
     
     # garantir que os vizinhos nao sao problematicos
-    hex_prob_vizinhos <- hex_prob_vizinhos[hex_prob_vizinhos %nin% points_prob]
+    hex_prob_vizinhos <- hex_prob_vizinhos[hex_prob_vizinhos %nin% points_prob$id_hex]
+    
+    
     
     # garantir que os vizinhos estejam dentro da matriz de tempo de viagem da cidade
     # podem acontecer dois casos em que o(s) hex(s) vizinho(s) esteja(m) fora da matriz:
     # 1) o hex problematico ser de borda/perto mar e tem varios vizinhos na cidade vizinha
     # ou no oceano
-    # 2) o hex vizinho nao ter pop/atividade e nao ter entrado pro OTP
-    hex_prob_vizinhos <- hex_prob_vizinhos[hex_prob_vizinhos %in% ttmatrix_allmodes$origin]
+    # 2) o hex vizinho nao ter pop/atividade e nao ter entrado pro r5r
+    hex_prob_vizinhos <- hex_prob_vizinhos[hex_prob_vizinhos %in% points$id_hex]
     
-    # pegar so os 10 primeiros vizinhos
-    hex_prob_vizinhos <- hex_prob_vizinhos[1:10] %>% na.omit()
+    # pegar so os 6 primeiros vizinhos
+    hex_prob_vizinhos <- hex_prob_vizinhos[1:6] %>% na.omit()
+    
+    # a <- points[id_hex %in% hex_prob_vizinhos] %>% st_as_sf(coords = c("X", "Y"), crs = 4326)
+    # b <- points[id_hex %in% hex_prob] %>% st_as_sf(coords = c("X", "Y"), crs = 4326)
+    # mapview(a) + b
     
     # ATENCAO: eh necessario corrigir o hex tanto pra quando ele eh origem na matriz
     # como pra quando ele eh destino na matrix
@@ -155,9 +164,10 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
     
     # juntar as matrizes de quando eh origem e de quando eh destino
     ttmatrix_allmodes_blueprint_fim <- rbind(ttmatrix_allmodes_blueprint_origin_mean, ttmatrix_allmodes_blueprint_dest_mean)
+    ttmatrix_allmodes_blueprint_fim[, ano := ano]
     
-    nrow(ttmatrix_allmodes_blueprint_fim)
-    nrow(distinct(ttmatrix_allmodes_blueprint_fim, origin, destination, mode, pico))
+    # nrow(ttmatrix_allmodes_blueprint_fim)
+    # nrow(distinct(ttmatrix_allmodes_blueprint_fim, origin, destination, mode, pico))
     
     # # qual id correto correspondente
     # hex_correto <- subset(points_corrigidos, hex_problema==hex_prob)$hex_blueprint
@@ -184,8 +194,10 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   ttmatrix_hex_fim <- rbind(ttmatrix_allmodes_nprob,
                             ttmatrix_hex_prob_corrigidos)
   
+  
   # salvar output corrigido
-  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_fix/%s/ttmatrix_fix_%s_%s.rds", ano, ano, sigla_muni))
+  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds", ano, ano, sigla_muni),
+            compress = "gz")
   
   
 }
@@ -193,6 +205,9 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+plan(multiprocess)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+
+
 walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2018)
 walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2019)

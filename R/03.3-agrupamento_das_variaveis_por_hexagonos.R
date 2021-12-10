@@ -4,7 +4,7 @@
 sf::sf_use_s2(FALSE)
 source('./R/fun/setup.R')
 
-# ano <- 2019
+# ano <- 2017
 
 #' A funcao `agrupar_variaveis_hex` agrega as variaveis de emprego, educacao, saude
 #' e demograficas das grades estisticas para os hexagonos de cada cidade

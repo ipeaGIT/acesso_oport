@@ -4,8 +4,6 @@
 # carregar bibliotecas
 source('./R/fun/setup.R')
 
-
-
 #### 1. CALCULAR ACESSIBILIDADE --------------------------------------------------------------
 
 
@@ -14,7 +12,7 @@ source('./R/fun/setup.R')
 # sigla_muni <- "spo"; ano=2019
 # sigla_muni <- "for"; ano=2019
 # sigla_muni <- "for"; ano=2017
-# sigla_muni <- "for"; ano = 2017; engine = 'otp'
+# sigla_muni <- "for"; ano = 2019
 
 
 calcular_acess_muni <- function(sigla_muni, ano) {
@@ -24,9 +22,10 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   
   # 1) Abrir tttmatrix ---------------------------------------------------
   
-  ttmatrix_median <- fread(sprintf("E:/data/output_ttmatrix/%s/r5/ttmatrix_%s_%s_r5.csv",
+  ttmatrix_median <- read_rds(sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds",
                                       ano, ano, sigla_muni))
-  
+  # trazer matriz de carro e dar rbind - somente para o ano 2019
+  if (ano == 2019) ttmatrix_median <- rbind(ttmatrix_median, read_rds(sprintf("E:/data/output_ttmatrix/car/2019/ttmatrix_car_2019_%s.rds", sigla_muni)))
   
   
   # 2) Agregar dados de uso do solo à ttmatrix --------------------------
@@ -39,27 +38,32 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   
   # Filtrar apenas colunas com info demograficas na origem
   hex_orig <- hexagonos_sf %>% dplyr::select(id_hex, 
+                                             # variaveis de populacao - total e sexo
+                                             matches("pop_"), 
                                              # variaveis de populacao - cor
-                                             pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, 
+                                             matches("cor_"),
                                              # variaveis de populacao - idade
                                              matches("idade_"),
                                              # variaveis de renda
                                              renda_total, renda_capita, quintil, decil) %>% setDT()
   
   # Filtrar apenas colunas com info de uso do solo no destino
-  hex_dest <- setDT(hexagonos_sf)[, .(id_hex, empregos_total, empregos_baixa, empregos_media, empregos_alta,  
+  # corrigir para dplyr
+  hex_dest <- setDT(hexagonos_sf)[, .(id_hex, 
+                                      empregos_total, empregos_baixa, empregos_media, empregos_alta,  
                                       saude_total, saude_baixa, saude_media, saude_alta,
                                       edu_total, edu_infantil, edu_fundamental, edu_medio,
-                                      mat_total, mat_infantil, mat_fundamental, mat_medio)]
+                                      mat_total, mat_infantil, mat_fundamental, mat_medio,
+                                      cras_total)]
   
   
   # Merge dados de origem na matrix de tempo de viagem
   ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
-                              c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra',
+                              c('pop_total', 'pop_homens', 'pop_mulheres',  'cor_branca','cor_amarela','cor_indigena','cor_negra',
                                 "idade_0a5", "idade_6a14", "idade_15a18", "idade_19a24",    
                                 "idade_25a39", "idade_40a69", "idade_70",
                                 'renda_total','renda_capita','quintil','decil') :=
-                                list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, 
+                                list(i.pop_total, i.pop_homens, i.pop_mulheres, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, 
                                      i.idade_0a5, i.idade_6a14, i.idade_15a18, i.idade_19a24,    
                                      i.idade_25a39, i.idade_40a69, i.idade_70,    
                                      i.renda_total, i.renda_capita, i.quintil, i.decil)]
@@ -69,22 +73,24 @@ calcular_acess_muni <- function(sigla_muni, ano) {
                        c("empregos_total", "empregos_baixa","empregos_media","empregos_alta",
                          "saude_total", "saude_baixa", "saude_media", "saude_alta",
                          "edu_total","edu_infantil","edu_fundamental","edu_medio",
-                         "mat_total", "mat_infantil", "mat_fundamental", "mat_medio") :=
+                         "mat_total", "mat_infantil", "mat_fundamental", "mat_medio", 
+                         "cras_total") :=
                          list(i.empregos_total, i.empregos_baixa,i.empregos_media,i.empregos_alta,
                               i.saude_total, i.saude_baixa, i.saude_media, i.saude_alta,
                               i.edu_total,i.edu_infantil,i.edu_fundamental,i.edu_medio,
-                              i.mat_total, i.mat_infantil, i.mat_fundamental, i.mat_medio)]    
+                              i.mat_total, i.mat_infantil, i.mat_fundamental, i.mat_medio,
+                              i.cras_total)]    
   
   # Calcular emprego com match qualitativo de renda e nivel de escolaridade do emprego 
   # high income people = jobs with high and med education
   # low income people = jobs with low and med education
-  ttmatrix[, empregos_match_decil := fifelse(decil>5, 
-                                            empregos_alta + empregos_media, 
-                                            empregos_baixa + empregos_media)]
-  
-  ttmatrix[, empregos_match_quintil := fifelse(quintil>=3, 
-                                              empregos_alta + empregos_media, 
-                                              empregos_baixa + empregos_media)]
+  # ttmatrix[, empregos_match_decil := fifelse(decil>5, 
+  #                                           empregos_alta + empregos_media, 
+  #                                           empregos_baixa + empregos_media)]
+  # 
+  # ttmatrix[, empregos_match_quintil := fifelse(quintil>=3, 
+  #                                             empregos_alta + empregos_media, 
+  #                                             empregos_baixa + empregos_media)]
   
   
   
@@ -100,8 +106,8 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   # - PI ~ "cor_indigena"
   # - PN ~ "cor_negra"
   # - TT ~ "empregos_total"
-  # - TQ ~ "empregos_match_quintil"
-  # - TD ~ "empregos_match_decil"
+  # - TQ ~ "empregos_match_quintil" nao vamos usar
+  # - TD ~ "empregos_match_decil"  nao vamos usar
   # - ST ~ "saude_total"
   # - SB ~ "saude_baixa"
   # - SM ~ "saude_media"
@@ -111,14 +117,25 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   # - EF ~ "edu_fundamental"
   # - EM ~ "edu_medio"
   # - EI ~ "edu_infantil"
+  # - CT ~ "cras_total"
   
   
   # 3) Calcular acessibilidade cumulativa ativa ----------------------------------------------------
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cma <- "CMA"
-  atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM",
-                     "MT", "MI", "MF", "MM")
+  atividade_cma <- c(
+    # emprego
+    "TT", "TB", "TM", "TA",
+    # saude
+    "ST", "SB", "SM", "SA", 
+    # educacao - escolas
+    "ET", "EI", "EF", "EM",
+    # educacao - matriculas
+    "MT", "MI", "MF", "MM",
+    # cras
+    "CT"
+  )
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
   
@@ -140,8 +157,9 @@ calcular_acess_muni <- function(sigla_muni, ano) {
     mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
     mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
     mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
-                                      atividade_sigla == "TQ" ~ "empregos_match_quintil",
-                                      atividade_sigla == "TD" ~ "empregos_match_decil",
+                                      atividade_sigla == "TB" ~ "empregos_baixa",
+                                      atividade_sigla == "TM" ~ "empregos_media",
+                                      atividade_sigla == "TA" ~ "empregos_alta",
                                       atividade_sigla == "ST" ~ "saude_total",
                                       atividade_sigla == "SB" ~ "saude_baixa",
                                       atividade_sigla == "SM" ~ "saude_media",
@@ -153,7 +171,8 @@ calcular_acess_muni <- function(sigla_muni, ano) {
                                       atividade_sigla == "MT" ~ "mat_total",
                                       atividade_sigla == "MF" ~ "mat_fundamental",
                                       atividade_sigla == "MM" ~ "mat_medio",
-                                      atividade_sigla == "MI" ~ "mat_infantil"))
+                                      atividade_sigla == "MI" ~ "mat_infantil",
+                                      atividade_sigla == "CT" ~ "cras_total"))
   
   
   # gerar o codigo
@@ -187,30 +206,40 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   # modo_year <- sprintf("modo_%s", ano)
   modo <- munis_list$munis_modo[abrev_muni == sigla_muni & ano_modo == ano]$modo
   
-  if (modo == "todos") {
-    
-    # para transporte publico
-    acess_cma_tp <- ttmatrix[mode == "transit",
-                             lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
-                             , by=.(city, mode, origin, pico, quintil, decil)]
-    
-    # para modos ativos
-    acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
-                                lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                                , by=.(city, mode, origin, pico, quintil, decil)]
-    
-    # juntar os cma
-    acess_cma <- rbind(acess_cma_tp, acess_cma_ativo,
-                       fill = TRUE)
-    
-  } else {
-    
-    # so para modos ativos
-    acess_cma <- ttmatrix[, 
-                          lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                          , by=.(city, mode, origin, pico, quintil, decil)]
-    
-  }
+  # if (modo == "todos") {
+  
+  # para transporte publico e carro
+  acess_cma_tp <- ttmatrix[mode %in% c("transit", "car"),
+                           lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
+                           , by=.(city, mode, origin, pico, quintil, decil)]
+  
+  # para modos ativos
+  acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
+                              lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+                              , by=.(city, mode, origin, pico, quintil, decil)]
+  
+  # juntar os cma
+  acess_cma <- rbind(acess_cma_tp, acess_cma_ativo,
+                     fill = TRUE)
+  
+  # } else {
+  #   
+  #   
+  #   # para  carro
+  #   acess_cma_carro <- ttmatrix[mode %in% c("car"),
+  #                            lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
+  #                            , by=.(city, mode, origin, pico, quintil, decil)]
+  #   
+  #   # so para modos ativos
+  #   acess_cma_ativo <- ttmatrix[, 
+  #                         lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+  #                         , by=.(city, mode, origin, pico, quintil, decil)]
+  #   
+  #   # rbind
+  #   acess_cma <- rbind(acess_cma_carro, acess_cma_ativo,
+  #                      fill = TRUE)
+  #   
+  # }
   
   
   
@@ -220,8 +249,9 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cmp <- "CMP"
-  # atividade_cmp <- c("PT", "PB", "PA", "PI", "PN")
-  atividade_cmp <- c("PT", "PB", "PA", "PI", "PN", "I1", "I2", "I3", "I4", "I5", "I6", "I7")
+  atividade_cmp <- c("PT", "PM", "PW",
+                     "PB", "PA", "PI", "PN", 
+                     "I00a05", "I06a14","I15a18","I19a24","I25a39","I40a69","I70")
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
   
@@ -242,18 +272,20 @@ calcular_acess_muni <- function(sigla_muni, ano) {
     )) %>%
     mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
     mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
-    mutate(atividade_nome = case_when(atividade_sigla == "PT" ~ "pop_total",
-                                      atividade_sigla == "PB" ~ "cor_branca",
-                                      atividade_sigla == "PA" ~ "cor_amarela",
-                                      atividade_sigla == "PI" ~ "cor_indigena",
-                                      atividade_sigla == "PN" ~ "cor_negra",
-                                      atividade_sigla == "I1" ~ "idade_0a5", 
-                                      atividade_sigla == "I2" ~ "idade_6a14", 
-                                      atividade_sigla == "I3" ~ "idade_15a18", 
-                                      atividade_sigla == "I4" ~ "idade_19a24",    
-                                      atividade_sigla == "I5" ~ "idade_25a39", 
-                                      atividade_sigla == "I6" ~ "idade_40a69", 
-                                      atividade_sigla == "I7" ~ "idade_70"))
+    mutate(atividade_nome = case_when(atividade_sigla == "PT"     ~ "pop_total",
+                                      atividade_sigla == "PM"     ~ "pop_homens",
+                                      atividade_sigla == "PW"     ~ "pop_mulheres",
+                                      atividade_sigla == "PB"     ~ "cor_branca",
+                                      atividade_sigla == "PA"     ~ "cor_amarela",
+                                      atividade_sigla == "PI"     ~ "cor_indigena",
+                                      atividade_sigla == "PN"     ~ "cor_negra",
+                                      atividade_sigla == "I00a05" ~ "idade_0a5", 
+                                      atividade_sigla == "I06a14" ~ "idade_6a14", 
+                                      atividade_sigla == "I15a18" ~ "idade_15a18", 
+                                      atividade_sigla == "I19a24" ~ "idade_19a24",    
+                                      atividade_sigla == "I25a39" ~ "idade_25a39", 
+                                      atividade_sigla == "I40a69" ~ "idade_40a69", 
+                                      atividade_sigla == "I70"    ~ "idade_70"))
   
   # gerar o codigo
   # para tp 
@@ -286,39 +318,48 @@ calcular_acess_muni <- function(sigla_muni, ano) {
   
   # so aplicar a acessibilidade para os modos da cidade
   
-  if (modo == "todos") {
-    
-    # para transporte publico
-    acess_cmp_tp <- ttmatrix[mode == "transit",
-                             lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
-                             , by=.(city, mode, destination, pico)]
-    
-    # para modos ativos
-    acess_cmp_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
-                                lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
-                                , by=.(city, mode, destination, pico)]
-    
-    
-    # juntar os cma
-    acess_cmp <- rbind(acess_cmp_tp, acess_cmp_ativo, fill = TRUE)  
-    
-  } else {
-    
-    # so para modos ativos
-    acess_cmp <- ttmatrix[, 
-                          lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
-                          , by=.(city, mode, destination, pico)]
-    
-  }
+  # if (modo == "todos") {
+  
+  # para transporte publico e carro
+  acess_cmp_tp <- ttmatrix[mode %in% c("transit", "car"),
+                           lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
+                           , by=.(city, mode, destination, pico)]
+  
+  # para modos ativos
+  acess_cmp_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
+                              lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
+                              , by=.(city, mode, destination, pico)]
+  
+  
+  # juntar os cma
+  acess_cmp <- rbind(acess_cmp_tp, acess_cmp_ativo, fill = TRUE)  
+  
+  # } else {
+  #   
+  #   # para carro
+  #   acess_cmp_car <- ttmatrix[mode %in% c("car"),
+  #                             lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
+  #                             , by=.(city, mode, destination, pico)]
+  #   
+  #   # so para modos ativos
+  #   acess_cmp_ativo <- ttmatrix[, 
+  #                               lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
+  #                               , by=.(city, mode, destination, pico)]
+  #   
+  #   # juntar os acess
+  #   acess_cmp <- rbind(acess_cmp_car, acess_cmp_ativo, fill = TRUE)  
+  #   
+  # }
   
   
   # 5) Calcular acessibilidade tempo minimo ---------------
   # (aqui eh feito junto para os dois modos)
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   
-  
+  # 666666666666 terminar de colocar os cras_total
+  # 666666666666 incorporar carro
   acess_tmi <- "TMI"
-  atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
+  atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM", "CT")
   
   grid_tmi <- expand.grid(acess_tmi, atividade_tmi, stringsAsFactors = FALSE) %>%
     rename(acess_sigla = Var1, atividade_sigla = Var2) %>%
@@ -331,7 +372,8 @@ calcular_acess_muni <- function(sigla_muni, ano) {
                                       atividade_sigla == "EI" ~ "edu_infantil",
                                       atividade_sigla == "EF" ~ "edu_fundamental",
                                       atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil"))
+                                      atividade_sigla == "EI" ~ "edu_infantil",
+                                      atividade_sigla == "CT" ~ "cras_total"))
   
   
   # gerar o codigo

@@ -8,6 +8,7 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   # sigla_muni <- 'for'; ano <- 2017
   # sigla_muni <- 'poa'; ano <- 2017
   # sigla_muni <- 'cam'; ano <- 2018
+  # sigla_muni <- 'rec'; ano <- 2019
   # sigla_muni <- 'bho-flat'; ano <- 2019
   # sigla_muni <- 'sal-flat'; ano <- 2019
   
@@ -16,7 +17,7 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   message(sprintf("working on %s", sigla_muni))
   
   # Leitura do gtfs para pasta temporaria
-  path_zip <- sprintf("../../otp/graphs/%s/%s", ano, sigla_muni)
+  path_zip <- sprintf("../../r5/network/%s/%s", ano, sigla_muni)
   file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)
   
   library(gtfsio)
@@ -50,7 +51,7 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
       mutate(start_date = as.Date(start_date, tryFormats = c("%Y-%m-%d", "%Y%m%d")))
     
     # Le calendario 2
-    calendar2 <- gtfsio::import_gtfs(file_zip[1], files = "calendar")$calendar %>%
+    calendar2 <- gtfsio::import_gtfs(file_zip[2], files = "calendar")$calendar %>%
       mutate(end_date = as.character(end_date)) %>%
       mutate(start_date = as.character(start_date)) %>%
       mutate(end_date = as.Date(end_date, tryFormats = c("%Y-%m-%d", "%Y%m%d"))) %>%
@@ -99,7 +100,7 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
     # unzip(file_zip, files = "calendar.txt", exdir = "../../data/acesso_oport/temp")
     
     # Le calendario
-    calendar <- gtfsio::import_gtfs(file_zip, files = "calendar") %>%
+    calendar <- gtfsio::import_gtfs(file_zip, files = "calendar")$calendar %>%
       mutate(end_date = as.character(end_date)) %>%
       mutate(start_date = as.character(start_date)) %>%
       mutate(end_date = as.Date(end_date, tryFormats = c("%Y-%m-%d", "%Y%m%d"))) %>%

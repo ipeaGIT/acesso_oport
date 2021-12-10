@@ -1,40 +1,40 @@
 Sys.setenv(TZ='UTC') # Fuso horario local
 
 # carregar bibliotecas
-library(raster)
-library(ggplot2)      # visualizacao de dados
-library(ggthemes)     # temas para visualizacao de dados
-library(sf)           # leitura e manipulacao de dados espaciais
-library(data.table)   # manipulacao de dados
-# library(read.dbc)     # leitura de bases relacionais em Microsoft Access
-library(geobr)        # dados espaciais do brasil
-library(pbapply)      # progress bar
-library(readr)        # rapida leitura de dados 
-library(tidyr)        # manipulacao de dados
-library(stringr)      # operacoes em strings
-library(lubridate)    # dados em data/horario
-library(fasttime)     # rapido processamento deddados em data/horario
-library(mapview)      # visualizacao interativa dos dados
-library(RColorBrewer) # paleta de cores
-library(extrafont)    # fontes de texto
-# library(bit.64)       # lidar com numeros ee 64bits
-library(knitr)
-library(furrr)
-library(purrr)
-library(forcats)
-library(future.apply) # Aplicar funcoes em paralelo
-# library(h3jsr) # H3 grade hexagonal
-library(dplyr)
-library(hrbrthemes)
-library(beepr)
-library(patchwork)
-# library(Hmisc) # calcular quantis ponderados
-# library(osmdata) # Download de dados do OpenStreeteMaps (OSM)
-library(opentripplanner) # Usar OTP de dentro do R: https://github.com/ITSLeeds/opentripplanner
-library(ggmap) # geocoding
-library(h3jsr) # h3 hex remotes::install_github("obrl-soil/h3jsr")
-library(bit64) # viz large numbers
-library(quantreg)
+suppressMessages(library(raster))
+suppressMessages(library(ggplot2) )     # visualizacao de dados
+suppressMessages(library(ggthemes)  )   # temas para visualizacao de dados
+suppressMessages(library(sf)  )         # leitura e manipulacao de dados espaciais
+suppressMessages(library(data.table)  ) # manipulacao de dados
+# suppressMessages(library(read.dbc)  )   # leitura de bases relacionais em Microsoft Access
+suppressMessages(library(geobr) )       # dados espaciais do brasil
+suppressMessages(library(pbapply) )     # progress bar
+suppressMessages(library(readr) )       # rapida leitura de dados 
+suppressMessages(library(tidyr) )       # manipulacao de dados
+suppressMessages(library(stringr) )     # operacoes em strings
+suppressMessages(library(lubridate) )   # dados em data/horario
+suppressMessages(library(fasttime)  )   # rapido processamento deddados em data/horario
+suppressMessages(library(mapview) )     # visualizacao interativa dos dados
+suppressMessages(library(RColorBrewer)) # paleta de cores
+suppressMessages(library(extrafont) )   # fontes de texto
+# suppressMessages(library(bit.64)  )     # lidar com numeros ee 64bits
+suppressMessages(library(knitr))
+suppressMessages(library(furrr))
+suppressMessages(library(purrr))
+suppressMessages(library(forcats))
+suppressMessages(library(future.apply)) # Aplicar funcoes em paralelo
+# suppressMessages(library(h3jsr)) # H3 grade hexagonal
+suppressMessages(library(dplyr))
+suppressMessages(library(hrbrthemes))
+suppressMessages(library(beepr))
+suppressMessages(library(patchwork))
+suppressMessages(library(Hmisc)) # calcular quantis ponderados
+suppressMessages(library(osmdata)) # Download de dados do OpenStreeteMaps (OSM)
+suppressMessages(library(opentripplanner)) # Usar OTP de dentro do R: https://github.com/ITSLeeds/opentripplanner
+suppressMessages(library(ggmap)) # geocoding
+suppressMessages(library(h3jsr)) # h3 hex remotes::install_github("obrl-soil/h3jsr")
+suppressMessages(library(bit64)) # viz large numbers
+suppressMessages(library(quantreg))
 
 
 
