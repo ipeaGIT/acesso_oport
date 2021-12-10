@@ -1,6 +1,7 @@
 # Agrega informacao ddos setores censitários (renda, idade) para a grade estatistica
 
 # carregar bibliotecas
+sf::sf_use_s2(FALSE)
 source('./R/fun/setup.R')
 
 #' A funcao `renda_de_setor_p_grade` passa todas as variaveis que foram coletadas
@@ -12,7 +13,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
   renda_de_setor_p_grade_muni <- function(sigla_muni) {
     
     # sigla_muni <- 'nat'; ano <- 2019
-    # sigla_muni <- 'for'; ano <- 2019
+    # sigla_muni <- 'for'; ano <- 2017
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -29,7 +30,13 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     grade <- subset(grade, POP >0)
     
     # mesma projecao
+    # setor <- sf::st_transform(setor, crs = 31984)
+    # grade <- sf::st_transform(grade, crs = 31984)
     setor <- sf::st_transform(setor, sf::st_crs(grade))
+    
+    # precision
+    # grade <- grade %>% st_set_precision(units::set_units(10, nm))
+    # setor <- setor %>% st_set_precision(units::set_units(10, nm))
     
     # Criar id unico de cada grade e filtra colunas
     grade$id_grade <- 1:nrow(grade)

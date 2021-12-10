@@ -123,6 +123,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       
       # Ler arquivo de hexagono  
       hex_muni <- readr::read_rds(hexf)
+      hex_muni <- hex_muni %>% mutate(ano = ano)
       
       # Agrupar populacao, cor e renda
       # join espacial 
@@ -252,9 +253,6 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       
       # substitui NAs por zeros
       hex_muni_fim[is.na(hex_muni_fim)] <- 0
-      
-      # adiciona sigla do municipio
-      hex_muni_fim$muni <- sigla_muni
       
       
       # Salva grade de hexagonos com todas informacoes de uso do soloe

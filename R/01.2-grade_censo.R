@@ -12,7 +12,7 @@ options(mc.cores = 10)
 
 ### Funcao
 
-# munis <- sigla <- "for"
+# munis <- sigla <- "for"; ano <- 2017
 
 criar_grade_muni_all <- function(ano, munis = "all") {
   
