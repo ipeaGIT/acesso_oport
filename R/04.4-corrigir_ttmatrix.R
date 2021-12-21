@@ -11,6 +11,7 @@ source('./R/fun/setup.R')
 
 # sigla_muni <- 'for'; ano <- 2017
 # sigla_muni <- 'for'; ano <- 2018
+# sigla_muni <- 'for'; ano <- 2019
 # sigla_muni <- 'nat'; ano <- 2017
 # sigla_muni <- 'man'; ano <- 2019
 
@@ -26,8 +27,8 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   # ttmatrix_allmodes <- read_rds("../../data/avaliacao_intervencoes/for/ttmatrix/antes/ttmatrix_bike.rds")
   
   # pegar so bike
-  ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
-  # ttmatrix_teste <- ttmatrix_allmodes[mode == "transit" & pico == 1]
+  # ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
+  ttmatrix_teste <- ttmatrix_allmodes[mode == "transit" & pico == 1]
   # ttmatrix_teste <- ttmatrix_allmodes
   
   # abrir os pontos da resolucao 09 ~~~~
@@ -111,6 +112,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
     # hex_prob <- "8980104e90bffff" # for
     # hex_prob <- "89801048d37ffff" # for
     # hex_prob <- "8980104e973ffff" # for 8980104e973ffff
+    # for 8980104e90fffff nao foi corrigido
     
     # ver quais sao os vizinhos desse hexagono
     # ring_size = 3 vai me trazer todos os hex vizinhos ate o nivel 3, isso da 36 vizinhos
@@ -205,9 +207,9 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-plan(multiprocess)
+plan(multiprocess, workers = 20)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2018)
 
 
-walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2018)
 walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2019)
