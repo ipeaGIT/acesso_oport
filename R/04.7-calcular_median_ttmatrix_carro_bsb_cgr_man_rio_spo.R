@@ -5,9 +5,10 @@ library(dplyr)
 library(matrixStats)
 setDTthreads(percent = 100)
 
-setwd("//storage6/usuarios/Proj_acess_oport/git_diego")
+setwd("//storage6/usuarios/Proj_acess_oport/git_diego/NOVA_MATRIZ_TI")
 
-cidades <- c("bsb", "cgr", "man", "rio","spo")
+#cidades <- c("bsb", "cgr", "man", "rio","spo")
+cidades <- c("rio","spo")
 pastas <- c("06AM","0615AM","0630AM","0645AM","07AM","0715AM","0730AM","0745AM","08AM","02PM","0215PM","0230PM","0245PM","03PM","0315PM","0330PM","0345PM","04PM")
 
 for (i in (1:length(cidades))){
@@ -34,7 +35,7 @@ for (i in (1:length(cidades))){
       
       if (k==6){
         OD_TI_pre <- fread(gunzip(paste0(cidades[i],"/wkday", pastas[j],"/",pastas[j], ".csv.gzip"), temporary=T, remove = F, overwrite=T))
-        OD_TI <- OD_TI_pre[OriginName > k*x]
+        OD_TI <- OD_TI_pre[OriginName > (k-1)*x]
         rm(OD_TI_pre)
         gc()
       }
