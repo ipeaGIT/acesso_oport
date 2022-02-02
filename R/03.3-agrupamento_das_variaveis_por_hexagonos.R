@@ -4,7 +4,7 @@
 sf::sf_use_s2(FALSE)
 source('./R/fun/setup.R')
 
-# ano <- 2017
+# ano <- 2019
 
 #' A funcao `agrupar_variaveis_hex` agrega as variaveis de emprego, educacao, saude
 #' e demograficas das grades estisticas para os hexagonos de cada cidade
@@ -65,6 +65,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     
     # sigla_muni <- "for"
     # sigla_muni <- "nat"
+    # sigla_muni <- "rio"
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -86,8 +87,8 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                     idade_19a24,
                     idade_25a39,
                     idade_40a69,
-                    idade_70   ) %>%
-      st_centroid()
+                    idade_70   )
+    # st_centroid()
     
     # Qual o codigo do municipio em questao?
     cod_mun_ok <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% 
@@ -125,34 +126,66 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       hex_muni <- readr::read_rds(hexf)
       hex_muni <- hex_muni %>% mutate(ano = ano)
       
+      centroide_pop <- centroide_pop %>%
+        mutate(grade_area = st_area(.))
+      
       # Agrupar populacao, cor e renda
-      # join espacial 
-      hex_pop <- hex_muni %>% st_join(centroide_pop)
+      # join espacial pela proporcao da intersecao entre  as grades e os hex
+      # hex_pop <- hex_muni %>% st_join(centroide_pop)
+      hex_pop <- hex_muni %>%
+        # fazer intersecao
+        st_intersection(centroide_pop) %>%
+        # calcular a area do pedaco
+        mutate(pedaco_area = st_area(.)) %>%
+        # calcular a proporcao da area total do hex que esta dentro da isocrona
+        mutate(area_prop_hex = as.numeric(pedaco_area) / as.numeric(grade_area)) %>%
+        # apagar geometria
+        st_set_geometry(NULL)
       
       
-      ### a. substituir CENTROID pela proporcao de intersecao
-      ### b. arredondamento %>%
-      ###  mutate_at(vars(matches("pop|renda|moradores|cor|idade")), round)
-      
-      # Summarize
-      hex_pop <- setDT(hex_pop)[, .(cor_branca   = as.numeric(sum(round(cor_branca,0), na.rm = TRUE)),
-                                    cor_amarela  = as.numeric(sum(round(cor_amarela,0), na.rm = TRUE)),
-                                    cor_indigena = as.numeric(sum(round(cor_indigena,0), na.rm = TRUE)),
-                                    cor_negra    = as.numeric(sum(round(cor_negra,0), na.rm = TRUE)),
+      hex_pop <- setDT(hex_pop)[, .(cor_branca   = round(sum(cor_branca    *  area_prop_hex , na.rm = TRUE)),
+                                    cor_amarela  = round(sum(cor_amarela   *  area_prop_hex  , na.rm = TRUE)),
+                                    cor_indigena = round(sum(cor_indigena  *  area_prop_hex , na.rm = TRUE)),
+                                    cor_negra    = round(sum(cor_negra     *  area_prop_hex    , na.rm = TRUE)),
                                     # age variables
-                                    idade_0a5   = as.numeric(sum(idade_0a5   , na.rm = TRUE)),
-                                    idade_6a14 =  as.numeric(sum(idade_6a14 , na.rm = TRUE)),
-                                    idade_15a18 = as.numeric(sum(idade_15a18 , na.rm = TRUE)),
-                                    idade_19a24 = as.numeric(sum(idade_19a24 , na.rm = TRUE)),
-                                    idade_25a39 = as.numeric(sum(idade_25a39 , na.rm = TRUE)),
-                                    idade_40a69 = as.numeric(sum(idade_40a69 , na.rm = TRUE)),
-                                    idade_70 =    as.numeric(sum(idade_70 , na.rm = TRUE)),
+                                    idade_0a5   = round(sum(idade_0a5   *  area_prop_hex, na.rm = TRUE)),
+                                    idade_6a14 =  round(sum(idade_6a14  *  area_prop_hex, na.rm = TRUE)),
+                                    idade_15a18 = round(sum(idade_15a18 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_19a24 = round(sum(idade_19a24 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_25a39 = round(sum(idade_25a39 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_40a69 = round(sum(idade_40a69 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_70 =    round(sum(idade_70    *  area_prop_hex, na.rm = TRUE)),
                                     # total pop and income 
-                                    pop_total    = as.numeric(sum(round(pop_total,0), na.rm = TRUE)),
-                                    pop_homens   = as.numeric(sum(round(pop_homens,0), na.rm = TRUE)),
-                                    pop_mulheres = as.numeric(sum(round(pop_mulheres,0), na.rm = TRUE)),
-                                    renda_total  = as.numeric(sum(renda, na.rm = TRUE))), 
+                                    pop_total    = round(sum(pop_total    *  area_prop_hex, na.rm = TRUE)),
+                                    pop_homens   = round(sum(pop_homens   *  area_prop_hex, na.rm = TRUE)),
+                                    pop_mulheres = round(sum(pop_mulheres *  area_prop_hex, na.rm = TRUE)),
+                                    renda_total  = round(sum(renda * area_prop_hex, na.rm = TRUE))), 
                                 by = id_hex ]
+      
+      # sum(hex_pop$pop_total)
+      # sum(hex_pop$pop_homens, hex_pop$pop_mulheres)
+      # sum(hex_pop$cor_branca, hex_pop$cor_amarela, hex_pop$cor_indigena, hex_pop$cor_negra)
+      
+      
+      # # Summarize
+      # hex_pop <- setDT(hex_pop)[, .(cor_branca   = as.numeric(sum(round(cor_branca,0), na.rm = TRUE)),
+      #                               cor_amarela  = as.numeric(sum(round(cor_amarela,0), na.rm = TRUE)),
+      #                               cor_indigena = as.numeric(sum(round(cor_indigena,0), na.rm = TRUE)),
+      #                               cor_negra    = as.numeric(sum(round(cor_negra,0), na.rm = TRUE)),
+      #                               # age variables
+      #                               idade_0a5   = as.numeric(sum(idade_0a5   , na.rm = TRUE)),
+      #                               idade_6a14 =  as.numeric(sum(idade_6a14 , na.rm = TRUE)),
+      #                               idade_15a18 = as.numeric(sum(idade_15a18 , na.rm = TRUE)),
+      #                               idade_19a24 = as.numeric(sum(idade_19a24 , na.rm = TRUE)),
+      #                               idade_25a39 = as.numeric(sum(idade_25a39 , na.rm = TRUE)),
+      #                               idade_40a69 = as.numeric(sum(idade_40a69 , na.rm = TRUE)),
+      #                               idade_70 =    as.numeric(sum(idade_70 , na.rm = TRUE)),
+      #                               # total pop and income 
+      #                               pop_total    = as.numeric(sum(round(pop_total,0), na.rm = TRUE)),
+      #                               pop_homens   = as.numeric(sum(round(pop_homens,0), na.rm = TRUE)),
+      #                               pop_mulheres = as.numeric(sum(round(pop_mulheres,0), na.rm = TRUE)),
+      #                               renda_total  = as.numeric(sum(renda, na.rm = TRUE))), 
+      #                           by = id_hex ]
       
       # Calcular quintil e decil de renda
       # calcula renda per capita de cada hexagono
@@ -274,9 +307,9 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   } else (x = munis)
   
   # Parallel processing using future.apply
-  # future::plan(future::multiprocess)
+  # future::plan(future::multiprocess, workers = 10)
   #options(future.globals.maxSize= Inf) # permitir processamento de arquivo grande
-  # future.apply::future_lapply(X = x, FUN=agrupar_variaveis)
+  # furrr::future_walk(x, agrupar_variaveis)
   walk(x, agrupar_variaveis)
   
   
