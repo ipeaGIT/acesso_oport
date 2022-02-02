@@ -14,6 +14,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     # sigla_muni <- 'nat'; ano <- 2019
     # sigla_muni <- 'for'; ano <- 2017
+    # sigla_muni <- 'rio'; ano <- 2018
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -58,9 +59,11 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     grade_corrigida <- grade_corrigida %>%    
       mutate(area_depois = as.numeric(st_area(.))) %>%
       mutate(prop = area_depois/area_antes) %>%
-      mutate(pop_total =    round(prop * pop_total),
-             pop_homens =   round(prop * pop_homens),
-             pop_mulheres = round(prop * pop_mulheres))
+      mutate(prop_homens = pop_homens/pop_total,
+             prop_mulheres = pop_mulheres/pop_total) %>%
+      mutate(pop_total =    round(prop * pop_total)) %>%
+      mutate(pop_homens = round(pop_total * prop_homens),
+             pop_mulheres = round(pop_total * prop_mulheres))
     
     
     # Seleciona colunas da GRADE
@@ -72,7 +75,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     # calcula area de cada setor
     setor <- setor %>%
       mutate(id_setor = 1:n()) %>%
-      mutate(area_setor = st_area(.)) %>%
+      mutate(area_setor = as.numeric(st_area(.))) %>%
       dplyr::select(id_setor, renda_total, area_setor, 
                     # domicilios por renda
                     matches("moradores_SM"),
@@ -122,6 +125,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     by=id_setor]
     
+    setor$pop_total <- NULL
+    
     # volta para sf
     setor <- st_sf(setor)
     head(setor)
@@ -134,7 +139,7 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       # tip from https://rpubs.com/rural_gis/255550
       
       # Calcular a area de cada pedaco
-      dplyr::mutate(area_pedaco = st_area(.)) %>%
+      dplyr::mutate(area_pedaco = as.numeric(st_area(.))) %>%
       
       # Calcular a proporcao de cada setor que esta naquele pedaco (essa sera a area a ponderar pela renda)
       dplyr::mutate(area_prop_setor = area_pedaco/area_setor) %>%
@@ -143,10 +148,10 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       dplyr::mutate(area_prop_grade =  area_pedaco/area_grade) %>%
       
       # Calcular a quantidade (absoluto) de populacao em cada pedaco (baseado na grade)
-      dplyr::mutate(pop_sub_grade = pop_total * area_prop_grade) %>%
+      dplyr::mutate(pop_sub_grade = as.numeric(pop_total * area_prop_grade)) %>%
       
       # Calcular a populacao do setor somando-se a pop das grades
-      # necessario pq populacao da grade nao bate 100% com po do setor
+      # necessario pq populacao da grade nao bate 100% com pop do setor
       group_by(id_setor) %>%
       dplyr::mutate(total_pop_setor = sum(pop_sub_grade, na.rm = TRUE)) %>%
       ungroup() %>%
@@ -181,40 +186,112 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       dplyr::mutate(idade_5_pedaco = idade_5_prop * pop_sub_grade) %>%
       dplyr::mutate(idade_6_pedaco = idade_6_prop * pop_sub_grade) %>%
       dplyr::mutate(idade_7_pedaco = idade_7_prop * pop_sub_grade)
-
-    # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
-    ui_fim <- ui %>%
-      st_set_geometry(NULL) %>%
-      group_by(id_grade, pop_total, pop_homens, pop_mulheres) %>%
-      dplyr::summarise(
-        # renda
-        renda = sum(renda_pedaco, na.rm = TRUE),
-        # moradores_SM_0_1Q = sum(moradores_SM_0_1Q_pedaco, na.rm = TRUE),
-        # moradores_SM_1Q_1M = sum(moradores_SM_1Q_1M_pedaco, na.rm = TRUE),
-        # moradores_SM_1M_1 = sum(moradores_SM_1M_1_pedaco, na.rm = TRUE),
-        # moradores_SM_1_2 = sum(moradores_SM_1_2_pedaco, na.rm = TRUE),
-        # moradores_SM_2 = sum(moradores_SM_2_pedaco, na.rm = TRUE),
-        # cor
-        cor_branca = as.numeric(sum(branca_pedaco, na.rm = TRUE)),
-        cor_amarela = as.numeric(sum(amarela_pedaco, na.rm = TRUE)),
-        cor_indigena = as.numeric(sum(indigena_pedaco, na.rm = TRUE)),
-        cor_negra = as.numeric(sum(negra_pedaco, na.rm = TRUE)),
-        # para idade
-        idade_0a5   = as.numeric(sum(idade_1_pedaco, na.rm = TRUE)),
-        idade_6a14  = as.numeric(sum(idade_2_pedaco, na.rm = TRUE)),
-        idade_15a18 = as.numeric(sum(idade_3_pedaco, na.rm = TRUE)),
-        idade_19a24 = as.numeric(sum(idade_4_pedaco, na.rm = TRUE)),
-        idade_25a39 = as.numeric(sum(idade_5_pedaco, na.rm = TRUE)),
-        idade_40a69 = as.numeric(sum(idade_6_pedaco, na.rm = TRUE)),
-        idade_70    = as.numeric(sum(idade_7_pedaco, na.rm = TRUE))
-      ) %>%
-      dplyr::mutate(renda = as.numeric(renda)) %>%
-      ungroup()
     
+    # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
+    ui_fim <- ui %>% st_set_geometry(NULL) %>% setDT()
+    
+    ui_fim <- ui_fim[, .( 
+      # renda
+      renda = sum(renda_pedaco, na.rm = TRUE),
+      # moradores_SM_0_1Q = sum(moradores_SM_0_1Q_pedaco, na.rm = TRUE),
+      # moradores_SM_1Q_1M = sum(moradores_SM_1Q_1M_pedaco, na.rm = TRUE),
+      # moradores_SM_1M_1 = sum(moradores_SM_1M_1_pedaco, na.rm = TRUE),
+      # moradores_SM_1_2 = sum(moradores_SM_1_2_pedaco, na.rm = TRUE),
+      # moradores_SM_2 = sum(moradores_SM_2_pedaco, na.rm = TRUE),
+      # cor
+      cor_branca =   round(sum(branca_pedaco, na.rm = TRUE)),
+      cor_amarela =  round(sum(amarela_pedaco, na.rm = TRUE)),
+      cor_indigena = round(sum(indigena_pedaco, na.rm = TRUE)),
+      cor_negra =    round(sum(negra_pedaco, na.rm = TRUE)),
+      # para idade
+      idade_0a5   = round(sum(idade_1_pedaco, na.rm = TRUE)),
+      idade_6a14  = round(sum(idade_2_pedaco, na.rm = TRUE)),
+      idade_15a18 = round(sum(idade_3_pedaco, na.rm = TRUE)),
+      idade_19a24 = round(sum(idade_4_pedaco, na.rm = TRUE)),
+      idade_25a39 = round(sum(idade_5_pedaco, na.rm = TRUE)),
+      idade_40a69 = round(sum(idade_6_pedaco, na.rm = TRUE)),
+      idade_70    = round(sum(idade_7_pedaco, na.rm = TRUE))),
+      by = .(id_grade, pop_total, pop_homens, pop_mulheres)]
+    
+    ui_fim[, renda := as.numeric(renda)]
+    
+    # sum(grade_corrigida$pop_total) 
+    # sum(grade_corrigida$pop_homens)+ sum(grade_corrigida$pop_mulheres) 
     # sum(ui_fim$pop_total)
     # sum(ui_fim$pop_homens)+ sum(ui_fim$pop_mulheres) 
+    # a soma das cores sum(ui_fim$cor_branca, ui_fim$cor_amarela, ui_fim$cor_indigena, ui_fim$cor_negra) 
+    # nao esta batendo com sum(ui_fim$pop_total)
+    # a soma das idades sum(ui_fim$idade_0a5, ui_fim$idade_6a14, ui_fim$idade_15a18, ui_fim$idade_19a24, ui_fim$idade_25a39, ui_fim$idade_40a69, ui_fim$idade_70) 
+    # nao esta batendo com sum(ui_fim$pop_total)
+    # corrigir
     
-    #    
+    # ha casos em que pop_total != 0 e a soma das cores ou idades eh igual a 0. corrigir
+    ui_fim[, pop_total := fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 0, pop_total)]
+    ui_fim[, pop_total := fifelse(pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0, 0, pop_total)]
+    ui_fim[, pop_homens := fifelse(pop_total == 0, 0, pop_homens)]
+    ui_fim[, pop_mulheres := fifelse(pop_total == 0, 0, pop_mulheres)]
+    
+    # ha casos em que pop_total == 0 e a soma das cores ou idades eh maior que 0. corrigir
+    ui_fim[, ":="(cor_branca =   fifelse(pop_total == 0 & cor_branca != 0, 0, cor_branca),
+                  cor_amarela =  fifelse(pop_total == 0 & cor_amarela != 0, 0, cor_amarela),
+                  cor_indigena = fifelse(pop_total == 0 & cor_indigena != 0, 0, cor_indigena),
+                  cor_negra =    fifelse(pop_total == 0 & cor_negra != 0, 0, cor_negra),
+                  idade_0a5 =   fifelse(pop_total == 0 & idade_0a5 != 0, 0, idade_0a5),
+                  idade_6a14 =  fifelse(pop_total == 0 & idade_6a14 != 0, 0, idade_6a14),
+                  idade_15a18 = fifelse(pop_total == 0 & idade_15a18 != 0, 0, idade_15a18),
+                  idade_19a24 = fifelse(pop_total == 0 & idade_19a24 != 0, 0, idade_19a24),
+                  idade_25a39 = fifelse(pop_total == 0 & idade_25a39 != 0, 0, idade_25a39),
+                  idade_40a69 = fifelse(pop_total == 0 & idade_40a69 != 0, 0, idade_40a69),
+                  idade_70 =    fifelse(pop_total == 0 & idade_70 != 0, 0, idade_70)
+    )]
+    
+    
+    ui_fim[, ":="(prop_branca   = cor_branca/    (cor_branca + cor_amarela + cor_indigena + cor_negra),
+                  prop_amarela  = cor_amarela/   (cor_branca + cor_amarela + cor_indigena + cor_negra),
+                  prop_indigena = cor_indigena/  (cor_branca + cor_amarela + cor_indigena + cor_negra),
+                  prop_negra    = cor_negra/     (cor_branca + cor_amarela + cor_indigena + cor_negra),
+                  prop_idade_0a5   = idade_0a5/  (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
+                  prop_idade_6a14  = idade_6a14/ (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
+                  prop_idade_15a18 = idade_15a18/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
+                  prop_idade_19a24 = idade_19a24/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
+                  prop_idade_25a39 = idade_25a39/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
+                  prop_idade_40a69 = idade_40a69/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
+                  prop_idade_70    = idade_70/   (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70)
+                  )]
+    
+    # quando eh 0/0, o resultado da como NaN. corrigir
+    ui_fim[, ":="(prop_branca =   fifelse(is.nan(prop_branca), 0, prop_branca),
+                  prop_amarela =  fifelse(is.nan(prop_amarela), 0, prop_amarela),
+                  prop_indigena = fifelse(is.nan(prop_indigena), 0, prop_indigena),
+                  prop_negra =    fifelse(is.nan(prop_negra), 0, prop_negra),
+                  prop_idade_0a5 =    fifelse(is.nan(prop_idade_0a5), 0, prop_idade_0a5),
+                  prop_idade_6a14 =   fifelse(is.nan(prop_idade_6a14), 0, prop_idade_6a14),
+                  prop_idade_15a18 =  fifelse(is.nan(prop_idade_15a18), 0, prop_idade_15a18),
+                  prop_idade_19a24 =  fifelse(is.nan(prop_idade_19a24), 0, prop_idade_19a24),
+                  prop_idade_25a39 =  fifelse(is.nan(prop_idade_25a39), 0, prop_idade_25a39),
+                  prop_idade_40a69 =  fifelse(is.nan(prop_idade_40a69), 0, prop_idade_40a69),
+                  prop_idade_70 =     fifelse(is.nan(prop_idade_70), 0, prop_idade_70)
+                  )]
+    
+    ui_fim[, ":="(cor_branca =   round(prop_branca * pop_total),
+                  cor_amarela =  round(prop_amarela * pop_total),
+                  cor_indigena = round(prop_indigena * pop_total),
+                  cor_negra =    round(prop_negra * pop_total),
+                  idade_0a5 =    round(prop_idade_0a5 * pop_total),
+                  idade_6a14 =   round(prop_idade_6a14 * pop_total),
+                  idade_15a18 =  round(prop_idade_15a18 * pop_total),
+                  idade_19a24 =  round(prop_idade_19a24 * pop_total),
+                  idade_25a39 =  round(prop_idade_25a39 * pop_total),
+                  idade_40a69 =  round(prop_idade_40a69 * pop_total),
+                  idade_70 =     round(prop_idade_70 * pop_total)
+                  )]
+    
+    # exlucir variaeveis de proporcao
+    ui_fim <- ui_fim %>% select(-starts_with("prop_"))
+    
+    
+    
+    # finalizar trazendo as geometrias    
     ui_fim_sf <- grade_corrigida %>%
       dplyr::select(id_grade) %>%
       left_join(ui_fim, by = "id_grade") %>%
@@ -265,8 +342,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
   } else (x = munis)
   
   # Parallel processing using future.apply
-  # future::plan(future::multiprocess)
-  # future.apply::future_lapply(X = x, FUN=renda_de_setor_p_grade_muni, future.packages=c('sf', 'dplyr'))
+  # plan(multiprocess, workers = 10)
+  # furrr::future_walk(x, renda_de_setor_p_grade_muni)
   walk(x, renda_de_setor_p_grade_muni)
   
 }
