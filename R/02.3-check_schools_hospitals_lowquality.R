@@ -13,10 +13,21 @@ correct_low_quality <- function(ano1) {
   # 1.1) Saude
   cnes_data <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter_geocoded_gmaps.rds", ano1, ano1)) 
   # extract low quality
-  cnes_data_low <- cnes_data[(Addr_type %nin% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
-                                                'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
-                                                # these one are exclusive for educacao and saude
-                                                'inep', 'cnes', 'PMAQ'))]
+  cnes_data[, keep := fifelse(
+    # se for brasilia, selecionar mais categorias no gmaps
+    ibge %like% "530010" & Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+                                                 'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+                                                 'political', 'postal_code'), TRUE,
+    fifelse(Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+                             'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+                             # these one are exclusive for educacao and saude
+                             'inep', 'cnes', 'PMAQ'), TRUE, FALSE))]
+  
+  cnes_data_low <- cnes_data[keep == FALSE]
+  # cnes_data_low <- cnes_data[(Addr_type %nin% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+  #                                               'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+  #                                               # these one are exclusive for educacao and saude
+  #                                               'inep', 'cnes', 'PMAQ'))]
   cnes_data_low[, ano := ano1]
   
   
@@ -48,7 +59,7 @@ correct_low_quality <- function(ano1) {
   # corrigir
   cnes_data_good <- readr::read_rds(sprintf("../../data/acesso_oport/saude/%s/saude_%s_filter_geocoded_gmaps_gquality_corrected.rds", ano1, ano1)) 
   cnes_data_good[, ano := ano1]
-  cnes_data_good <- cnes_data_good %>% select(-keep) %>% setDT()
+  cnes_data_good <- cnes_data_good %>% setDT()
   
   
   cnes_data_good_new <- rbind(cnes_data_good, 
@@ -72,10 +83,21 @@ correct_low_quality <- function(ano1) {
   # 1.2) Escolas --------------------
   escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps.rds", ano1, ano1))
   # extract low quality
-  escolas_low <- escolas[(Addr_type %nin% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
-                                            'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
-                                            # these one are exclusive for educacao and saude
-                                            'inep', 'cnes', 'PMAQ'))]
+  escolas[, keep := fifelse(
+    # se for brasilia, selecionar mais categorias no gmaps
+    code_muni %like% "530010" & Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+                                                 'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+                                                 'political', 'postal_code'), TRUE,
+    fifelse(Addr_type %in% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+                             'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+                             # these one are exclusive for educacao and saude
+                             'inep', 'cnes', 'PMAQ'), TRUE, FALSE))]
+  escolas_low <- escolas[keep == FALSE]
+  
+  # escolas_low <- escolas[(Addr_type %nin% c('PointAddress', "StreetAddress", "StreetAddressExt", "StreetName",
+  #                                           'street_number', 'route', 'airport', 'amusement_park', 'intersection','premise','town_square',
+  #                                           # these one are exclusive for educacao and saude
+  #                                           'inep', 'cnes', 'PMAQ'))]
   
   escolas_low <- escolas_low %>%
     mutate(across(matches("lon|lat"), ~ ifelse(is.na(.x), 0, .x)))
@@ -120,7 +142,7 @@ correct_low_quality <- function(ano1) {
   # corrigir
   escolas_data_good <- readr::read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps_gquality_corrected.rds", ano1, ano1)) 
   escolas_data_good[, ano := ano1]
-  escolas_data_good <- escolas_data_good %>% select(-keep) %>% setDT()
+  escolas_data_good <- escolas_data_good %>% setDT()
   
   escolas_data_good_new <- rbind(escolas_data_good, 
                                  escolas_low_aceitar
@@ -128,6 +150,7 @@ correct_low_quality <- function(ano1) {
   
   
   table(escolas_data_good_new$geocode_engine, useNA = 'always')
+  table(escolas_data_good_new$keep, useNA = 'always')
   
   
   # save
