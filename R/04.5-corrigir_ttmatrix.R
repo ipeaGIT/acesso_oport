@@ -22,7 +22,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   
   
   ttmatrix_allmodes <- fread(sprintf("E:/data/output_ttmatrix/%s/r5/ttmatrix_%s_%s_r5.csv", 
-                                        ano, ano, sigla_muni))
+                                     ano, ano, sigla_muni))
   
   # ttmatrix_allmodes <- read_rds("../../data/avaliacao_intervencoes/for/ttmatrix/antes/ttmatrix_bike.rds")
   
@@ -197,6 +197,18 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
                             ttmatrix_hex_prob_corrigidos)
   
   
+  
+  # corrigir tempo de viagem para mesma origem/destino ----------------------
+  
+  
+  # Se a origem e o destino forem o mesmo, adotar o tempo de viagem como:
+  # transit / walk: 350s equivale ao tempo necessario para cruzar um hexagono a de pe (~1 metro/sec = ~3.6 km/h)
+  # bike: 110s equivale ao tempo necessario para cruzar um hexagono a bicicleta (~3.3 metros/sec = ~12 km/h)
+  ttmatrix_hex_fim[, travel_time := as.numeric(travel_time)]
+  ttmatrix_hex_fim[mode=='bike', travel_time := fifelse(origin == destination, 1.8, travel_time)]
+  ttmatrix_hex_fim[mode == "walk", travel_time := fifelse(origin == destination, 5.8, travel_time)]
+  ttmatrix_hex_fim[mode == "transit", travel_time := fifelse(origin == destination, 5.8, travel_time)]
+  
   # salvar output corrigido
   write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds", ano, ano, sigla_muni),
             compress = "gz")
@@ -207,9 +219,12 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-plan(multiprocess, workers = 20)
-furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2017)
-furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+plan(multiprocess, workers = 10)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, 
+                   identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, 
+                   identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, 
+     identificar_e_corrigir_extremos_acess_muni, ano = 2019)
 
 
-walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, identificar_e_corrigir_extremos_acess_muni, ano = 2019)

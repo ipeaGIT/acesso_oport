@@ -12,33 +12,47 @@ source('./R/fun/setup.R')
 # sigla_muni <- "spo"; ano=2019
 # sigla_muni <- "for"; ano=2019
 # sigla_muni <- "for"; ano=2017
-# sigla_muni <- "for"; ano = 2019; modo <- "car"
+# sigla_muni <- "for"; ano = 2019; mode1 <- "car"
+# sigla_muni <- "spo"; ano = 2019; mode1 <- "car"
+# sigla_muni <- "bsb_origin1"; ano = 2017; mode1 <- "car"
+# sigla_muni <- "bsb_dest1"; ano = 2019; mode1 <- "car"
 # sigla_muni <- "for"; ano = 2019; BFCA <- FALSE
 # sigla_muni <- "spo"; ano = 2019; BFCA <- FALSE
 
 
-calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, modo = "tp") {
+calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", access = "all") {
   
   # status message
   message('Woking on city ', sigla_muni, ' at year ', ano,  '\n')
   
   # 1) Abrir tttmatrix ---------------------------------------------------
   
-  if (modo == "tp") {
+  if (mode1 == "all") {
     
     ttmatrix <- read_rds(sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds",
                                  ano, ano, sigla_muni))
+  } else if (mode1 == "car") {
     
-  } else if (modo == "car") {
-    # trazer matriz de carro e dar rbind - somente para o ano 2019
-    # if (ano == 2019) ttmatrix <- rbind(ttmatrix, read_rds(sprintf("E:/data/output_ttmatrix/car/2019/ttmatrix_car_2019_%s.rds", sigla_muni)))
-    ttmatrix <- read_rds(sprintf("E:/data/output_ttmatrix/car/2019/ttmatrix_car_2019_%s.rds", sigla_muni))
+    if (sigla_muni %like% "bsb") {
+      
+      path <- sprintf("../../data/acesso_oport/output_ttmatrix_ti/bsb_split/ttmatrix_car_%s.csv", sigla_muni)
+      
+    } else {path <- sprintf("../../data/acesso_oport/output_ttmatrix_ti/OD_TI_%s.csv", sigla_muni)}
+    
+    ttmatrix <- fread(path)
+    setnames(ttmatrix, c("origin", "destination", "median_morning_peak", "median_afternoon_offpeak"))
+    ttmatrix[, city := substr(sigla_muni, 1, 3)]
+    ttmatrix[, mode := "car"]
+    
+    # ttmatrix <- fread(sprintf("E:/data/ttmatrix_fixed/%s/car/ttmatrix_fixed_car_%s_%s.csv", 
+    #                           "2019", "2019", sigla_muni))
+    
   }
   
   # 2) Agregar dados de uso do solo à ttmatrix --------------------------
   
   # Pegar arquivo com os hexagonos com as atividades
-  dir_hex <- sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, sigla_muni, ano)
+  dir_hex <- sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, substr(sigla_muni, 1, 3), ano)
   
   # Abrir oportunidades com hexagonos
   hexagonos_sf <- readr::read_rds(dir_hex) 
@@ -129,291 +143,348 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, modo = "tp") {
   
   # 3) Calcular acessibilidade cumulativa ativa ----------------------------------------------------
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-  acess_cma <- "CMA"
-  atividade_cma <- c(
-    # emprego
-    "TT", "TB", "TM", "TA",
-    # saude
-    "ST", "SB", "SM", "SA", 
-    # educacao - escolas
-    "ET", "EI", "EF", "EM",
-    # educacao - matriculas
-    "MT", "MI", "MF", "MM",
-    # cras
-    "CT"
-  )
-  # criar dummy para tt
-  tt <- c(1, 2, 3, 4)
-  
-  grid_cma <- expand.grid(acess_cma, atividade_cma, tt, stringsAsFactors = FALSE) %>%
-    rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
-    # adicionar colunas de time threshold  para cada um dos modos
-    mutate(tt_tp = case_when(
-      tt_sigla == 1 ~ 30,
-      tt_sigla == 2 ~ 60,
-      tt_sigla == 3 ~ 90,
-      tt_sigla == 4 ~ 120
-    )) %>%
-    mutate(tt_ativo = case_when(
-      tt_sigla == 1 ~ 15,
-      tt_sigla == 2 ~ 30,
-      tt_sigla == 3 ~ 45,
-      tt_sigla == 4 ~ 60
-    )) %>%
-    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
-    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
-    mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
-                                      atividade_sigla == "TB" ~ "empregos_baixa",
-                                      atividade_sigla == "TM" ~ "empregos_media",
-                                      atividade_sigla == "TA" ~ "empregos_alta",
-                                      atividade_sigla == "ST" ~ "saude_total",
-                                      atividade_sigla == "SB" ~ "saude_baixa",
-                                      atividade_sigla == "SM" ~ "saude_media",
-                                      atividade_sigla == "SA" ~ "saude_alta",
-                                      atividade_sigla == "ET" ~ "edu_total",
-                                      atividade_sigla == "EF" ~ "edu_fundamental",
-                                      atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil",
-                                      atividade_sigla == "MT" ~ "mat_total",
-                                      atividade_sigla == "MF" ~ "mat_fundamental",
-                                      atividade_sigla == "MM" ~ "mat_medio",
-                                      atividade_sigla == "MI" ~ "mat_infantil",
-                                      atividade_sigla == "CT" ~ "cras_total"))
-  
-  
-  # gerar o codigo
-  # para tp
-  codigo_cma_tp <- c(
+  if (access %in% c("all", "active")) {
     
-    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
-            grid_cma$junto_tp, 
-            grid_cma$atividade_nome, 
-            grid_cma$tt_tp
+    acess_cma <- "CMA"
+    atividade_cma <- c(
+      # emprego
+      "TT", "TB", "TM", "TA",
+      # saude
+      "ST", "SB", "SM", "SA", 
+      # educacao - escolas
+      "ET", "EI", "EF", "EM",
+      # educacao - matriculas
+      "MT", "MI", "MF", "MM",
+      # cras
+      "CT"
     )
-  )
-  
-  
-  # para ativo
-  codigo_cma_ativo <- c(
+    # criar dummy para tt
+    tt <- c(1, 2, 3, 4)
     
-    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
-            grid_cma$junto_ativo, 
-            grid_cma$atividade_nome, 
-            grid_cma$tt_ativo
+    grid_cma <- expand.grid(acess_cma, atividade_cma, tt, stringsAsFactors = FALSE) %>%
+      rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
+      # adicionar colunas de time threshold  para cada um dos modos
+      mutate(tt_tp = case_when(
+        tt_sigla == 1 ~ 30,
+        tt_sigla == 2 ~ 60,
+        tt_sigla == 3 ~ 90,
+        tt_sigla == 4 ~ 120
+      )) %>%
+      mutate(tt_ativo = case_when(
+        tt_sigla == 1 ~ 15,
+        tt_sigla == 2 ~ 30,
+        tt_sigla == 3 ~ 45,
+        tt_sigla == 4 ~ 60
+      )) %>%
+      mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
+      mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+      mutate(atividade_nome = case_when(atividade_sigla == "TT" ~ "empregos_total",
+                                        atividade_sigla == "TB" ~ "empregos_baixa",
+                                        atividade_sigla == "TM" ~ "empregos_media",
+                                        atividade_sigla == "TA" ~ "empregos_alta",
+                                        atividade_sigla == "ST" ~ "saude_total",
+                                        atividade_sigla == "SB" ~ "saude_baixa",
+                                        atividade_sigla == "SM" ~ "saude_media",
+                                        atividade_sigla == "SA" ~ "saude_alta",
+                                        atividade_sigla == "ET" ~ "edu_total",
+                                        atividade_sigla == "EF" ~ "edu_fundamental",
+                                        atividade_sigla == "EM" ~ "edu_medio",
+                                        atividade_sigla == "EI" ~ "edu_infantil",
+                                        atividade_sigla == "MT" ~ "mat_total",
+                                        atividade_sigla == "MF" ~ "mat_fundamental",
+                                        atividade_sigla == "MM" ~ "mat_medio",
+                                        atividade_sigla == "MI" ~ "mat_infantil",
+                                        atividade_sigla == "CT" ~ "cras_total"))
+    
+    
+    # gerar o codigo
+    # para tp
+    codigo_cma_tp <- c(
+      
+      sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
+              grid_cma$junto_tp, 
+              grid_cma$atividade_nome, 
+              grid_cma$tt_tp
+      )
     )
-  )
-  
-  # dar nomes às variaveis
-  to_make_cma_tp <-    setNames(codigo_cma_tp,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
-  to_make_cma_ativo <- setNames(codigo_cma_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_ativo))
-  
-  
-  # so aplicar a acessibilidade para os modos da cidade
-  # modo_year <- sprintf("modo_%s", ano)
-  modo <- munis_list$munis_modo[abrev_muni == sigla_muni & ano_modo == ano]$modo
-  
-  # if (modo == "todos") {
-  
-  # para transporte publico e carro
-  acess_cma_tp <- ttmatrix[mode %in% c("transit", "car"),
-                           lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
-                           , by=.(city, mode, origin, pico, quintil, decil)]
-  
-  # para modos ativos
-  if (modo == tp) {
-    acess_cma_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
-                                lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                                , by=.(city, mode, origin, pico, quintil, decil)]
+    codigo_cma_carro_pico <- c(
+      
+      sprintf("%s = (sum(%s[which(median_morning_peak <= %s)], na.rm = T))", 
+              grid_cma$junto_tp, 
+              grid_cma$atividade_nome, 
+              grid_cma$tt_tp
+      )
+    )
+    codigo_cma_carro_fpico <- c(
+      
+      sprintf("%s = (sum(%s[which(median_afternoon_offpeak <= %s)], na.rm = T))", 
+              grid_cma$junto_tp, 
+              grid_cma$atividade_nome, 
+              grid_cma$tt_tp
+      )
+    )
     
-    # juntar os cma
-    acess_cma <- rbind(acess_cma_tp, acess_cma_ativo,
-                       fill = TRUE)
+    
+    # para ativo
+    codigo_cma_ativo <- c(
+      
+      sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
+              grid_cma$junto_ativo, 
+              grid_cma$atividade_nome, 
+              grid_cma$tt_ativo
+      )
+    )
+    
+    # dar nomes às variaveis
+    to_make_cma_tp <-    setNames(codigo_cma_tp,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
+    to_make_cma_carro_pico <-    setNames(codigo_cma_carro_pico,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_carro_pico))
+    to_make_cma_carro_fpico <-    setNames(codigo_cma_carro_fpico,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_carro_fpico))
+    to_make_cma_ativo <- setNames(codigo_cma_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_ativo))
+    
+    
+    # so aplicar a acessibilidade para os modos da cidade
+    # modo_year <- sprintf("modo_%s", ano)
+    modo <- munis_list$munis_modo[abrev_muni == sigla_muni & ano_modo == ano]$modo
+    
+    message('Calculate access CMA')
+    # se for carro..
+    if (mode1 == "car") {
+      acess_cma_carro_pico <- ttmatrix[, lapply(to_make_cma_carro_pico, function(x) eval(parse(text = x)))
+                                       , by=.(city, mode, origin)]
+      
+      acess_cma_carro_pico[, pico := 1]
+      
+      acess_cma_carro_fpico <- ttmatrix[, lapply(to_make_cma_carro_fpico, function(x) eval(parse(text = x)))
+                                        , by=.(city, mode, origin)]
+      
+      acess_cma_carro_fpico[, pico := 0]
+      
+      acess_cma <- rbind(acess_cma_carro_pico, acess_cma_carro_fpico)
+      
+      rm(acess_cma_carro_pico, acess_cma_carro_fpico)
+      
+      
+    } else {
+      
+      # para modos ativos
+      acess_cma <- ttmatrix[mode %in% c("bike", "walk"), 
+                            lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
+                            , by=.(city, mode, origin, pico)]
+      
+      # para transporte publico e (so 2019) carro
+      if (modo == "todos") {
+        acess_cma_tp <- ttmatrix[mode %in% c("transit"),
+                                 lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
+                                 , by=.(city, mode, origin, pico)]
+        
+        # juntar os cma
+        acess_cma <- rbind(acess_cma, acess_cma_tp,
+                           fill = TRUE)
+      }
+      
+    }
+    
   }
-  
-  # se for carro:
-  acess_cma <- acess_cma_tp
-  
-  # } else {
-  #   
-  #   
-  #   # para  carro
-  #   acess_cma_carro <- ttmatrix[mode %in% c("car"),
-  #                            lapply(to_make_cma_tp, function(x) eval(parse(text = x)))
-  #                            , by=.(city, mode, origin, pico, quintil, decil)]
-  #   
-  #   # so para modos ativos
-  #   acess_cma_ativo <- ttmatrix[, 
-  #                         lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-  #                         , by=.(city, mode, origin, pico, quintil, decil)]
-  #   
-  #   # rbind
-  #   acess_cma <- rbind(acess_cma_carro, acess_cma_ativo,
-  #                      fill = TRUE)
-  #   
-  # }
-  
-  
-  
-  
   
   # 4) Calcular acessibilidade cumulativa passiva --------------------------------------------------
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-  acess_cmp <- "CMP"
-  atividade_cmp <- c("PT", "PM", "PW",
-                     "PB", "PA", "PI", "PN", 
-                     "I00a05", "I06a14","I15a18","I19a24","I25a39","I40a69","I70")
-  # criar dummy para tt
-  tt <- c(1, 2, 3, 4)
-  
-  grid_cmp <- expand.grid(acess_cmp, atividade_cmp, tt, stringsAsFactors = FALSE) %>%
-    rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
-    # adicionar colunas de time threshold para cada um dos modos
-    mutate(tt_tp = case_when(
-      tt_sigla == 1 ~ 30,
-      tt_sigla == 2 ~ 60,
-      tt_sigla == 3 ~ 90,
-      tt_sigla == 4 ~ 120
-    )) %>%
-    mutate(tt_ativo = case_when(
-      tt_sigla == 1 ~ 15,
-      tt_sigla == 2 ~ 30,
-      tt_sigla == 3 ~ 45,
-      tt_sigla == 4 ~ 60
-    )) %>%
-    mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
-    mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
-    mutate(atividade_nome = case_when(atividade_sigla == "PT"     ~ "pop_total",
-                                      atividade_sigla == "PM"     ~ "pop_homens",
-                                      atividade_sigla == "PW"     ~ "pop_mulheres",
-                                      atividade_sigla == "PB"     ~ "cor_branca",
-                                      atividade_sigla == "PA"     ~ "cor_amarela",
-                                      atividade_sigla == "PI"     ~ "cor_indigena",
-                                      atividade_sigla == "PN"     ~ "cor_negra",
-                                      atividade_sigla == "I00a05" ~ "idade_0a5", 
-                                      atividade_sigla == "I06a14" ~ "idade_6a14", 
-                                      atividade_sigla == "I15a18" ~ "idade_15a18", 
-                                      atividade_sigla == "I19a24" ~ "idade_19a24",    
-                                      atividade_sigla == "I25a39" ~ "idade_25a39", 
-                                      atividade_sigla == "I40a69" ~ "idade_40a69", 
-                                      atividade_sigla == "I70"    ~ "idade_70"))
-  
-  # gerar o codigo
-  # para tp 
-  codigo_cmp_tp <- c(
+  if (access %in% c("all", "passive")) {
+    acess_cmp <- "CMP"
+    atividade_cmp <- c("PT", 
+                       "PH", "PM",
+                       "PB", "PA", "PI", "PN", 
+                       "P0005I", "P0614I","P1518I","P1924I","P2539I","P4069I","P70I")
+    # criar dummy para tt
+    tt <- c(1, 2, 3, 4)
     
-    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
-            grid_cmp$junto_tp, 
-            grid_cmp$atividade_nome, 
-            grid_cmp$tt_tp
+    grid_cmp <- expand.grid(acess_cmp, atividade_cmp, tt, stringsAsFactors = FALSE) %>%
+      rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
+      # adicionar colunas de time threshold para cada um dos modos
+      mutate(tt_tp = case_when(
+        tt_sigla == 1 ~ 30,
+        tt_sigla == 2 ~ 60,
+        tt_sigla == 3 ~ 90,
+        tt_sigla == 4 ~ 120
+      )) %>%
+      mutate(tt_ativo = case_when(
+        tt_sigla == 1 ~ 15,
+        tt_sigla == 2 ~ 30,
+        tt_sigla == 3 ~ 45,
+        tt_sigla == 4 ~ 60
+      )) %>%
+      mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
+      mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
+      mutate(atividade_nome = case_when(atividade_sigla == "PT"     ~ "pop_total",
+                                        atividade_sigla == "PM"     ~ "pop_homens",
+                                        atividade_sigla == "PW"     ~ "pop_mulheres",
+                                        atividade_sigla == "PB"     ~ "cor_branca",
+                                        atividade_sigla == "PA"     ~ "cor_amarela",
+                                        atividade_sigla == "PI"     ~ "cor_indigena",
+                                        atividade_sigla == "PN"     ~ "cor_negra",
+                                        atividade_sigla == "I00a05" ~ "idade_0a5", 
+                                        atividade_sigla == "I06a14" ~ "idade_6a14", 
+                                        atividade_sigla == "I15a18" ~ "idade_15a18", 
+                                        atividade_sigla == "I19a24" ~ "idade_19a24",    
+                                        atividade_sigla == "I25a39" ~ "idade_25a39", 
+                                        atividade_sigla == "I40a69" ~ "idade_40a69", 
+                                        atividade_sigla == "I70"    ~ "idade_70"))
+    
+    # gerar o codigo
+    # para tp 
+    codigo_cmp_tp <- c(
+      
+      sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
+              grid_cmp$junto_tp, 
+              grid_cmp$atividade_nome, 
+              grid_cmp$tt_tp
+      )
     )
-  )
-  
-  # para ativo
-  codigo_cmp_ativo <- c(
     
-    sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
-            grid_cmp$junto_ativo, 
-            grid_cmp$atividade_nome, 
-            grid_cmp$tt_ativo
+    codigo_cmp_carro_pico <- c(
+      
+      sprintf("%s = (sum(%s[which(median_morning_peak <= %s)], na.rm = T))", 
+              grid_cmp$junto_tp, 
+              grid_cmp$atividade_nome, 
+              grid_cmp$tt_tp
+      )
     )
-  )
-  
-  
-  # gerar os nomes das variaveis
-  to_make_cmp_tp <- setNames(codigo_cmp_tp, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_tp))
-  
-  to_make_cmp_ativo <- setNames(codigo_cmp_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_ativo))
-  
-  
-  
-  # so aplicar a acessibilidade para os modos da cidade
-  
-  # if (modo == "todos") {
-  
-  # para transporte publico e carro
-  acess_cmp_tp <- ttmatrix[mode %in% c("transit", "car"),
-                           lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
-                           , by=.(city, mode, destination, pico)]
-  
-  # para modos ativos
-  if (modo == "tp") {
-    acess_cmp_ativo <- ttmatrix[mode %in% c("bike", "walk"), 
-                                lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
-                                , by=.(city, mode, destination, pico)]
+    codigo_cmp_carro_fpico <- c(
+      
+      sprintf("%s = (sum(%s[which(median_afternoon_offpeak <= %s)], na.rm = T))", 
+              grid_cmp$junto_tp, 
+              grid_cmp$atividade_nome, 
+              grid_cmp$tt_tp
+      )
+    )
+    
+    # para ativo
+    codigo_cmp_ativo <- c(
+      
+      sprintf("%s = (sum(%s[which(travel_time <= %s)], na.rm = T))", 
+              grid_cmp$junto_ativo, 
+              grid_cmp$atividade_nome, 
+              grid_cmp$tt_ativo
+      )
+    )
     
     
-    # juntar os cma
-    acess_cmp <- rbind(acess_cmp_tp, acess_cmp_ativo, fill = TRUE)  
+    # gerar os nomes das variaveis
+    to_make_cmp_tp <- setNames(codigo_cmp_tp, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_tp))
+    to_make_cmp_carro_pico <- setNames(codigo_cmp_carro_pico, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_carro_pico))
+    to_make_cmp_carro_fpico <- setNames(codigo_cmp_carro_fpico, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_carro_fpico))
+    
+    to_make_cmp_ativo <- setNames(codigo_cmp_ativo, sub('^([[:alnum:]]*) =.*', '\\1', codigo_cmp_ativo))
+    
+    
+    
+    # so aplicar a acessibilidade para os modos da cidade
+    
+    message('Calculate access CMP')
+    # se for carro..
+    if (mode1 == "car") {
+      acess_cmp_carro_pico <- ttmatrix[, lapply(to_make_cmp_carro_pico, function(x) eval(parse(text = x)))
+                                       , by=.(city, mode, destination)]
+      
+      acess_cmp_carro_pico[, pico := 1]
+      
+      acess_cmp_carro_fpico <- ttmatrix[, lapply(to_make_cmp_carro_fpico, function(x) eval(parse(text = x)))
+                                        , by=.(city, mode, destination)]
+      
+      acess_cmp_carro_fpico[, pico := 0]
+      
+      acess_cmp <- rbind(acess_cmp_carro_pico, acess_cmp_carro_fpico)
+      
+      rm(acess_cmp_carro_pico, acess_cmp_carro_fpico)
+      
+    } else {
+      
+      # para modos ativos
+      acess_cmp <- ttmatrix[mode %in% c("bike", "walk"), 
+                            lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
+                            , by=.(city, mode, destination, pico)]
+      
+      # para transporte publico e (so 2019) carro
+      if (modo == "todos") {
+        acess_cmp_tp <- ttmatrix[mode %in% c("transit"),
+                                 lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
+                                 , by=.(city, mode, destination, pico)]
+        
+        # juntar os cma
+        acess_cmp <- rbind(acess_cmp, acess_cmp_tp,
+                           fill = TRUE)
+      }
+      
+    }
+    
   }
   
-  # so para carro:
-  acess_cmp <- acess_cmp_tp
-  
-  # } else {
-  #   
-  #   # para carro
-  #   acess_cmp_car <- ttmatrix[mode %in% c("car"),
-  #                             lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
-  #                             , by=.(city, mode, destination, pico)]
-  #   
-  #   # so para modos ativos
-  #   acess_cmp_ativo <- ttmatrix[, 
-  #                               lapply(to_make_cmp_ativo, function(x) eval(parse(text = x)))
-  #                               , by=.(city, mode, destination, pico)]
-  #   
-  #   # juntar os acess
-  #   acess_cmp <- rbind(acess_cmp_car, acess_cmp_ativo, fill = TRUE)  
-  #   
-  # }
   
   
   # 5) Calcular acessibilidade tempo minimo ---------------
   # (aqui eh feito junto para os dois modos)
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  
-  acess_tmi <- "TMI"
-  atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM", "CT")
-  
-  grid_tmi <- expand.grid(acess_tmi, atividade_tmi, stringsAsFactors = FALSE) %>%
-    rename(acess_sigla = Var1, atividade_sigla = Var2) %>%
-    mutate(junto = paste0(acess_sigla, atividade_sigla)) %>%
-    mutate(atividade_nome = case_when(atividade_sigla == "ST" ~ "saude_total",
-                                      atividade_sigla == "SB" ~ "saude_baixa",
-                                      atividade_sigla == "SM" ~ "saude_media",
-                                      atividade_sigla == "SA" ~ "saude_alta",
-                                      atividade_sigla == "ET" ~ "edu_total",
-                                      atividade_sigla == "EI" ~ "edu_infantil",
-                                      atividade_sigla == "EF" ~ "edu_fundamental",
-                                      atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil",
-                                      atividade_sigla == "CT" ~ "cras_total"))
-  
-  
-  # gerar o codigo
-  codigo_tmi <- sprintf("%s = min(travel_time[which(%s >= 1)])", 
-                        grid_tmi$junto, 
-                        grid_tmi$atividade_nome)
-  
-  
-  # gerar os nomes das variaveis
-  to_make_tmi <- setNames(codigo_tmi, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi))
-  
-  
-  # calcular acessibilidade
-  acess_tmi <- ttmatrix[, lapply(to_make_tmi, function(x) eval(parse(text = x)))
-                        , by=.(city, mode, origin, pico)]
-  
-  # hexagonos_sf <- st_sf(hexagonos_sf)
-  # 
-  # ggplot() + geom_sf(data=hexagonos_sf ,fill='gray') +
-  #  geom_sf(data=subset(hexagonos_sf, saude_media>0) , aes(fill=saude_media))
-  # 
-  # ggplot() + geom_sf(data=hexagonos_sf ,fill='gray') +
-  #   geom_sf(data=subset(hexagonos_sf, saude_baixa>0) , aes(fill=saude_baixa))
-  # 
-  # 
+  if (access %in% c("all", "active")) {
+    acess_tmi <- "TMI"
+    atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM", "CT")
+    
+    grid_tmi <- expand.grid(acess_tmi, atividade_tmi, stringsAsFactors = FALSE) %>%
+      rename(acess_sigla = Var1, atividade_sigla = Var2) %>%
+      mutate(junto = paste0(acess_sigla, atividade_sigla)) %>%
+      mutate(atividade_nome = case_when(atividade_sigla == "ST" ~ "saude_total",
+                                        atividade_sigla == "SB" ~ "saude_baixa",
+                                        atividade_sigla == "SM" ~ "saude_media",
+                                        atividade_sigla == "SA" ~ "saude_alta",
+                                        atividade_sigla == "ET" ~ "edu_total",
+                                        atividade_sigla == "EI" ~ "edu_infantil",
+                                        atividade_sigla == "EF" ~ "edu_fundamental",
+                                        atividade_sigla == "EM" ~ "edu_medio",
+                                        atividade_sigla == "EI" ~ "edu_infantil",
+                                        atividade_sigla == "CT" ~ "cras_total"))
+    
+    
+    # gerar o codigo
+    codigo_tmi <- sprintf("%s = min(travel_time[which(%s >= 1)])", 
+                          grid_tmi$junto, 
+                          grid_tmi$atividade_nome)
+    codigo_tmi_carro_pico <- sprintf("%s = min(median_morning_peak[which(%s >= 1)])", 
+                                     grid_tmi$junto, 
+                                     grid_tmi$atividade_nome)
+    codigo_tmi_carro_fpico <- sprintf("%s = min(median_afternoon_offpeak[which(%s >= 1)])", 
+                                      grid_tmi$junto, 
+                                      grid_tmi$atividade_nome)
+    
+    
+    # gerar os nomes das variaveis
+    to_make_tmi <- setNames(codigo_tmi, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi))
+    to_make_tmi_carro_pico <- setNames(codigo_tmi_carro_pico, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi_carro_pico))
+    to_make_tmi_carro_fpico <- setNames(codigo_tmi_carro_fpico, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi_carro_fpico))
+    
+    message('Calculate access TMI')
+    # calcular acessibilidade
+    if (mode1 == "car") {
+      
+      acess_tmi_carro_pico <- ttmatrix[, lapply(to_make_tmi_carro_pico, function(x) eval(parse(text = x)))
+                                       , by=.(city, mode, origin)]
+      
+      acess_tmi_carro_pico[, pico := 1]
+      
+      acess_tmi_carro_fpico <- ttmatrix[, lapply(to_make_tmi_carro_fpico, function(x) eval(parse(text = x)))
+                                        , by=.(city, mode, origin)]
+      
+      acess_tmi_carro_fpico[, pico := 0]
+      
+      acess_tmi <- rbind(acess_tmi_carro_pico, acess_tmi_carro_fpico)
+      
+      rm(acess_tmi_carro_pico, acess_tmi_carro_fpico)
+      
+      
+    } else {
+      
+      acess_tmi <- ttmatrix[, lapply(to_make_tmi, function(x) eval(parse(text = x)))
+                            , by=.(city, mode, origin, pico)]
+      
+    }
+  }
   
   
   # 6) Calcular acessibilidade BFCA ---------------
@@ -602,22 +673,39 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, modo = "tp") {
   
   # 7) Juntar os arquivos de acess ------------------------------------------------
   
-  
+  message('Output ...')
   # Juntar os tres (left_join)
-  acess <- merge(acess_cma, acess_cmp,
-                 all.x = TRUE,
-                 by.x = c("city", "mode", "origin", "pico"),
-                 # como o cmp eh calculado para os destinos, o join eh para destination
-                 by.y = c("city", "mode", "destination", "pico"))
-  
-  acess <- merge(acess, acess_tmi,
-                 all.x = TRUE,
-                 by.x = c("city", "mode", "origin", "pico"),
-                 by.y = c("city", "mode", "origin", "pico"))
+  if (access == "all") {
+    
+    acess <- merge(acess_cma, acess_cmp,
+                   all = TRUE,
+                   by.x = c("city", "mode", "origin", "pico"),
+                   # como o cmp eh calculado para os destinos, o join eh para destination
+                   by.y = c("city", "mode", "destination", "pico"))
+    
+    acess <- merge(acess, acess_tmi,
+                   all = TRUE,
+                   by.x = c("city", "mode", "origin", "pico"),
+                   by.y = c("city", "mode", "origin", "pico"))
+    
+  } else if (access == "active") {
+    
+    acess <- merge(acess_cma, acess_tmi,
+                   all = TRUE,
+                   by.x = c("city", "mode", "origin", "pico"),
+                   by.y = c("city", "mode", "origin", "pico"))
+    
+    
+  } else {
+    
+    acess <- acess_cmp 
+    setnames(acess, "destination", "origin")
+    
+  }
   
   if (BFCA) {
     acess <- merge(acess, acess_bfc,
-                   all.x = TRUE,
+                   all = TRUE,
                    by.x = c("city", "mode", "origin", "pico"),
                    by.y = c("city", "mode", "origin", "pico"))
   }
@@ -637,10 +725,13 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, modo = "tp") {
   
   # 8) Salvar output --------------------------------------
   
-  path_out <- sprintf("../../data/acesso_oport/output_access/%s/acess_%s_%s_%s.rds", ano, ano, sigla_muni, modo)
+  path_out <- sprintf("../../data/acesso_oport/output_access/%s/acess_%s_%s_%s_access-%s.rds", ano, ano, sigla_muni, mode1, access)
+  
+  
   write_rds(acess_sf, path_out)
   
   # gc colletc
+  rm(ttmatrix)
   gc(TRUE)
   
   
@@ -648,22 +739,28 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, modo = "tp") {
 
 # 2. APLICAR PARA TODOS AS CIDADADES --------------------------------------------------------------
 plan(multiprocess, workers = 4)
-furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, calcular_acess_muni, ano = 2017)
-furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, calcular_acess_muni, ano = 2018)
+# furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, calcular_acess_muni, ano = 2017)
+# furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, calcular_acess_muni, ano = 2018)
+# furrr::future_walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, calcular_acess_muni, ano = 2019)
+# furrr::future_walk(c("bsb", "bho", "bel", "cur", "man", "nat", "sal"), calcular_acess_muni, ano = 2019)
+# calcular_acess_muni("rio", 2019)
+# calcular_acess_muni("spo", 2019)
 
 # big boys first
-calcular_acess_muni("spo", 2019, modo = "tp")
-calcular_acess_muni("spo", 2019, modo = "car")
-calcular_acess_muni("bsb", 2019, modo = "tp")
-calcular_acess_muni("bsb", 2019, modo = "car")
-calcular_acess_muni("rio", 2019, modo = "tp")
-calcular_acess_muni("rio", 2019, modo = "car")
-calcular_acess_muni("goi", 2019, modo = "tp")
-calcular_acess_muni("goi", 2019, modo = "car")
+calcular_acess_muni("spo", 2018, mode1 = "car")
+calcular_acess_muni("bsb_origin1", 2018, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_origin2", 2018, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_origin3", 2018, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_dest1",   2018, mode1 = "car", access = "passive")
+calcular_acess_muni("bsb_dest2",   2018, mode1 = "car", access = "passive")
+calcular_acess_muni("bsb_dest3",   2018, mode1 = "car", access = "passive")
+calcular_acess_muni("rio", 2018, mode1 = "car")
+calcular_acess_muni("goi", 2018, mode1 = "car")
 # others
 furrr::future_walk(c("for", "cur","poa","bho",
                      "sal","man","rec","bel",
                      "gua","cam","slz","sgo","mac",
-                     "duq","cgr", 'nat'), 
-                   calcular_acess_muni, ano = 2019)
+                     "duq","cgr", 'nat'),
+                   calcular_acess_muni, ano = 2018,
+                   mode1 = "car")
 
