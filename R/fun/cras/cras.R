@@ -117,14 +117,14 @@ cras_geocode <- function(ano, run_gmaps = F) {
     mutate(lat_digits = sub("^-?(\\d+)[[:punct:]]{1}\\d+$", "\\1", lat)) %>%
     mutate(lat_digits = nchar(lat_digits)) %>%
     # municipio so tem 6 digitos
-    mutate(code_muni = substr(code_muni, 1,6)) %>%
+    # mutate(code_muni = substr(code_muni, 1,6)) %>%
     # selecionar so as colunas necessarias
     dplyr::select(code_muni, lat_digits)
     
   # criar dataframe com as coordenadas ajeitadas
   cras_fixed <- cras %>%
     # Seleciona Colunas 
-    select(code_muni,code_cras,lon_suas,lat_suas) %>% 
+    dplyr::select(code_muni,code_cras,lon_suas,lat_suas) %>% 
     # Left join com número de dígitos da latitude
     left_join(munis %>% mutate(code_muni = as.integer(code_muni)),
               by = 'code_muni') %>% 
@@ -153,16 +153,18 @@ cras_geocode <- function(ano, run_gmaps = F) {
   setDT(cras_fixed)
   cras_fixed[, ndigitos_lat := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lat))]
   cras_fixed[, ndigitos_lon := nchar(sub("(-\\d+)\\.(\\d+)", "\\2", lon))]
-  cras_fixed[, ndigitos := pmin(ndigitos_lon, ndigitos_lat) , by= code_cras ]
+  cras_fixed[, ndigitos := pmin(ndigitos_lon, ndigitos_lat, na.rm = TRUE) , by= code_cras ]
   
   # Número de CRAS no mesmo ponto
   cras_fixed <- cras_fixed %>%
     group_by(lat, lon) %>%
     mutate(cras_rep = n()) %>%
-    ungroup()
+    ungroup() %>%
+    setDT()
   
   # Indicador se geocode está ok
-  setDT(cras_fixed)[, check := ifelse(ndigitos <= 2 | cras_rep > 1, 0, 1)]
+  cras_fixed[, check := fifelse(ndigitos <= 2 | cras_rep > 1, 0, 1)]
+  summary(cras_fixed$ndigitos)
   table(cras_fixed$check)
   
   
@@ -201,15 +203,14 @@ cras_geocode <- function(ano, run_gmaps = F) {
   
   # registrar Google API Key
   my_api <- data.table::fread("../../data-raw/google_key.txt", header = F)
-  register_google(key = my_api$V1[3])
+  register_google(key = my_api$V1[2])
   
   if (run_gmaps) {
       
       message("Running gmaps, this may take a while")
-      
       coords_google <- lapply(input,geocode) %>% data.table::rbindlist()
       
-      input_geocode <- input_geocode[, -c('lat', 'lon')] %>% dplyr::bind_cols(coords_google) %>% select(-input)
+      input_geocode <- input_geocode[, -c('lat', 'lon')] %>% dplyr::bind_cols(coords_google) %>% dplyr::select(-input)
       
       cras_ano <- dplyr::bind_rows(intermediate, cras_ok, input_geocode) %>% setDT(key = 'code_cras')
       
@@ -225,6 +226,11 @@ cras_geocode <- function(ano, run_gmaps = F) {
     # Update do histórico de geocode
     update <- cras_ano[code_cras %nin% geocode_hist$code_cras,.(code_cras,lon,lat)]
     geocode_hist_final <- dplyr::bind_rows(geocode_hist, update) %>% setDT(key = 'code_cras')
+    
+    cras_ano %>%
+      filter(is.na(name_muni)) %>%
+      st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+      mapview()
     
     # Salva arquivos
     data.table::fwrite(cras_ano, sprintf("../../data/acesso_oport/cras/cras_%s.csv", ano))
