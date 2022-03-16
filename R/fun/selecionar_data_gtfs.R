@@ -1,16 +1,7 @@
 #### Funcao para selecionar a data do gtfs que sera usada no script Python para o OTP
 
 selecionar_data_gtfs <- function(sigla_muni, ano) {
-  # sigla_muni <- 'for'; ano <- 2019
-  # sigla_muni <- 'rio'; ano <- 2017
-  # sigla_muni <- 'rio'; ano <- 2018
-  # sigla_muni <- 'bho'; ano <- 2017
-  # sigla_muni <- 'for'; ano <- 2017
-  # sigla_muni <- 'poa'; ano <- 2017
-  # sigla_muni <- 'cam'; ano <- 2018
-  # sigla_muni <- 'rec'; ano <- 2019
-  # sigla_muni <- 'bho-flat'; ano <- 2019
-  # sigla_muni <- 'sal-flat'; ano <- 2019
+  # sigla_muni <- 'spo'; ano <- 2019
   
   # file.remove(dir("../../data/acesso_oport/temp/", full.names = TRUE))
   
@@ -19,8 +10,6 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   # Leitura do gtfs para pasta temporaria
   path_zip <- sprintf("../../r5/network/%s/%s", ano, sigla_muni)
   file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)
-  
-  library(gtfsio)
   
   if (length(file_zip) == 0) {
     

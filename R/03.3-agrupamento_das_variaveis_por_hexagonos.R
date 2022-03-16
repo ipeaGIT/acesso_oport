@@ -4,7 +4,7 @@
 sf::sf_use_s2(FALSE)
 source('./R/fun/setup.R')
 
-# ano <- 2019
+# ano <- 2017
 
 #' A funcao `agrupar_variaveis_hex` agrega as variaveis de emprego, educacao, saude
 #' e demograficas das grades estisticas para os hexagonos de cada cidade
@@ -66,6 +66,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
     # sigla_muni <- "for"
     # sigla_muni <- "nat"
     # sigla_muni <- "rio"
+    # sigla_muni <- "bsb"
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -89,6 +90,11 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                     idade_40a69,
                     idade_70   )
     # st_centroid()
+    
+    # sum(centroide_pop$pop_total, na.rm = TRUE) 
+    # sum(centroide_pop$pop_homens)+ sum(centroide_pop$pop_mulheres) 
+    # centroide_pop %>% filter(is.na(pop_total))
+    # centroide_pop %>% filter(pop_total == 0, renda > 0)
     
     # Qual o codigo do municipio em questao?
     cod_mun_ok <- munis_list$munis_metro[abrev_muni == sigla_muni & ano_metro == ano]$code_muni %>% 
@@ -129,6 +135,19 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       centroide_pop <- centroide_pop %>%
         mutate(grade_area = st_area(.))
       
+      # calculate city proportions
+      pop_city_prop <- centroide_pop %>% st_set_geometry(NULL) %>% mutate(sigla_muni = "a") %>%
+        group_by(sigla_muni) %>%
+        summarise(
+          # sexo
+          across(c(pop_homens, pop_mulheres), ~ sum(.x, na.rm = TRUE)/sum(pop_total, na.rm = TRUE)),
+          # pop cor
+          across(starts_with("cor_"), ~ sum(.x, na.rm = TRUE)/sum(pop_total, na.rm = TRUE)),
+          # pop idade
+          across(starts_with("idade_"), ~ sum(.x, na.rm = TRUE)/sum(pop_total, na.rm = TRUE))
+        )
+      
+      
       # Agrupar populacao, cor e renda
       # join espacial pela proporcao da intersecao entre  as grades e os hex
       # hex_pop <- hex_muni %>% st_join(centroide_pop)
@@ -143,18 +162,19 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
         st_set_geometry(NULL)
       
       
+      # aqui: arredondar ou nao arredondar?
       hex_pop <- setDT(hex_pop)[, .(cor_branca   = round(sum(cor_branca    *  area_prop_hex , na.rm = TRUE)),
                                     cor_amarela  = round(sum(cor_amarela   *  area_prop_hex  , na.rm = TRUE)),
                                     cor_indigena = round(sum(cor_indigena  *  area_prop_hex , na.rm = TRUE)),
                                     cor_negra    = round(sum(cor_negra     *  area_prop_hex    , na.rm = TRUE)),
                                     # age variables
-                                    idade_0a5   = round(sum(idade_0a5   *  area_prop_hex, na.rm = TRUE)),
-                                    idade_6a14 =  round(sum(idade_6a14  *  area_prop_hex, na.rm = TRUE)),
-                                    idade_15a18 = round(sum(idade_15a18 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_19a24 = round(sum(idade_19a24 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_25a39 = round(sum(idade_25a39 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_40a69 = round(sum(idade_40a69 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_70 =    round(sum(idade_70    *  area_prop_hex, na.rm = TRUE)),
+                                    idade_0a5    = round(sum(idade_0a5   *  area_prop_hex, na.rm = TRUE)),
+                                    idade_6a14   = round(sum(idade_6a14  *  area_prop_hex, na.rm = TRUE)),
+                                    idade_15a18  = round(sum(idade_15a18 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_19a24  = round(sum(idade_19a24 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_25a39  = round(sum(idade_25a39 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_40a69  = round(sum(idade_40a69 *  area_prop_hex, na.rm = TRUE)),
+                                    idade_70     = round(sum(idade_70    *  area_prop_hex, na.rm = TRUE)),
                                     # total pop and income 
                                     pop_total    = round(sum(pop_total    *  area_prop_hex, na.rm = TRUE)),
                                     pop_homens   = round(sum(pop_homens   *  area_prop_hex, na.rm = TRUE)),
@@ -165,6 +185,13 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       # sum(hex_pop$pop_total)
       # sum(hex_pop$pop_homens, hex_pop$pop_mulheres)
       # sum(hex_pop$cor_branca, hex_pop$cor_amarela, hex_pop$cor_indigena, hex_pop$cor_negra)
+      # hex_pop[pop_total == 0] %>% View()
+      # hex_pop[pop_total == 0 & pop_homens > 0] %>% View()
+      # hex_pop[pop_total == 0 & pop_mulheres > 0] %>% View()
+      # hex_pop[pop_total == 0 & renda_total > 0] %>% View()
+      # hex_pop[pop_total > 0 & renda_total == 0] %>% View()
+      hex_pop[, renda_total := fifelse(pop_total == 0, 0, renda_total)]
+      hex_pop[, pop_total := fifelse(renda_total == 0, 0, pop_total)]
       
       
       # # Summarize
@@ -190,6 +217,9 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       # Calcular quintil e decil de renda
       # calcula renda per capita de cada hexagono
       hex_pop[, renda_capita := renda_total / pop_total]
+      
+      
+      # 89a8d18d423ffff bsb
       
       # calcular quintis ponderados pela populacao
       deciles  <- Hmisc::wtd.quantile(hex_pop$renda_capita, weights=hex_pop$pop_total, 
@@ -325,7 +355,14 @@ agrupar_variaveis_hex(ano = 2019)
 
 
 
+# basic checks -------------------------------
+hex_2017 <- lapply(dir("../../data/acesso_oport/hex_agregados/2017/", full.names = TRUE),
+                   read_rds) %>% rbindlist()
 
+hex_2017[pop_total == 0 & renda_total > 0]
+hex_2017[pop_total > 0 & renda_total == 0]
+hex_pop[pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0]
+a <- hex_pop[pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0]
 
 
 

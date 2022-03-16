@@ -19,7 +19,7 @@ source("./R/fun/selecionar_data_gtfs.R")
 # sigla_munii <- 'rio'; ano <- 2017; modo <- c("WALK", "TRANSIT")
 # sigla_munii <- 'rio'; ano <- 2018; modo <- c("WALK", "TRANSIT")
 # sigla_munii <- 'rio-novo'; ano <- 2019; modo <- c("WALK", "TRANSIT")
-# sigla_munii <- "bho"; ano <- 2019
+# sigla_munii <- "bho"; ano <- 2017
 # sigla_munii <- "spo"; ano <- 2017
 
 calculate_ttmatrix <- function(sigla_munii, ano) {
@@ -191,6 +191,8 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                       ano,
                       sigla_munii))
   
+  rm(ttm)
+  r5r::stop_r5()
   
 }
 
@@ -251,7 +253,7 @@ r5r::stop_r5()
 calculate_ttmatrix("spo", 2018)
 # r5r::stop_r5()
 calculate_ttmatrix("rio", 2018)
-# r5r::stop_r5()
+r5r::stop_r5()
 calculate_ttmatrix("cur", 2018)
 r5r::stop_r5()
 calculate_ttmatrix("poa", 2018)

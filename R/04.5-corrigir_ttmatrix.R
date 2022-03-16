@@ -11,7 +11,7 @@ source('./R/fun/setup.R')
 
 # sigla_muni <- 'for'; ano <- 2017
 # sigla_muni <- 'for'; ano <- 2018
-# sigla_muni <- 'for'; ano <- 2019
+# sigla_muni <- 'bel'; ano <- 2019
 # sigla_muni <- 'nat'; ano <- 2017
 # sigla_muni <- 'man'; ano <- 2019
 
@@ -27,8 +27,8 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   # ttmatrix_allmodes <- read_rds("../../data/avaliacao_intervencoes/for/ttmatrix/antes/ttmatrix_bike.rds")
   
   # pegar so bike
-  # ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
-  ttmatrix_teste <- ttmatrix_allmodes[mode == "transit" & pico == 1]
+  ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
+  # ttmatrix_teste <- ttmatrix_allmodes[mode == "transit" & pico == 1]
   # ttmatrix_teste <- ttmatrix_allmodes
   
   # abrir os pontos da resolucao 09 ~~~~
@@ -213,17 +213,23 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds", ano, ano, sigla_muni),
             compress = "gz")
   
+  rm(ttmatrix_allmodes)
+  rm(ttmatrix_allmodes_nprob)
+  rm(ttmatrix_hex_fim)
+  gc(TRUE)
   
 }
 
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-plan(multiprocess, workers = 10)
+plan(multiprocess, workers = 5)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, 
                    identificar_e_corrigir_extremos_acess_muni, ano = 2017)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, 
                    identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+furrr::future_walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, 
+                   identificar_e_corrigir_extremos_acess_muni, ano = 2019)
 walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, 
      identificar_e_corrigir_extremos_acess_muni, ano = 2019)
 

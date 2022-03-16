@@ -12,6 +12,7 @@ source('./R/fun/setup.R')
 # sigla_muni <- "spo"; ano=2019
 # sigla_muni <- "for"; ano=2019
 # sigla_muni <- "for"; ano=2017
+# sigla_muni <- "bel"; ano=2019; mode1 <- "all"; access <- "all"
 # sigla_muni <- "for"; ano = 2019; mode1 <- "car"
 # sigla_muni <- "spo"; ano = 2019; mode1 <- "car"
 # sigla_muni <- "bsb_origin1"; ano = 2017; mode1 <- "car"
@@ -55,7 +56,7 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
   dir_hex <- sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, substr(sigla_muni, 1, 3), ano)
   
   # Abrir oportunidades com hexagonos
-  hexagonos_sf <- readr::read_rds(dir_hex) 
+  hexagonos_sf <- readr::read_rds(dir_hex)
   
   # Filtrar apenas colunas com info demograficas na origem
   hex_orig <- hexagonos_sf %>% dplyr::select(id_hex, 
@@ -78,7 +79,9 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
                                       cras_total)]
   
   
-  # Merge dados de origem na matrix de tempo de viagem
+  # if (access %in% c("all", "active")) {
+  
+  # Join1 - Merge dados de origem na matrix de tempo de viagem
   ttmatrix <- ttmatrix[hex_orig, on = c("origin" = "id_hex"),  
                        c('pop_total', 'pop_homens', 'pop_mulheres',  'cor_branca','cor_amarela','cor_indigena','cor_negra',
                          "idade_0a5", "idade_6a14", "idade_15a18", "idade_19a24",    
@@ -89,7 +92,7 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
                               i.idade_25a39, i.idade_40a69, i.idade_70,    
                               i.renda_total, i.renda_capita, i.quintil, i.decil)]
   
-  # Merge dados de destino na matrix de tempo de viagem
+  # Join2 -  Merge dados de destino na matrix de tempo de viagem
   ttmatrix <- ttmatrix[hex_dest, on = c("destination" = "id_hex"),  
                        c("empregos_total", "empregos_baixa","empregos_media","empregos_alta",
                          "saude_total", "saude_baixa", "saude_media", "saude_alta",
@@ -732,6 +735,7 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
   
   # gc colletc
   rm(ttmatrix)
+  rm(acess_sf)
   gc(TRUE)
   
   
@@ -741,26 +745,32 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
 plan(multiprocess, workers = 4)
 # furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, calcular_acess_muni, ano = 2017)
 # furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, calcular_acess_muni, ano = 2018)
-# furrr::future_walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, calcular_acess_muni, ano = 2019)
-# furrr::future_walk(c("bsb", "bho", "bel", "cur", "man", "nat", "sal"), calcular_acess_muni, ano = 2019)
+furrr::future_walk(c("for", "cur","poa","bho",
+                     "sal","man","rec","bel",
+                     "gua","cam","slz","sgo","mac",
+                     "duq","cgr", 'nat'), calcular_acess_muni, ano = 2019)
 # calcular_acess_muni("rio", 2019)
 # calcular_acess_muni("spo", 2019)
+# calcular_acess_muni("bsb", 2019)
+# calcular_acess_muni("goi", 2019)
 
+# para carro --------------
 # big boys first
-calcular_acess_muni("spo", 2018, mode1 = "car")
-calcular_acess_muni("bsb_origin1", 2018, mode1 = "car", access = "active")
-calcular_acess_muni("bsb_origin2", 2018, mode1 = "car", access = "active")
-calcular_acess_muni("bsb_origin3", 2018, mode1 = "car", access = "active")
-calcular_acess_muni("bsb_dest1",   2018, mode1 = "car", access = "passive")
-calcular_acess_muni("bsb_dest2",   2018, mode1 = "car", access = "passive")
-calcular_acess_muni("bsb_dest3",   2018, mode1 = "car", access = "passive")
-calcular_acess_muni("rio", 2018, mode1 = "car")
-calcular_acess_muni("goi", 2018, mode1 = "car")
+calcular_acess_muni("spo", 2019, mode1 = "car")
+calcular_acess_muni("bsb_origin1", 2019, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_origin2", 2019, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_origin3", 2019, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_dest1",   2019, mode1 = "car", access = "passive")
+calcular_acess_muni("bsb_dest2",   2019, mode1 = "car", access = "passive")
+calcular_acess_muni("bsb_dest3",   2019, mode1 = "car", access = "passive")
+calcular_acess_muni("rio", 2019, mode1 = "car")
+calcular_acess_muni("goi", 2019, mode1 = "car")
 # others
+plan(multiprocess, workers = 4)
 furrr::future_walk(c("for", "cur","poa","bho",
                      "sal","man","rec","bel",
                      "gua","cam","slz","sgo","mac",
                      "duq","cgr", 'nat'),
-                   calcular_acess_muni, ano = 2018,
+                   calcular_acess_muni, ano = 2019,
                    mode1 = "car")
 

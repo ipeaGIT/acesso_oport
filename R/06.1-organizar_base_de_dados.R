@@ -37,7 +37,7 @@ organizar_base_acess <- function(ano) {
   # dados acessibilidade ---------------------------
   acess_paths <- dir(sprintf("../../data/acesso_oport/output_access/%s", ano), full.names = TRUE)
   acess_paths_ok <- acess_paths[acess_paths %nlike% "bsb_origin|bsb_dest"]
-  acess <- lapply(acess_paths_ok, read_rds) %>% rbindlist(fill = TRUE)
+  acess <- lapply(acess_paths, read_rds) %>% rbindlist(fill = TRUE)
   
   # abrir bsb carro - especial
   acess_paths_bsb_carro1 <- acess_paths[acess_paths %like% "bsb_origin"]
@@ -51,9 +51,11 @@ organizar_base_acess <- function(ano) {
                                by = c("origin", "city", "mode", "ano", "pico"))
   # bring geom
   acess_bsb_carro <- left_join(acess_bsb_carro, hex_agreg %>% select(id_hex, geometry), by = c("origin" = "id_hex")) %>% setDT()
-  
-  
+
+
   # rbind both access
+  # we have to set fill = TRUE because bsb is only for car and car doesnt have some
+  # variables from walk and bike
   acess <- rbind(acess, acess_bsb_carro, fill = TRUE)
   setDT(acess)
   setnames(acess, 'origin', 'id_hex' )
@@ -150,8 +152,6 @@ organizar_base_acess <- function(ano) {
     
     modo <- munis_list$munis_modo[abrev_muni == munii & ano_modo == ano]$modo
     
-    
-    if (modo == "todos" | ano == 2019) {
       hex_dt_tpcarro <- acess_muni %>%
         filter(mode %in% c("transit", "car")) %>%
         select(id_hex, sigla_muni = city, ano,
@@ -175,7 +175,6 @@ organizar_base_acess <- function(ano) {
         distinct(id_hex, sigla_muni, modo, pico, .keep_all = TRUE) %>%
         setDT()
       
-    } else hex_dt_tpcarro <- data.table()
     
     
     hex_dt_ativo <- acess_muni %>%
@@ -223,8 +222,11 @@ organizar_base_acess <- function(ano) {
   
   a <- lapply(munis_df$abrev_muni, join_by_muni)
   b <- purrr::transpose(a)
-  c <- lapply(b, rbindlist)
   
+  # for now, delete bsb by tp and car (its empty anyway, but is thorwing an error when rbinding)
+  b$hex_dt_tpcarro[[7]] <- NULL
+  
+  c <- lapply(b, rbindlist)
   
   # 3) Exportar ---------------------------
   
