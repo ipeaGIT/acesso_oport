@@ -46,6 +46,10 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
     ttmatrix[, city := substr(sigla_muni, 1, 3)]
     ttmatrix[, mode := "car"]
     
+    # add parking time
+    ttmatrix[origin != destination, median_morning_peak := median_morning_peak + 2]
+    ttmatrix[origin != destination, median_afternoon_offpeak :=  median_afternoon_offpeak + 2]
+    
     # ttmatrix <- fread(sprintf("E:/data/ttmatrix_fixed/%s/car/ttmatrix_fixed_car_%s_%s.csv", 
     #                           "2019", "2019", sigla_muni))
     
