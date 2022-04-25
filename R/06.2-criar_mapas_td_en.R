@@ -96,49 +96,57 @@ baseplot <- theme_minimal() +
 ### 0) Mapa com cidades do projeto   ---------------------------------------
 
 # get World map
-worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf()
+worldMap <- rworldmap::getMap(resolution = "low") %>% st_as_sf() %>%
+  st_transform(4326)
 
 
 # load map of Brazil and municipalities
-states_sf <- geobr::read_state(code_state = "all", year = 2018)
-munis_sf <- lapply(munis_df_2019$code_muni, geobr::read_municipality) %>% rbind_list() %>% st_sf()
-st_crs(munis_sf) <- st_crs(states_sf)
+states_sf <- geobr::read_state(code_state = "all", year = 2018) %>%
+  st_transform(4326)
+munis_sf <- lapply(munis_list$munis_df$code_muni, geobr::read_municipality) %>% rbindlist() %>% st_sf()
+munis_sf <- st_transform(munis_sf, 4326)
 
 munis_sf <- munis_sf %>%
-  left_join(munis_df_2019, by = "code_muni") %>%
+  left_join(munis_list$munis_df, by = "code_muni") %>%
+  left_join(munis_list$munis_modo[ano_modo == 2019, .(abrev_muni, modo)], by = "abrev_muni") %>%
   # number it according to order
-  mutate(n = case_when(abrev_muni == "bho" ~ 1,
-                       abrev_muni == "cur" ~ 2,
-                       abrev_muni == "for" ~ 3,
-                       abrev_muni == "poa" ~ 4,
-                       abrev_muni == "rec" ~ 5,
-                       abrev_muni == "rio" ~ 6,
-                       abrev_muni == "spo" ~ 7,
-                       abrev_muni == "bel" ~ 8,
-                       abrev_muni == "bsb" ~ 9,
-                       abrev_muni == "cam" ~ 10,
-                       abrev_muni == "cgr" ~ 11,
-                       abrev_muni == "duq" ~ 12,
-                       abrev_muni == "goi" ~ 13,
-                       abrev_muni == "gua" ~ 14,
-                       abrev_muni == "mac" ~ 15,
-                       abrev_muni == "man" ~ 16,
-                       abrev_muni == "nat" ~ 17,
-                       abrev_muni == "sal" ~ 18,
-                       abrev_muni == "sgo" ~ 19,
-                       abrev_muni == "slz" ~ 20
-  )) %>%
+  arrange(desc(modo), name_muni.y) %>%
+  mutate(n = 1:n()) %>%
+  # mutate(n = case_when(abrev_muni == "bho" ~ 1,
+  #                      abrev_muni == "cur" ~ 2,
+  #                      abrev_muni == "for" ~ 3,
+  #                      abrev_muni == "poa" ~ 4,
+  #                      abrev_muni == "rec" ~ 5,
+  #                      abrev_muni == "rio" ~ 6,
+  #                      abrev_muni == "spo" ~ 7,
+  #                      abrev_muni == "bel" ~ 8,
+  #                      abrev_muni == "bsb" ~ 9,
+  #                      abrev_muni == "cam" ~ 10,
+  #                      abrev_muni == "cgr" ~ 11,
+  #                      abrev_muni == "duq" ~ 12,
+  #                      abrev_muni == "goi" ~ 13,
+  #                      abrev_muni == "gua" ~ 14,
+  #                      abrev_muni == "mac" ~ 15,
+  #                      abrev_muni == "man" ~ 16,
+  #                      abrev_muni == "nat" ~ 17,
+  #                      abrev_muni == "sal" ~ 18,
+  #                      abrev_muni == "sgo" ~ 19,
+  #                      abrev_muni == "slz" ~ 20
+  # )) %>%
   # format
   mutate(text = paste0(n, ".", " ", name_muni.x)) %>%
-  mutate(type = ifelse(abrev_muni %in% c("bho", "cur", "for", "poa", "rec", "rio", "spo"), 
+  mutate(text = ifelse(abrev_muni %in% c("bho", "rio", "rec", "sal", "goi"), paste0(text, "*"), text)) %>%
+  mutate(type = ifelse(modo %in% c("todos"), 
                        "Active and Public Transport",
                        "Active Transport")) %>%
-  mutate(color = ifelse(abrev_muni %in% c("bho", "cur", "for", "poa", "rec", "rio", "spo"), 
+  mutate(color = ifelse(abrev_muni %in% c("todos"), 
                         "#469c77", "steelblue4"))
 
 # get centroids of municipalities
 munis_centroids <- st_centroid(munis_sf)
-munis_tp_centroids <- subset(munis_centroids, code_muni %in% munis_df_2019$code_muni[which(munis_df_2019$modo=='todos')])
+munis_tp_centroids <- subset(munis_centroids, 
+                             abrev_muni %in% munis_list$munis_modo[ano_modo == 2019 & modo == "todos"]$abrev_muni) %>%
+  mutate(modo = "todos")
 
 munis_tp_centroids_df <- sfc_as_cols(munis_centroids)
   
@@ -148,8 +156,8 @@ munis_tp_centroids_df <- sfc_as_cols(munis_centroids)
 sp <- ggplot()+
   geom_sf(data=worldMap, fill="white", color="gray90") +
   geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
-  geom_sf(data=st_buffer(munis_centroids, dist =.1), fill="steelblue4", color="gray95", alpha=.8) +
-  geom_sf(data=st_buffer(munis_tp_centroids, dist =.1), fill="#469c77", color="gray95", alpha=.8) +
+  geom_sf(data=munis_centroids, size = 3, fill="steelblue4", color="steelblue4", alpha=1) +
+  geom_sf(data=munis_tp_centroids, size = 3, fill="#469c77", color="#469c77", alpha=1) +
   ggrepel::geom_text_repel(data = filter(munis_tp_centroids_df, abbrev_state == "SP"), aes(x = lon, y = lat, label = n),
                            segment.size = 3, size=2.5)+
   theme_void() +
@@ -167,8 +175,8 @@ sp <- ggplot()+
 rio <- ggplot()+
   geom_sf(data=worldMap, fill="white", color="gray90") +
   geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
-  geom_sf(data=st_buffer(munis_centroids, dist =.1), fill="steelblue4", color="gray95", alpha=.8) +
-  geom_sf(data=st_buffer(munis_tp_centroids, dist =.1), fill="#469c77", color="gray95", alpha=.8) +
+  geom_sf(data=munis_centroids, size = 3, fill="steelblue4", color="steelblue4", alpha=1) +
+  geom_sf(data=munis_tp_centroids, size = 3, fill="#469c77", color="#469c77", alpha=1) +
   ggrepel::geom_text_repel(data = filter(munis_tp_centroids_df, abbrev_state == "RJ"), aes(x = lon, y = lat, label = n),
                            segment.size = 3, size=2.5)+
   theme_void() +
@@ -190,8 +198,8 @@ temp_map1 <-
   ggplot() + 
   geom_sf(data=worldMap, fill="white", color="gray90") +
   geom_sf(data=states_sf, fill="gray85", colour = "gray89") +
-  geom_sf(data=st_buffer(munis_centroids, dist =.5), fill="steelblue4", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
-  geom_sf(data=st_buffer(munis_tp_centroids, dist =.5), fill="#469c77", color="gray95", alpha=.8) + # 'springgreen4' steelblue4
+  geom_sf(data=munis_centroids,    size = 3, fill="steelblue4", color="steelblue4", alpha=1) + # 'springgreen4' steelblue4
+  geom_sf(data=munis_tp_centroids, size = 3, fill="#469c77", color="#469c77", alpha=1) + # 'springgreen4' steelblue4
   ggrepel::geom_text_repel(data = filter(munis_tp_centroids_df, abbrev_state %nin% c("SP", "RJ")), 
                                          aes(x = lon, y = lat, label = n),
                            segment.size = 3, size=3)+
@@ -237,10 +245,10 @@ tt2 <- ttheme_minimal(
   )
 
 # textos
-t1 <- textGrob("Active and Public\n Transport",  gp=gpar(col="#469c77", fontsize=10, fontface = "bold"),
-               just = c("right"))
-t2 <- textGrob("Active\n Transport", gp=gpar(col="steelblue4", fontsize=10, fontface = "bold"), 
-               just = c("right"))
+# t1 <- textGrob("Active and Public\n Transport",  gp=gpar(col="#469c77", fontsize=10, fontface = "bold"), just = c("right"))
+t1 <- textGrob("Transporte Público e\n Ativo",  gp=gpar(col="#469c77", fontsize=10, fontface = "bold"), just = c("right"))
+# t2 <- textGrob("Active\n Transport", gp=gpar(col="steelblue4", fontsize=10, fontface = "bold"), just = c("right"))
+t2 <- textGrob("Transporte\n Ativo", gp=gpar(col="steelblue4", fontsize=10, fontface = "bold"), just = c("right"))
 # t <- textGrob("[", gp=gpar(fontsize=50))
 
 # tabelas
@@ -288,7 +296,8 @@ fim <- ggplot() +
 
 # save map
 ggsave(fim, 
-       file="../publicacoes/2020_access_inequalities_paper/figures/fig0_munis_all_test.png", 
+       # file="../publicacoes/2020_access_inequalities_paper/figures/fig0_munis_all_test.png", 
+       file="fig0_munis_all_test.png",
        dpi = 300, width = 16, height = 12, units = "cm")
 beepr::beep()
 
