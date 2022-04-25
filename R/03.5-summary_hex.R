@@ -54,3 +54,15 @@ hex_summary1 <- hex_summary1 %>%
 googlesheets4::write_sheet(data = hex_summary1,
                            ss = "https://docs.google.com/spreadsheets/d/12crCjRAm_ZknmYKn3hNBzcFTKibhaRP76lGriz8RhYQ/edit#gid=0",
                            sheet = "summary")
+
+
+# tabela p/ td dados de educacao
+hex_summary1 %>%
+  filter(var %in% c("edu_infantil", "edu_fundamental", "edu_medio", "edu_total",
+                    "mat_infantil", "mat_fundamental", "mat_medio", "mat_total")) %>%
+  select(sigla_muni, var, ano = "2019") %>%
+  tidyr::pivot_wider(names_from = var, values_from = ano) %>%
+  arrange(desc(edu_total)) %>%
+    googlesheets4::write_sheet(
+    ss = "https://docs.google.com/spreadsheets/d/12crCjRAm_ZknmYKn3hNBzcFTKibhaRP76lGriz8RhYQ/edit#gid=0",
+    sheet = "summary_td_educacao")
