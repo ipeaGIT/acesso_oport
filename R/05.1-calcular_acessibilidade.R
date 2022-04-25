@@ -13,6 +13,7 @@ source('./R/fun/setup.R')
 # sigla_muni <- "for"; ano=2019
 # sigla_muni <- "for"; ano=2017
 # sigla_muni <- "bel"; ano=2019; mode1 <- "all"; access <- "all"
+# sigla_muni <- "bho"; ano=2019; mode1 <- "all"; access <- "all"
 # sigla_muni <- "for"; ano = 2019; mode1 <- "car"
 # sigla_muni <- "spo"; ano = 2019; mode1 <- "car"
 # sigla_muni <- "bsb_origin1"; ano = 2017; mode1 <- "car"
@@ -162,22 +163,24 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
       "CT"
     )
     # criar dummy para tt
-    tt <- c(1, 2, 3, 4)
+    tt <- c(1, 2, 3, 4, 5)
     
     grid_cma <- expand.grid(acess_cma, atividade_cma, tt, stringsAsFactors = FALSE) %>%
       rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
       # adicionar colunas de time threshold  para cada um dos modos
       mutate(tt_tp = case_when(
-        tt_sigla == 1 ~ 30,
-        tt_sigla == 2 ~ 60,
-        tt_sigla == 3 ~ 90,
-        tt_sigla == 4 ~ 120
+        tt_sigla == 1 ~ 15,
+        tt_sigla == 2 ~ 30,
+        tt_sigla == 3 ~ 60,
+        tt_sigla == 4 ~ 90,
+        tt_sigla == 5 ~ 120
       )) %>%
       mutate(tt_ativo = case_when(
         tt_sigla == 1 ~ 15,
         tt_sigla == 2 ~ 30,
         tt_sigla == 3 ~ 45,
-        tt_sigla == 4 ~ 60
+        tt_sigla == 4 ~ 60,
+        tt_sigla == 5 ~ 75
       )) %>%
       mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
       mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
@@ -298,39 +301,41 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
                        "PB", "PA", "PI", "PN", 
                        "P0005I", "P0614I","P1518I","P1924I","P2539I","P4069I","P70I")
     # criar dummy para tt
-    tt <- c(1, 2, 3, 4)
+    tt <- c(1, 2, 3, 4, 5)
     
     grid_cmp <- expand.grid(acess_cmp, atividade_cmp, tt, stringsAsFactors = FALSE) %>%
       rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
       # adicionar colunas de time threshold para cada um dos modos
       mutate(tt_tp = case_when(
-        tt_sigla == 1 ~ 30,
-        tt_sigla == 2 ~ 60,
-        tt_sigla == 3 ~ 90,
-        tt_sigla == 4 ~ 120
+        tt_sigla == 1 ~ 15,
+        tt_sigla == 2 ~ 30,
+        tt_sigla == 3 ~ 60,
+        tt_sigla == 4 ~ 90,
+        tt_sigla == 5 ~ 120
       )) %>%
       mutate(tt_ativo = case_when(
         tt_sigla == 1 ~ 15,
         tt_sigla == 2 ~ 30,
         tt_sigla == 3 ~ 45,
-        tt_sigla == 4 ~ 60
+        tt_sigla == 4 ~ 60,
+        tt_sigla == 5 ~ 75
       )) %>%
       mutate(junto_tp = paste0(acess_sigla, atividade_sigla, tt_tp)) %>%
       mutate(junto_ativo = paste0(acess_sigla, atividade_sigla, tt_ativo)) %>%
       mutate(atividade_nome = case_when(atividade_sigla == "PT"     ~ "pop_total",
-                                        atividade_sigla == "PM"     ~ "pop_homens",
-                                        atividade_sigla == "PW"     ~ "pop_mulheres",
+                                        atividade_sigla == "PH"     ~ "pop_homens",
+                                        atividade_sigla == "PM"     ~ "pop_mulheres",
                                         atividade_sigla == "PB"     ~ "cor_branca",
                                         atividade_sigla == "PA"     ~ "cor_amarela",
                                         atividade_sigla == "PI"     ~ "cor_indigena",
                                         atividade_sigla == "PN"     ~ "cor_negra",
-                                        atividade_sigla == "I00a05" ~ "idade_0a5", 
-                                        atividade_sigla == "I06a14" ~ "idade_6a14", 
-                                        atividade_sigla == "I15a18" ~ "idade_15a18", 
-                                        atividade_sigla == "I19a24" ~ "idade_19a24",    
-                                        atividade_sigla == "I25a39" ~ "idade_25a39", 
-                                        atividade_sigla == "I40a69" ~ "idade_40a69", 
-                                        atividade_sigla == "I70"    ~ "idade_70"))
+                                        atividade_sigla == "P0005I" ~ "idade_0a5", 
+                                        atividade_sigla == "P0614I" ~ "idade_6a14", 
+                                        atividade_sigla == "P1518I" ~ "idade_15a18", 
+                                        atividade_sigla == "P1924I" ~ "idade_19a24",    
+                                        atividade_sigla == "P2539I" ~ "idade_25a39", 
+                                        atividade_sigla == "P4069I" ~ "idade_40a69", 
+                                        atividade_sigla == "P70I"    ~ "idade_70"))
     
     # gerar o codigo
     # para tp 
@@ -412,7 +417,7 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
                                  lapply(to_make_cmp_tp, function(x) eval(parse(text = x)))
                                  , by=.(city, mode, destination, pico)]
         
-        # juntar os cma
+        # juntar os cmp
         acess_cmp <- rbind(acess_cmp, acess_cmp_tp,
                            fill = TRUE)
       }
@@ -742,35 +747,35 @@ calcular_acess_muni <- function(sigla_muni, ano, BFCA = FALSE, mode1 = "all", ac
 }
 
 # 2. APLICAR PARA TODOS AS CIDADADES --------------------------------------------------------------
-plan(multiprocess, workers = 4)
+plan(multiprocess, workers = 3)
 # furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, calcular_acess_muni, ano = 2017)
 # furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, calcular_acess_muni, ano = 2018)
 furrr::future_walk(c("for", "cur","poa","bho",
                      "sal","man","rec","bel",
                      "gua","cam","slz","sgo","mac",
-                     "duq","cgr", 'nat'), calcular_acess_muni, ano = 2019)
-# calcular_acess_muni("rio", 2019)
-# calcular_acess_muni("spo", 2019)
-# calcular_acess_muni("bsb", 2019)
-# calcular_acess_muni("goi", 2019)
+                     "duq","cgr", 'nat'), calcular_acess_muni, ano = 2018)
+calcular_acess_muni("rio", 2018)
+calcular_acess_muni("spo", 2018)
+calcular_acess_muni("bsb", 2018)
+calcular_acess_muni("goi", 2018)
 
 # para carro --------------
 # big boys first
-calcular_acess_muni("spo", 2019, mode1 = "car")
-calcular_acess_muni("bsb_origin1", 2019, mode1 = "car", access = "active")
-calcular_acess_muni("bsb_origin2", 2019, mode1 = "car", access = "active")
-calcular_acess_muni("bsb_origin3", 2019, mode1 = "car", access = "active")
-calcular_acess_muni("bsb_dest1",   2019, mode1 = "car", access = "passive")
-calcular_acess_muni("bsb_dest2",   2019, mode1 = "car", access = "passive")
-calcular_acess_muni("bsb_dest3",   2019, mode1 = "car", access = "passive")
-calcular_acess_muni("rio", 2019, mode1 = "car")
-calcular_acess_muni("goi", 2019, mode1 = "car")
+calcular_acess_muni("spo", 2018, mode1 = "car")
+calcular_acess_muni("bsb_origin1", 2018, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_origin2", 2018, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_origin3", 2018, mode1 = "car", access = "active")
+calcular_acess_muni("bsb_dest1",   2018, mode1 = "car", access = "passive")
+calcular_acess_muni("bsb_dest2",   2018, mode1 = "car", access = "passive")
+calcular_acess_muni("bsb_dest3",   2018, mode1 = "car", access = "passive")
+calcular_acess_muni("rio", 2018, mode1 = "car")
+calcular_acess_muni("goi", 2018, mode1 = "car")
 # others
-plan(multiprocess, workers = 4)
+plan(multiprocess, workers = 3)
 furrr::future_walk(c("for", "cur","poa","bho",
                      "sal","man","rec","bel",
                      "gua","cam","slz","sgo","mac",
                      "duq","cgr", 'nat'),
-                   calcular_acess_muni, ano = 2019,
+                   calcular_acess_muni, ano = 2018,
                    mode1 = "car")
 
