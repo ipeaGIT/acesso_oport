@@ -4,7 +4,7 @@
 sf::sf_use_s2(FALSE)
 source('./R/fun/setup.R')
 
-# ano <- 2017
+# ano <- 2018
 
 #' A funcao `agrupar_variaveis_hex` agrega as variaveis de emprego, educacao, saude
 #' e demograficas das grades estisticas para os hexagonos de cada cidade
@@ -64,9 +64,12 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   agrupar_variaveis <- function(sigla_muni) { 
     
     # sigla_muni <- "for"
+    # sigla_muni <- "rec"
     # sigla_muni <- "nat"
     # sigla_muni <- "rio"
+    # sigla_muni <- "bho"
     # sigla_muni <- "bsb"
+    # sigla_muni <- "spo"
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -88,8 +91,8 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                     idade_19a24,
                     idade_25a39,
                     idade_40a69,
-                    idade_70   )
-    # st_centroid()
+                    idade_70   ) %>%
+    st_centroid()
     
     # sum(centroide_pop$pop_total, na.rm = TRUE) 
     # sum(centroide_pop$pop_homens)+ sum(centroide_pop$pop_mulheres) 
@@ -132,87 +135,52 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
       hex_muni <- readr::read_rds(hexf)
       hex_muni <- hex_muni %>% mutate(ano = ano)
       
-      centroide_pop <- centroide_pop %>%
-        mutate(grade_area = st_area(.))
-      
-      # calculate city proportions
-      pop_city_prop <- centroide_pop %>% st_set_geometry(NULL) %>% mutate(sigla_muni = "a") %>%
-        group_by(sigla_muni) %>%
-        summarise(
-          # sexo
-          across(c(pop_homens, pop_mulheres), ~ sum(.x, na.rm = TRUE)/sum(pop_total, na.rm = TRUE)),
-          # pop cor
-          across(starts_with("cor_"), ~ sum(.x, na.rm = TRUE)/sum(pop_total, na.rm = TRUE)),
-          # pop idade
-          across(starts_with("idade_"), ~ sum(.x, na.rm = TRUE)/sum(pop_total, na.rm = TRUE))
-        )
-      
-      
       # Agrupar populacao, cor e renda
-      # join espacial pela proporcao da intersecao entre  as grades e os hex
-      # hex_pop <- hex_muni %>% st_join(centroide_pop)
-      hex_pop <- hex_muni %>%
-        # fazer intersecao
-        st_intersection(centroide_pop) %>%
-        # calcular a area do pedaco
-        mutate(pedaco_area = st_area(.)) %>%
-        # calcular a proporcao da area total do hex que esta dentro da isocrona
-        mutate(area_prop_hex = as.numeric(pedaco_area) / as.numeric(grade_area)) %>%
-        # apagar geometria
-        st_set_geometry(NULL)
+      # join espacial
+      hex_pop <- hex_muni %>% st_join(centroide_pop)
+      head(centroide_pop)
+      head(hex_pop)
+      sum(hex_pop$pop_total, na.rm = TRUE)
+      sum(centroide_pop$pop_total, na.rm = TRUE)
       
-      
-      # aqui: arredondar ou nao arredondar?
-      hex_pop <- setDT(hex_pop)[, .(cor_branca   = round(sum(cor_branca    *  area_prop_hex , na.rm = TRUE)),
-                                    cor_amarela  = round(sum(cor_amarela   *  area_prop_hex  , na.rm = TRUE)),
-                                    cor_indigena = round(sum(cor_indigena  *  area_prop_hex , na.rm = TRUE)),
-                                    cor_negra    = round(sum(cor_negra     *  area_prop_hex    , na.rm = TRUE)),
+      # Summarize
+      hex_pop <- setDT(hex_pop)[, .(cor_branca   = as.numeric(sum(round(cor_branca,0), na.rm = TRUE)),
+                                    cor_amarela  = as.numeric(sum(round(cor_amarela,0), na.rm = TRUE)),
+                                    cor_indigena = as.numeric(sum(round(cor_indigena,0), na.rm = TRUE)),
+                                    cor_negra    = as.numeric(sum(round(cor_negra,0), na.rm = TRUE)),
                                     # age variables
-                                    idade_0a5    = round(sum(idade_0a5   *  area_prop_hex, na.rm = TRUE)),
-                                    idade_6a14   = round(sum(idade_6a14  *  area_prop_hex, na.rm = TRUE)),
-                                    idade_15a18  = round(sum(idade_15a18 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_19a24  = round(sum(idade_19a24 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_25a39  = round(sum(idade_25a39 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_40a69  = round(sum(idade_40a69 *  area_prop_hex, na.rm = TRUE)),
-                                    idade_70     = round(sum(idade_70    *  area_prop_hex, na.rm = TRUE)),
-                                    # total pop and income 
-                                    pop_total    = round(sum(pop_total    *  area_prop_hex, na.rm = TRUE)),
-                                    pop_homens   = round(sum(pop_homens   *  area_prop_hex, na.rm = TRUE)),
-                                    pop_mulheres = round(sum(pop_mulheres *  area_prop_hex, na.rm = TRUE)),
-                                    renda_total  = round(sum(renda * area_prop_hex, na.rm = TRUE))), 
+                                    idade_0a5   = as.numeric(sum(idade_0a5   , na.rm = TRUE)),
+                                    idade_6a14 =  as.numeric(sum(idade_6a14 , na.rm = TRUE)),
+                                    idade_15a18 = as.numeric(sum(idade_15a18 , na.rm = TRUE)),
+                                    idade_19a24 = as.numeric(sum(idade_19a24 , na.rm = TRUE)),
+                                    idade_25a39 = as.numeric(sum(idade_25a39 , na.rm = TRUE)),
+                                    idade_40a69 = as.numeric(sum(idade_40a69 , na.rm = TRUE)),
+                                    idade_70 =    as.numeric(sum(idade_70 , na.rm = TRUE)),
+                                    # total pop and income
+                                    pop_total    = as.numeric(sum(pop_total, na.rm = TRUE)),
+                                    pop_homens   = as.numeric(sum(round(pop_homens,0), na.rm = TRUE)),
+                                    pop_mulheres = as.numeric(sum(round(pop_mulheres,0), na.rm = TRUE)),
+                                    renda_total  = as.numeric(sum(renda, na.rm = TRUE))),
                                 by = id_hex ]
+      
+      hex_pop1 <- hex_pop %>%
+        left_join(hex_muni, by = "id_hex") %>% st_sf()
+      
+      # mapview(hex_pop1)
+      # ggplot() + geom_sf(data = hex_pop1, aes(fill = pop_total), color = NA)+
+      #   scale_fill_viridis_c()
       
       # sum(hex_pop$pop_total)
       # sum(hex_pop$pop_homens, hex_pop$pop_mulheres)
       # sum(hex_pop$cor_branca, hex_pop$cor_amarela, hex_pop$cor_indigena, hex_pop$cor_negra)
-      # hex_pop[pop_total == 0] %>% View()
-      # hex_pop[pop_total == 0 & pop_homens > 0] %>% View()
-      # hex_pop[pop_total == 0 & pop_mulheres > 0] %>% View()
-      # hex_pop[pop_total == 0 & renda_total > 0] %>% View()
-      # hex_pop[pop_total > 0 & renda_total == 0] %>% View()
+      # hex_pop[pop_total == 0]
+      # hex_pop[pop_total == 0 & pop_homens > 0]
+      # hex_pop[pop_total == 0 & pop_mulheres > 0]
+      # hex_pop[pop_total == 0 & renda_total > 0]
+      # hex_pop[pop_total > 0 & renda_total == 0]
       hex_pop[, renda_total := fifelse(pop_total == 0, 0, renda_total)]
       hex_pop[, pop_total := fifelse(renda_total == 0, 0, pop_total)]
       
-      
-      # # Summarize
-      # hex_pop <- setDT(hex_pop)[, .(cor_branca   = as.numeric(sum(round(cor_branca,0), na.rm = TRUE)),
-      #                               cor_amarela  = as.numeric(sum(round(cor_amarela,0), na.rm = TRUE)),
-      #                               cor_indigena = as.numeric(sum(round(cor_indigena,0), na.rm = TRUE)),
-      #                               cor_negra    = as.numeric(sum(round(cor_negra,0), na.rm = TRUE)),
-      #                               # age variables
-      #                               idade_0a5   = as.numeric(sum(idade_0a5   , na.rm = TRUE)),
-      #                               idade_6a14 =  as.numeric(sum(idade_6a14 , na.rm = TRUE)),
-      #                               idade_15a18 = as.numeric(sum(idade_15a18 , na.rm = TRUE)),
-      #                               idade_19a24 = as.numeric(sum(idade_19a24 , na.rm = TRUE)),
-      #                               idade_25a39 = as.numeric(sum(idade_25a39 , na.rm = TRUE)),
-      #                               idade_40a69 = as.numeric(sum(idade_40a69 , na.rm = TRUE)),
-      #                               idade_70 =    as.numeric(sum(idade_70 , na.rm = TRUE)),
-      #                               # total pop and income 
-      #                               pop_total    = as.numeric(sum(round(pop_total,0), na.rm = TRUE)),
-      #                               pop_homens   = as.numeric(sum(round(pop_homens,0), na.rm = TRUE)),
-      #                               pop_mulheres = as.numeric(sum(round(pop_mulheres,0), na.rm = TRUE)),
-      #                               renda_total  = as.numeric(sum(renda, na.rm = TRUE))), 
-      #                           by = id_hex ]
       
       # Calcular quintil e decil de renda
       # calcula renda per capita de cada hexagono
@@ -358,169 +326,53 @@ agrupar_variaveis_hex(ano = 2019)
 # basic checks -------------------------------
 hex_2017 <- lapply(dir("../../data/acesso_oport/hex_agregados/2017/", full.names = TRUE),
                    read_rds) %>% rbindlist()
+hex_2017 <- hex_2017[h3_resolution == 9]
+hex_2018 <- lapply(dir("../../data/acesso_oport/hex_agregados/2018/", full.names = TRUE),
+                   read_rds) %>% rbindlist()
+hex_2018 <- hex_2018[h3_resolution == 9]
+hex_junto <- rbind(hex_2017, hex_2018)
 
 hex_2017[pop_total == 0 & renda_total > 0]
 hex_2017[pop_total > 0 & renda_total == 0]
 hex_pop[pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0]
-a <- hex_pop[pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0]
+hex_pop[pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0]
 
 
 
-# # compare years -------------------------------------------------------------------------------
-# 
-# 
-# 
-# 
-# # sigla_munii <- 'for'
-# 
-# compare_jobs_distribution <- function(sigla_munii) {
-#   
-#   # open hex files
-#   hex_jobs_2017 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2017/hex_agregado_%s_09_2017.rds",
-#                                     sigla_munii)) %>%
-#     mutate(ano_jobs = 2017)
-#   
-#   hex_jobs_2018 <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2018/hex_agregado_%s_09_2018.rds",
-#                                     sigla_munii)) %>%
-#     mutate(ano_jobs = 2018)
-#   
-#   # hex_jobs_2017_old <- read_rds(sprintf("../../data/acesso_oport/hex_agregados/2019/hex_agregado_%s_09_2019.rds",
-#   #                                       sigla_munii)) %>%
-#   #   mutate(ano_jobs = "2017_old")
-#   
-#   hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018)
-#   # hex_jobs <- rbind(hex_jobs_2017, hex_jobs_2018, hex_jobs_2017_old)
-#   hex_jobs <- select(hex_jobs, id_hex, sigla_muni, empregos_total, ano_jobs, geometry) %>% setDT()
-#   
-#   hex_jobs_wide <- pivot_wider(hex_jobs, names_from = ano_jobs, values_from = empregos_total,
-#                                names_prefix = "jobs_")
-#   
-#   # compare!
-#   hex_jobs_wide <- hex_jobs_wide %>%
-#     mutate(dif1_abs = jobs_2018 - jobs_2017) %>%
-#     mutate(dif1_log = log(jobs_2018/jobs_2017)) %>%
-#     # truncate
-#     mutate(dif1_abs_tc = case_when(dif1_abs < -500 ~ -500,
-#                                    dif1_abs > 500 ~ 500,
-#                                    TRUE ~ dif1_abs)) %>%
-#     mutate(dif1_log_tc = case_when(dif1_log < -1 ~ -1,
-#                                    dif1_log > 1 ~ 1,
-#                                    TRUE ~ dif1_log)) %>%
-#     st_sf()
-#   
-#   
-#   hex_jobs_wide <- hex_jobs_wide %>%
-#     filter(!(jobs_2017 == 0 & jobs_2018 == 0))
-#   
-#   map1 <- ggplot()+
-#     geom_sf(data = hex_jobs_wide, aes(fill = dif1_log_tc), color = NA)+
-#     scale_fill_distiller(palette = "RdBu"
-#                          , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_log_tc))
-#     )+
-#     labs(title = "Diferença relativa de empregos entre 2017 e 2018",
-#          subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
-#     theme_aop_map()
-#   
-#   # ggplot()+
-#   #   geom_sf(data = hex_jobs_wide, aes(fill = dif1_abs), color = NA)+
-#   #   scale_fill_distiller(palette = "RdBu"
-#   #                        , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_abs))
-#   #   )+
-#   #   labs(title = "Diferença relativa de empregos entre 2017 e 2018",
-#   #        subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
-#   #   theme_for_CMA()
-#   
-#   plot1 <- ggplot()+
-#     geom_boxplot(data = hex_jobs_wide, aes(x = 1, y = dif1_log))+
-#     labs(title = "Diferença relativa de empregos entre 2017 e 2018",
-#          subtitle = "Maior que zero: Jobs 2018 > Jobs 2017")+
-#     # theme_ipsum()+
-#     theme_bw()+
-#     ggforce::facet_zoom(ylim = c(-0.5, 0.5))
-#   
-#   map2 <- ggplot()+
-#     geom_sf(data = hex_jobs_wide, aes(fill = dif1_abs_tc), color = NA)+
-#     scale_fill_distiller(palette = "RdBu"
-#                          , limits  = c(-1, 1)*max(abs(hex_jobs_wide$dif1_abs_tc))
-#     )+
-#     labs(title = "Diferença absoluta de empregos entre 2017 e 2018",
-#          subtitle = "Em vermelho: Jobs 2018 > Jobs 2017")+
-#     theme_aop_map()
-#   
-#   plot2 <- ggplot()+
-#     geom_boxplot(data = hex_jobs_wide, aes(x = 1, y = dif1_abs))+
-#     # labs(title = "Diferença absoluta empregos entre 2017 e 2018",
-#     #      subtitle = "Maior que zero: Jobs 2018 > Jobs 2017")+
-#     # theme_ipsum()+
-#     theme_bw()+
-#     theme(axis.text.x = element_blank())
-#     # ggforce::facet_zoom(ylim = c(-100, 100))
-#   
-#   summary(hex_jobs_wide$dif1_abs)
-#   
-#   library(patchwork)
-#   figure2 <- map2 + plot2 + plot_layout(widths = c(3, 1)) 
-#   
-#   ggsave(filename = sprintf("reports/comparacao_distribuicao_anos/comp_jobs_%s.png", sigla_munii),
-#          plot = figure2,
-#          device = "png",
-#          width = 16,
-#          units = "cm")
-#   
-#   
-#   # ggsave(filename = sprintf("reports/%s_teste2.png", sigla_munii), plot = plot2)
-#   # ggsave(filename = sprintf("reports/%s_teste3.png", sigla_munii), plot = plot3)
-#   
-#   
-#   
-# }
-# 
-# 
-# 
-# lapply(munis_df_2019$abrev_muni, compare_jobs_distribution)
-# 
-# 
-# 
-# 
-# # Checagem de resultados ---------------------------------------------------------------------------
-# 
-# # Fun para criar mapas interativos (html) de distribuicao espacial de uso do solo
-# salva_mapas <- function(sigla_muni, ano) {
-#   
-#   # sigla_muni <- "bsb"; ano <- 2019
-#   # sigla_muni <- "for"; ano <- 2018
-#   
-#   
-#   # trazer dados de uso do solo
-#   us <- readr::read_rds(sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", ano, sigla_muni, ano))
-#   
-#   
-#   # # saude
-#   # map_saude <- mapview(subset(us, saude_total>0), zcol = "saude_total")
-#   # 
-#   # # empregos
-#   # map_empregos <- mapview(subset(us, empregos_total>0), zcol = "empregos_total")
-#   # 
-#   # # educacao
-#   # map_edu <- mapview(subset(us, edu_total>0), zcol = "edu_total")
-#   # 
-#   # 
-#   # single_map <- mapview(subset(us, saude_total>0), zcol = "saude_total") +  
-#   #   mapview(subset(us, empregos_total>0), zcol = "empregos_total") + 
-#   #   mapview(subset(us, edu_total>0), zcol = "edu_total")
-#   
-#   # save
-#   # mapview::mapshot(single_map, debug=T, remove_controls=NULL, url = sprintf("reports/distribuicao_us/us_%s_%s.html", sigla_muni, ano))
-#   
-#   maxs <- data.frame(sigla_muni = sigla_muni,
-#                      max_saude = max(us$saude_total),
-#                      max_edu = max(us$edu_total))
-#   
-# }  
-# 
-# # Aplica funcao para cada municipio
-# 
-# # Parallel processing using future.apply
-# maxs <- lapply(X = munis_df_2019$abrev_muni, FUN=salva_mapas, ano = 2018)
-# 
-# maxs_dt <- rbindlist(maxs)
+# maps --------------------------------------------------------------------
+
+maps_pop <- function(sigla_munii) {
+  
+  # sigla_munii <- "for"
+  # sigla_munii <- "bho"
+  
+  hex_2017a <- hex_junto %>%
+    filter(sigla_muni == sigla_munii) %>%
+    st_sf(crs = 4326)
+
+  
+  # put limits to 2000
+  hex_2017a <- hex_2017a %>%
+    mutate(pop_total = ifelse(pop_total > 5000, 5000, pop_total))
+  
+  a <- ggplot()+
+    geom_sf(data = hex_2017a, aes(fill = pop_total), color = NA)+
+    scale_fill_viridis_c()+
+    theme_void()+
+    facet_wrap(vars(ano), ncol = ifelse(sigla_munii == "rio", 1, 2))+
+    labs(title = sigla_munii)
+  
+  ggsave(plot = a, filename = sprintf("testes/hex_pop/hex_pop_%s.png", sigla_munii))
+  
+  
+  
+}
+
+walk(munis_list$munis_modo$abrev_muni, maps_pop)
+
+
+# quantos hex com pop == 1?
+
+hex_pop1 <- hex_junto[pop_total == 1, .(hex_pop1 = .N), by = .(sigla_muni, ano)]
+hex_pop1 <- pivot_wider(hex_pop1, names_from = ano, values_from = hex_pop1,
+                        values_fill = 0)
