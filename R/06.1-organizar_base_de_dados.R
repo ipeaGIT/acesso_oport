@@ -30,29 +30,29 @@ organizar_base_acess <- function(ano) {
     rbindlist(fill = TRUE)
   
   # incorporar nome da cidade e codigo do municipio
-  hex_agreg <- hex_agreg %>% left_join(munis_df %>% select(cod_muni = code_muni, abrev_muni, nome_muni = name_muni), 
+  hex_agreg <- hex_agreg %>% left_join(munis_df %>% dplyr::select(cod_muni = code_muni, abrev_muni, nome_muni = name_muni), 
                                        by = c("sigla_muni" = "abrev_muni"))
   
   
   # dados acessibilidade ---------------------------
-  acess_paths <- dir(sprintf("../../data/acesso_oport/output_access/%s", ano), full.names = TRUE)
+  acess_paths <- dir(sprintf("../../data/acesso_oport/output_access/%s", ano), full.names = TRUE, pattern = "acess_")
   acess_paths_ok <- acess_paths[acess_paths %nlike% "bsb_origin|bsb_dest"]
   acess <- lapply(acess_paths, read_rds) %>% rbindlist(fill = TRUE)
   
   # abrir bsb carro - especial
   acess_paths_bsb_carro1 <- acess_paths[acess_paths %like% "bsb_origin"]
   acess_paths_bsb_carro2 <- acess_paths[acess_paths %like% "bsb_dest"]
-  acess_bsb_carro1 <- lapply(acess_paths_bsb_carro1, function(x) read_rds(x)) %>% rbindlist() %>% select(-geometry) %>%
+  acess_bsb_carro1 <- lapply(acess_paths_bsb_carro1, function(x) read_rds(x)) %>% rbindlist() %>% dplyr::select(-geometry) %>%
     mutate(city = "bsb")
-  acess_bsb_carro2 <- lapply(acess_paths_bsb_carro2, function(x) read_rds(x)) %>% rbindlist() %>% select(-geometry) %>%
+  acess_bsb_carro2 <- lapply(acess_paths_bsb_carro2, function(x) read_rds(x)) %>% rbindlist() %>% dplyr::select(-geometry) %>%
     mutate(city = "bsb")
   # join them all!
   acess_bsb_carro <- full_join(acess_bsb_carro1, acess_bsb_carro2,
                                by = c("origin", "city", "mode", "ano", "pico"))
   # bring geom
-  acess_bsb_carro <- left_join(acess_bsb_carro, hex_agreg %>% select(id_hex, geometry), by = c("origin" = "id_hex")) %>% setDT()
-
-
+  acess_bsb_carro <- left_join(acess_bsb_carro, hex_agreg %>% dplyr::select(id_hex, geometry), by = c("origin" = "id_hex")) %>% setDT()
+  
+  
   # rbind both access
   # we have to set fill = TRUE because bsb is only for car and car doesnt have some
   # variables from walk and bike
@@ -66,12 +66,18 @@ organizar_base_acess <- function(ano) {
   
   # munii <- "for"
   # munii <- "rio"
+  # munii <- "bsb"
   
   join_by_muni <- function(munii) {
     
     # filter muni
     hex_agreg_muni <- hex_agreg[sigla_muni == munii]
     acess_muni <- acess[city == munii]
+    
+    # trazer infos tipo codemuni, namemuni pra base de acess
+    acess_muni <- acess_muni %>%
+      left_join(hex_agreg_muni %>% dplyr::select(id_hex, sigla_muni, cod_muni, nome_muni),
+                by = "id_hex")
     
     # # join data sets
     # hex_dt <- left_join(setDT(hex_agreg_muni), setDT(acess_muni)[, -"geometry", with =F], 
@@ -84,7 +90,7 @@ organizar_base_acess <- function(ano) {
     
     
     hex_landuse <- hex_agreg_muni %>%
-      select(id_hex, sigla_muni, nome_muni, code_muni = cod_muni, 
+      dplyr::select(id_hex, sigla_muni, nome_muni, code_muni = cod_muni, ano,
              
              # Selecionar variaveis de populacao (cor)
              P001 = pop_total, 
@@ -152,34 +158,34 @@ organizar_base_acess <- function(ano) {
     
     modo <- munis_list$munis_modo[abrev_muni == munii & ano_modo == ano]$modo
     
-      hex_dt_tpcarro <- acess_muni %>%
-        filter(mode %in% c("transit", "car")) %>%
-        select(id_hex, sigla_muni = city, ano,
-               # Selecionar variaveis de acessibilidade
-               modo = mode, 
-               pico, 
-               ends_with(c("30", "60", "90", "120")), 
-               # matches("^CMA[:upper:]{3}(15|30|45|60)"), 
-               # matches("^CMP[:upper:]{3}(15|30|45|60)"), 
-               starts_with("TMI"),
-               geometry) %>%
-        # renomear os modos
-        mutate(modo = case_when(
-          modo == "transit" ~ "tp",
-          modo == "car" ~ "carro"
-        )) %>%
-        # arredondar acessibilidade para 4 casas decimais
-        mutate_at(vars(matches("CMA|CMP|TMI")), round, digits = 4) %>%
-        
-        # garantir que so tenha um unico hexagono para cada cidade, modo e pico
-        distinct(id_hex, sigla_muni, modo, pico, .keep_all = TRUE) %>%
-        setDT()
+    hex_dt_tpcarro <- acess_muni %>%
+      filter(mode %in% c("transit", "car")) %>%
+      dplyr::select(id_hex, sigla_muni, nome_muni, code_muni = cod_muni, ano,
+             # Selecionar variaveis de acessibilidade
+             modo = mode, 
+             pico, 
+             ends_with(c("15", "30", "60", "90", "120")), 
+             # matches("^CMA[:upper:]{3}(15|30|45|60)"), 
+             # matches("^CMP[:upper:]{3}(15|30|45|60)"), 
+             starts_with("TMI"),
+             geometry) %>%
+      # renomear os modos
+      mutate(modo = case_when(
+        modo == "transit" ~ "tp",
+        modo == "car" ~ "carro"
+      )) %>%
+      # arredondar acessibilidade para 4 casas decimais
+      mutate_at(vars(matches("CMA|CMP|TMI")), round, digits = 4) %>%
       
+      # garantir que so tenha um unico hexagono para cada cidade, modo e pico
+      distinct(id_hex, sigla_muni, modo, pico, .keep_all = TRUE) %>%
+      setDT()
+    
     
     
     hex_dt_ativo <- acess_muni %>%
       filter(mode %in% c("bike", "walk")) %>%
-      select(id_hex, sigla_muni = city, ano,
+      dplyr::select(id_hex, sigla_muni, nome_muni, code_muni = cod_muni, ano,
              # Selecionar variaveis de acessibilidade
              modo = mode, 
              pico, 
@@ -220,11 +226,12 @@ organizar_base_acess <- function(ano) {
   
   # aplicar funcao
   
+  # a <- lapply(munis_df$abrev_muni, purrr::possibly(join_by_muni, otherwise = "erro"))
   a <- lapply(munis_df$abrev_muni, join_by_muni)
   b <- purrr::transpose(a)
   
   # for now, delete bsb by tp and car (its empty anyway, but is thorwing an error when rbinding)
-  b$hex_dt_tpcarro[[7]] <- NULL
+  # b$hex_dt_tpcarro[[7]] <- NULL
   
   c <- lapply(b, rbindlist)
   
