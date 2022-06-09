@@ -13,6 +13,9 @@ source('./R/fun/setup.R')
 gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
   
   # sigla_muni <- "for"; ano <- 2017
+  # sigla_muni <- "mac"; ano <- 2017
+  # sigla_muni <- "cam"; ano <- 2017
+  # sigla_muni <- "bsb"; ano <- 2017
   # ano <- 2019
   
   # status message
@@ -49,7 +52,7 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
     ]
     
     # identifica resolucao utilizada
-    res <- str_extract(endereco_grade, "\\d{2}(?=_)")
+    res <- stringr::str_extract(endereco_grade, "\\d{2}(?=_)")
     
     # gera centroides e faz snap
     # suprime warnings de calculo de centroides com lat long
@@ -67,11 +70,15 @@ gerar_pontos_OTP_muni <- function(sigla_muni, ano) {
     snaps[grade, on = "id_hex", tem_pop_oport := i.tem_pop_oport]
     snaps[, distance := as.numeric(distance)]
     antes <- nrow(snaps)
-    snaps <- snaps[distance <= 452 | tem_pop_oport]
+    snaps <- snaps[distance <= 452 | tem_pop_oport==TRUE]
+    # snaps1 <- snaps[tem_pop_oport==TRUE]
     depois <- nrow(snaps)
     
     # mantem apenas as colunas de id, lat e lon, e renomeia lat e lon pra Y e X
     snaps <- snaps[, .(id_hex, X = lon, Y = lat)]
+    
+    # snaps_sf <- snaps %>% st_as_sf(coords = c("X", "Y"), crs = 4326)
+    # mapview(snaps_sf, zcol = NULL, legend = NULL)
     
     # salva resultado
     arquivo_resultado <- paste0(
@@ -109,7 +116,7 @@ go <- go %>%
          points_r5 = points_out)
 googlesheets4::write_sheet(data = go,
                            ss = "https://docs.google.com/spreadsheets/d/11pIp1Ioiua7NWDp41DKXMMWI_3JvmzonhNMoNpvR1aE/edit#gid=215944254",
-                           sheet = "points_snap")
+                           sheet = "points_snap_new")
 
 
 
