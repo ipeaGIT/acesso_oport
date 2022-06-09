@@ -14,7 +14,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     # sigla_muni <- 'nat'; ano <- 2019
     # sigla_muni <- 'for'; ano <- 2017
-    # sigla_muni <- 'rio'; ano <- 2018
+    # sigla_muni <- 'rio'; ano <- 2017
+    # sigla_muni <- 'bho'; ano <- 2017
     
     # status message
     message('Woking on city ', sigla_muni, '\n')
@@ -30,33 +31,32 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     # Drop grades vazias e setores vazios
     grade <- subset(grade, POP >0)
     setor <- subset(setor, cor_branca + cor_amarela + cor_preta + cor_parda + cor_indigena > 0)
+    # mapview(grade, zcol = "POP")
+    
+    
     # DELETE OVERLAP FROM SECTORS
-    sum(setor$moradores_total)
-    setor <- st_difference(setor)
-    sum(setor$moradores_total)
+    # acontecia overlap entre os setores, o que acabava prejudicando a
+    # reagregacao espacial - a populacao total (da grade) acabava 
+    # nao sendo a soma da populacao por cor/idade
+    # sum(setor$moradores_total)
+    # setor <- st_difference(setor)
+    # sum(setor$moradores_total)
+    # checar se a populacao eh a mesma antes e depois OK
     
     # mesma projecao
     # setor <- sf::st_transform(setor, crs = 31984)
     # grade <- sf::st_transform(grade, crs = 31984)
     setor <- sf::st_transform(setor, sf::st_crs(grade))
     
-    # setor_junto <- st_union(setor)
-    
-    # precision
-    # grade <- grade %>% st_set_precision(units::set_units(10, nm))
-    # setor <- setor %>% st_set_precision(units::set_units(10, nm))
-    
     # Criar id unico de cada grade e filtra colunas
     grade$id_grade <- 1:nrow(grade)
     
-    # getl imits for each city
-    # limits <- read_rds(sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano))
-    
-    # corrigir grades de borda
-    # cortar as grades da borda e tira rebarbas
-    # e divide a grade segundo recorte dos setores
+    # outra premissa da reagregacao eh que aconteca uma correspondencia espacial
+    # entre a grade e os setores, nao podendo ter grade/setor com pedaco sobrando
+    # essa operacao garante que exista uma correspondecia espacial perfeita
+    # entre grades e setores
     grade_corrigida <- grade %>%
-      mutate(area_antes = as.numeric(st_area(.))) %>%
+      # mutate(area_antes = as.numeric(st_area(.))) %>%
       # st_intersection(limits %>% dplyr::select(code_state)) %>%
       st_intersection(setor %>% dplyr::select(code_tract)) %>%
       group_by(id_grade) %>%
@@ -64,24 +64,6 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
                 pop_homens = first(MASC),
                 pop_mulheres = first(FEM)) %>%
       mutate(area_grade = st_area(.))
-    
-    # # corrigir populacao das grades de borda que foram cortadas (porque parte da grade
-    # # cai fora do municipio)
-    # grade_corrigida <- grade_corrigida %>%
-    #   mutate(area_depois = as.numeric(st_area(.))) %>%
-    #   mutate(prop = area_depois/area_antes) %>%
-    #   mutate(prop_homens = pop_homens/pop_total,
-    #          prop_mulheres = pop_mulheres/pop_total) %>%
-    #   mutate(pop_total =    prop * pop_total) %>%
-    #   mutate(pop_homens = pop_total * prop_homens,
-    #          pop_mulheres = pop_total * prop_mulheres)
-    
-    
-    # # Seleciona colunas da GRADE
-    # grade_corrigida <- grade_corrigida %>%
-    #   rename(area_grade = area_depois) %>%
-    #   dplyr::select(id_grade, pop_total, pop_homens, pop_mulheres, area_grade)
-    
     
     # Criar id unico de cada setor e filtra colunas DO SETOR
     # calcula area de cada setor
@@ -199,10 +181,6 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       dplyr::mutate(idade_6_pedaco = idade_6_prop * pop_sub_grade) %>%
       dplyr::mutate(idade_7_pedaco = idade_7_prop * pop_sub_grade)
     
-    # # grades p/ teste: 2229 (problematica), 2230 (ok)
-    # a1 <- ui %>% filter(id_grade == 2229)
-    # a2 <- ui %>% filter(id_grade == 2230)
-    # mapview(a1)
     
     # Grand Finale (uniao dos pedacos) - Agrupar por grade e somar a renda
     ui_fim <- ui %>% st_set_geometry(NULL) %>% setDT()
@@ -235,28 +213,6 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     # delete grade without pop
     ui_fim <- ui_fim[pop_total > 0]
     
-    # renda pelo setor
-    # ui_fim[, renda_capita_setor := renda / (cor_branca + cor_amarela + cor_indigena + cor_negra)]
-    # renda capita media da cidade
-    # renda_capita_cidade <- median(ui_fim$renda_capita_setor, na.rm = TRUE)
-    
-    # # calculate proportions
-    # ui_fim[, ":="(
-    #   prop_homens   = pop_homens   / (pop_homens + pop_mulheres),
-    #   prop_mulheres = pop_mulheres / (pop_homens + pop_mulheres),
-    #   prop_branca   = cor_branca/    (cor_branca + cor_amarela + cor_indigena + cor_negra),
-    #   prop_amarela  = cor_amarela/   (cor_branca + cor_amarela + cor_indigena + cor_negra),
-    #   prop_indigena = cor_indigena/  (cor_branca + cor_amarela + cor_indigena + cor_negra),
-    #   prop_negra    = cor_negra/     (cor_branca + cor_amarela + cor_indigena + cor_negra),
-    #   prop_idade_0a5   = idade_0a5/  (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
-    #   prop_idade_6a14  = idade_6a14/ (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
-    #   prop_idade_15a18 = idade_15a18/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
-    #   prop_idade_19a24 = idade_19a24/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
-    #   prop_idade_25a39 = idade_25a39/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
-    #   prop_idade_40a69 = idade_40a69/(idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70),
-    #   prop_idade_70    = idade_70/   (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70)
-    # )]
-    
     # sum(grade_corrigida$pop_total) 
     # sum(grade_corrigida$pop_homens)+ sum(grade_corrigida$pop_mulheres) 
     # sum(ui_fim$pop_total)
@@ -267,41 +223,24 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     # nao esta batendo com sum(ui_fim$pop_total)
     # corrigir / redistribuir
     
-    # # when they are all empty, assume 1 pop - so they can have the same proportion
-    # ui_fim[, ":="(    cor_branca   = fifelse(pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0, 1, cor_branca),
-    #                   cor_amarela  = fifelse(pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0, 1, cor_amarela),
-    #                   cor_indigena = fifelse(pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0, 1, cor_indigena),
-    #                   cor_negra    = fifelse(pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0, 1, cor_negra),
-    #                   idade_0a5   = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_0a5),
-    #                   idade_6a14  = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_6a14),
-    #                   idade_15a18 = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_15a18),
-    #                   idade_19a24 = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_19a24),
-    #                   idade_25a39 = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_25a39),
-    #                   idade_40a69 = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_40a69),
-    #                   idade_70    = fifelse(pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0, 1, idade_70))
-    # ]
-    # income will be city average
-    
-    
     # distribute
-    # teste: ui_fim <- ui_fim[id_grade == 3955]
     # identify within each class the hierarquy of proportions (non-zero)
-    vector_sexo <- purrr::pmap(ui_fim[, .(-pop_homens, -pop_mulheres)], 
-                               c)
+    # vector_sexo <- purrr::pmap(ui_fim[, .(-pop_homens, -pop_mulheres)], 
+    #                            c)
     vector_cor <- purrr::pmap(ui_fim[, .(-cor_branca, -cor_amarela, -cor_indigena, -cor_negra)], 
                               c)
     vector_idade <- purrr::pmap(ui_fim[, .(-idade_0a5, -idade_6a14, -idade_15a18, -idade_19a24,-idade_25a39,-idade_40a69,-idade_70)], 
                                 c)
     # rank them (highest rank means highest value)
-    rank_sexo <- lapply(vector_sexo, frank, ties.method = "first")
-    rank_sexo <- do.call(rbind, rank_sexo) %>% as.data.frame()
+    # rank_sexo <- lapply(vector_sexo, frank, ties.method = "first")
+    # rank_sexo <- do.call(rbind, rank_sexo) %>% as.data.frame()
     rank_cor <- lapply(vector_cor, frank, ties.method = "first")
     rank_cor <- do.call(rbind, rank_cor) %>% as.data.frame()
     rank_idade <- lapply(vector_idade, frank, ties.method = "first")
     rank_idade <- do.call(rbind, rank_idade) %>% as.data.frame()
     
     # apply theses rans as columns
-    ui_fim[, ':='(rank_homens = rank_sexo$V1, rank_mulheres = rank_sexo$V2)]
+    # ui_fim[, ':='(rank_homens = rank_sexo$V1, rank_mulheres = rank_sexo$V2)]
     ui_fim[, ':='(rank_branca   = rank_cor$V1, 
                   rank_amarela  = rank_cor$V2, 
                   rank_indigena = rank_cor$V3, 
@@ -319,8 +258,8 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     
     # now we will rounbd the variables to calculate the difference
     ui_fim[, ":="(
-      pop_homens = round(pop_homens),
-      pop_mulheres = round(pop_mulheres),
+      # pop_homens = round(pop_homens),
+      # pop_mulheres = round(pop_mulheres),
       cor_branca = round(cor_branca),
       cor_amarela = round(cor_amarela),
       cor_indigena = round(cor_indigena),
@@ -338,6 +277,14 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     # ui_fim[, dif_sexo := pop_total - (pop_homens + pop_mulheres)]
     ui_fim[, dif_cor := pop_total - (cor_branca + cor_amarela + cor_indigena + cor_negra)]
     ui_fim[, dif_idade := pop_total - (idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70)]
+    
+    summary(ui_fim$dif_cor)
+    summary(ui_fim$dif_idade)
+    
+    # # para rio de janeiro: grade 13688 problematica
+    # grade_prob <- ui %>% filter(id_grade == 13688)
+    # setores_prob <- setor %>% filter(id_setor %in% grade_prob$id_setor)
+    # mapview(grade_prob) + setores_prob
     
     # |> now we have to distribute the difference based on the ranks -----------------
     # divide the number to be distributed by the number of classes
@@ -401,23 +348,6 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       dif_idade_70    = ifelse(dif_idade   > 0, dif_idade_70, -dif_idade_70)
     )]
     
-    # # define how much people alocate to each category
-    # ui_fim[, dif_homens := round(dif_sexo * prop_homens)]
-    # ui_fim[, dif_mulheres := dif_sexo - (dif_homens)]
-    # ui_fim[, dif_branca := round(dif_cor * prop_branca)]
-    # ui_fim[, dif_amarela := round(dif_cor * prop_amarela)]
-    # ui_fim[, dif_indigena := round(dif_cor * prop_indigena)]
-    # ui_fim[, dif_negra := dif_cor - (dif_branca + dif_amarela + dif_indigena)]
-    # 
-    # ui_fim[, ":="(dif_idade_0a5 =    round(dif_idade * prop_idade_0a5),
-    #               dif_idade_6a14 =   round(dif_idade * prop_idade_6a14),
-    #               dif_idade_15a18 =  round(dif_idade * prop_idade_15a18),
-    #               dif_idade_19a24 =  round(dif_idade * prop_idade_19a24),
-    #               dif_idade_25a39 =  round(dif_idade * prop_idade_25a39),
-    #               dif_idade_40a69 =  round(dif_idade * prop_idade_40a69))]
-    # ui_fim[, dif_idade_70 := dif_idade - (dif_idade_0a5 + dif_idade_6a14 + dif_idade_15a18 + dif_idade_19a24 + dif_idade_25a39 + dif_idade_40a69)]
-    
-    
     # so add up these variables
     ui_fim[, ":="(
       # pop_homens = pop_homens + dif_homens,
@@ -437,11 +367,6 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
       
     )]
     
-    # problema! populacao negativa!!
-    # especialmente idade_70
-    # ui_fim[idade_70 < 0]
-    
-    
     # sum(ui_fim$pop_total)
     # sum(ui_fim$pop_homens)+ sum(ui_fim$pop_mulheres) 
     # sum(ui_fim$cor_branca, ui_fim$cor_amarela, ui_fim$cor_indigena, ui_fim$cor_negra) 
@@ -450,6 +375,9 @@ renda_de_setor_p_grade <- function(ano, munis = "all") {
     # ui_fim[pop_total > 0 & renda == 0]
     # ui_fim[pop_total != cor_branca + cor_amarela + cor_indigena + cor_negra]
     # median(ui_fim$renda / ui_fim$pop_total)
+    # ui_fim[pop_total <= 0 & renda != 0]
+    # summary(ui_fim$pop_total)
+    
     
     
     
@@ -534,9 +462,12 @@ check_grade <- function(ano) {
     message("Any case where pop total >0 and sum by color = 0: ", check4)
     message("Any case where pop total =! sum pop by color: ", check5)
     message("Any case where pop total > 0 and income = 0: ", check6)
+    message("Median income: ", var8)
     
     
   }
+  
+  walk(munis_list$munis_df$abrev_muni, check_grade_ano)
   
   
   
