@@ -45,7 +45,9 @@ hex_summary1 <- hex_summary %>%
   mutate(values = round(values)) %>%
   group_by(sigla_muni, ano, var) %>%
   summarise(sum = sum(values, na.rm = TRUE)) %>%
-  ungroup()
+  ungroup() %>%
+  # trazer nome da c idade
+  left_join(select(munis_list$munis_df, sigla_muni = abrev_muni, name_muni))
 
 hex_summary1 <- hex_summary1 %>%
   tidyr::pivot_wider(names_from = ano, values_from = "sum")
