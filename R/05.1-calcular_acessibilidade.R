@@ -774,8 +774,12 @@ calcular_acess_muni("bsb_dest2",   2018, mode1 = "car", access = "passive")
 calcular_acess_muni("bsb_dest3",   2018, mode1 = "car", access = "passive")
 calcular_acess_muni("rio", 2018, mode1 = "car")
 calcular_acess_muni("goi", 2018, mode1 = "car")
+# calcular_acess_muni("man", 2017, mode1 = "car")
+# calcular_acess_muni("rec", 2017, mode1 = "car")
+# calcular_acess_muni("nat", 2017, mode1 = "car")
+# calcular_acess_muni("bel", 2017, mode1 = "car")
 # others
-plan(multiprocess, workers = 3)
+plan(multiprocess, workers = 1)
 furrr::future_walk(c("for", "cur","poa","bho",
                      "sal","man","rec","bel",
                      "gua","cam","slz","sgo","mac",
