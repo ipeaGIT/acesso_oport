@@ -36,9 +36,10 @@ download_muni_setores <- function(ano, munis = "all") {
     muni_sf <- st_transform(muni_sf, 4326)
 
     # Download de arquivos - shapes dos setores censitarios
-    uf_sf_tracts <- geobr::read_census_tract(state_code)
+    uf_sf_tracts <- geobr::read_census_tract(state_code, simplified = FALSE)
     ct_sf <- uf_sf_tracts %>% filter(code_muni %in% code_munis)
     ct_sf <- st_transform(ct_sf, 4326)
+    # mapview(ct_sf)
 
 
     # salvar municipios
