@@ -83,7 +83,7 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                                    time_window = 120,
                                    max_walk_dist = max_walk_dist,
                                    max_trip_duration = max_trip_duration,
-                                   n_threads = 38)
+                                   n_threads = 30)
     time_ttmatrix_tp_pico <- Sys.time() - a
     print(time_ttmatrix_tp_pico)
     
@@ -100,7 +100,7 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                                     time_window = 120,
                                     max_walk_dist = max_walk_dist,
                                     max_trip_duration = max_trip_duration,
-                                    n_threads = 38)
+                                    n_threads = 30)
     time_ttmatrix_tp_fpico <- Sys.time() - a
     print(time_ttmatrix_tp_fpico)
     
@@ -120,7 +120,7 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                                  destinations = points,
                                  mode = "WALK",
                                  max_trip_duration = max_trip_duration_walk,
-                                 n_threads = 38)
+                                 n_threads = 30)
   time_ttmatrix_walk <- Sys.time() - a
   
   ttm_walk[, mode := "walk"]
@@ -132,7 +132,7 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                                  destinations = points,
                                  mode = "BICYCLE",
                                  max_trip_duration = max_trip_duration_bike,
-                                 n_threads = 38)
+                                 n_threads = 30)
   time_ttmatrix_bike <- Sys.time() - a
   
   ttm_bike[, mode := "bike"]
@@ -151,10 +151,14 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                      ano, ano, sigla_munii))
     
     
-    
     # juntar matrizes
     ttm <- rbind(ttm_pico, ttm_fpico, ttm_walk, ttm_bike)
     # ttm <- rbind(ttm_pico)
+    
+    rm(ttm_pico)
+    rm(ttm_fpico)
+    rm(ttm_walk)
+    rm(ttm_bike)
     
     
   } else {
@@ -170,6 +174,9 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
     
     # juntar matrizes
     ttm <- rbind(ttm_walk, ttm_bike)
+    
+    rm(ttm_walk)
+    rm(ttm_bike)
     
     
   }
@@ -190,7 +197,7 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
                       ano, 
                       ano,
                       sigla_munii))
-  
+
   rm(ttm)
   r5r::stop_r5()
   
@@ -204,46 +211,27 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
 # walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni,
 #      calculate_ttmatrix, ano = 2017)
 
-calculate_ttmatrix("for", 2017)
-r5r::stop_r5()
-calculate_ttmatrix("spo", 2017)
-# r5r::stop_r5()
-calculate_ttmatrix("rio", 2017)
-r5r::stop_r5()
-calculate_ttmatrix("cur", 2017)
-r5r::stop_r5()
+calculate_ttmatrix("for", 2017) # ok
+calculate_ttmatrix("cur", 2017) # ok
 calculate_ttmatrix("poa", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("bho", 2017)
-r5r::stop_r5()
-calculate_ttmatrix("bsb", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("sal", 2017)
-r5r::stop_r5()
-calculate_ttmatrix("man", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("rec", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("goi", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("bel", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("gua", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("cam", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("slz", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("sgo", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("mac", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("duq", 2017)
-r5r::stop_r5()
-calculate_ttmatrix("cgr", 2017)
-r5r::stop_r5()
 calculate_ttmatrix("nat", 2017)
-r5r::stop_r5()
+
+calculate_ttmatrix("cgr", 2017)
+calculate_ttmatrix("man", 2017)
+calculate_ttmatrix("bsb", 2017)
+calculate_ttmatrix("rio", 2017)
+calculate_ttmatrix("spo", 2017)
 # 
 # # walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni,
 # #      calculate_ttmatrix, ano = 2018)
