@@ -104,7 +104,7 @@ munis_list <- list(
     "poa",       "todos",  "todos",  "todos",  "todos",   
     "bho",       "todos",  "todos",  "todos",  "todos",   
     "bsb",       "ativo",  "ativo",  "ativo",  "ativo",   
-    "sal",       "ativo",  "ativo",  "todos",  "todos",   
+    "sal",       "ativo",  "ativo",  "ativo",  "ativo",   
     "man",       "ativo",  "ativo",  "ativo",  "ativo",   
     "rec",       "ativo",  "ativo",  "todos",  "todos",   
     "goi",       "ativo",  "ativo",  "todos",  "todos",   
