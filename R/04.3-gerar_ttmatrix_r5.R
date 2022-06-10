@@ -61,7 +61,7 @@ calculate_ttmatrix <- function(sigla_munii, ano) {
     df <- setup$getTransitServicesByDate(as.character(date))
     df <- jdx::convertToR(df$getDataFrame())
     
-    max_walk_dist <- 1000   # meters
+    max_walk_dist <- 1600   # meters
     max_trip_duration <- 180 # minutes
     departure_pico <- paste0(date, " 06:00:00")
     departure_fpico <- paste0(date, " 14:00:00")
