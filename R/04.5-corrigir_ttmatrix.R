@@ -9,11 +9,12 @@ source('./R/fun/setup.R')
 # p/ bike. O ponto de roteamento desses hexagonos sao alocados para o hexagono mais proximo 
 # que nao tenha menos que 10 hex de acess.
 
-# sigla_muni <- 'for'; ano <- 2017
-# sigla_muni <- 'for'; ano <- 2018
+# sigla_muni <- 'spo'; ano <- 2017
+# sigla_muni <- 'poa'; ano <- 2019
 # sigla_muni <- 'bel'; ano <- 2019
 # sigla_muni <- 'nat'; ano <- 2017
 # sigla_muni <- 'man'; ano <- 2019
+# sigla_muni <- 'spo'; ano <- 2019
 
 identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   
@@ -24,15 +25,13 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   ttmatrix_allmodes <- fread(sprintf("E:/data/output_ttmatrix/%s/r5/ttmatrix_%s_%s_r5.csv", 
                                      ano, ano, sigla_muni))
   
-  # ttmatrix_allmodes <- read_rds("../../data/avaliacao_intervencoes/for/ttmatrix/antes/ttmatrix_bike.rds")
-  
   # pegar so bike
   ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
   # ttmatrix_teste <- ttmatrix_allmodes[mode == "transit" & pico == 1]
   # ttmatrix_teste <- ttmatrix_allmodes
   
   # abrir os pontos da resolucao 09 ~~~~
-  points_file <- sprintf("../../otp/points/%s/points_%s_09_%s.csv", ano, sigla_muni, ano)
+  points_file <- sprintf("../../r5/points/%s/points_%s_09_%s.csv", ano, sigla_muni, ano)
   # points_file <- "../../data/avaliacao_intervencoes/r5/points/points_for_09_2019.csv"
   points <- fread(points_file)
   
@@ -223,7 +222,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-plan(multiprocess, workers = 5)
+plan(multiprocess, workers = 1)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, 
                    identificar_e_corrigir_extremos_acess_muni, ano = 2017)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, 
@@ -234,3 +233,16 @@ walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni,
      identificar_e_corrigir_extremos_acess_muni, ano = 2019)
 
 
+# falta spo, rio, goi, bsb
+walk(c("for", "cur","poa","bho",
+       "sal","man","rec","bel",
+       "gua","cam","slz","sgo",
+       "mac","duq","cgr", 'nat'),
+     identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+walk(c("rio","goi","bsb"),
+     identificar_e_corrigir_extremos_acess_muni, ano = 2019)
+walk(c("for", "cur","poa","bho",
+       "sal","man","rec","bel",
+       "gua","cam","slz","sgo",
+       "mac","duq","cgr", 'nat'),
+     identificar_e_corrigir_extremos_acess_muni, ano = 2019)
