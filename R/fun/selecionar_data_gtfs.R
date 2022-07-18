@@ -8,7 +8,7 @@ selecionar_data_gtfs <- function(sigla_muni, ano) {
   message(sprintf("working on %s", sigla_muni))
   
   # Leitura do gtfs para pasta temporaria
-  path_zip <- sprintf("../../r5/network/%s/%s", ano, sigla_muni)
+  path_zip <- sprintf("../../data/acesso_oport/r5/network/%s/%s", ano, sigla_muni)
   file_zip <- dir(path_zip, full.names = TRUE, pattern = "gtfs.*.zip$", ignore.case = TRUE)
   
   if (length(file_zip) == 0) {
