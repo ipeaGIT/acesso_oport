@@ -26,7 +26,7 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
   
   
   # 1.2) Escolas
-  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps_gquality_corrected2.rds", ano, ano))
+  escolas <- read_rds(sprintf("../../data/acesso_oport/educacao/%s/educacao_%s_filter_geocoded_gmaps_gquality_corrected2_bsb.rds", ano, ano))
   
   # remove lat lon missing
   escolas <- escolas[!is.na(lat),] 
@@ -201,12 +201,12 @@ agrupar_variaveis_hex <- function(ano, munis = "all") {
                                         normwt=FALSE, na.rm=T)
       
       # classificar cada hexagono em cada quintil de renda
-      hex_pop[, quintil := findInterval(renda_capita , quintiles[ -length(quintiles) ] ) ]
-      hex_pop[, decil := findInterval(renda_capita , deciles[ -length(deciles) ] ) ]
+      hex_pop[, renda_quintil := findInterval(renda_capita , quintiles[ -length(quintiles) ] ) ]
+      hex_pop[, renda_decil := findInterval(renda_capita , deciles[ -length(deciles) ] ) ]
       
       # check if pop size in each decile are roughly equal
-      hex_pop[, .(po_in_quintil = sum(pop_total, na.rm=T)), by = quintil]
-      hex_pop[, .(po_in_decile  = sum(pop_total, na.rm=T)), by = decil]
+      # hex_pop[, .(po_in_quintil = sum(pop_total, na.rm=T)), by = quintil]
+      # hex_pop[, .(po_in_decile  = sum(pop_total, na.rm=T)), by = decil]
       
       # # remove NAs
       # hex_pop <- hex_pop[ !is.na(decil)]
@@ -330,13 +330,22 @@ hex_2017 <- hex_2017[h3_resolution == 9]
 hex_2018 <- lapply(dir("../../data/acesso_oport/hex_agregados/2018/", full.names = TRUE),
                    read_rds) %>% rbindlist()
 hex_2018 <- hex_2018[h3_resolution == 9]
-hex_junto <- rbind(hex_2017, hex_2018)
+hex_2019 <- lapply(dir("../../data/acesso_oport/hex_agregados/2019/", full.names = TRUE),
+                   read_rds) %>% rbindlist()
+hex_2019 <- hex_2019[h3_resolution == 9]
+hex_junto <- rbind(hex_2017, hex_2018, hex_2019)
 
 hex_2017[pop_total == 0 & renda_total > 0]
+hex_2017[pop_total == 0 & (renda_quintil != 0)]
+hex_2017[pop_total == 0 & (renda_decil != 0)]
 hex_2017[pop_total > 0 & renda_total == 0]
-hex_pop[pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0]
-hex_pop[pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0]
+hex_2017[pop_total > 0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0]
+hex_2017[pop_total !=0 & idade_0a5 + idade_6a14 + idade_15a18 + idade_19a24 + idade_25a39  + idade_40a69 + idade_70 == 0]
+hex_2017[pop_total > 0 & cor_branca + cor_amarela + cor_indigena + cor_negra == 0]
 
+hex_summary_2017 <- hex_2017 %>%
+  group_by(sigla_muni) %>%
+  summarise(across(cor_branca:cras_total, max))
 
 
 # maps --------------------------------------------------------------------
