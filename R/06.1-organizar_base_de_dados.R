@@ -35,9 +35,9 @@ organizar_base_acess <- function(ano) {
   
   
   # dados acessibilidade ---------------------------
-  acess_paths <- dir(sprintf("../../data/acesso_oport/output_access/%s", ano), full.names = TRUE, pattern = "acess_")
+  acess_paths <- dir(sprintf("../../data/acesso_oport/output_access/%s", ano), full.names = TRUE, pattern = "acess_", recursive = TRUE)
   acess_paths_ok <- acess_paths[acess_paths %nlike% "bsb_origin|bsb_dest"]
-  acess <- lapply(acess_paths, read_rds) %>% rbindlist(fill = TRUE)
+  acess <- lapply(acess_paths_ok, read_rds) %>% rbindlist(fill = TRUE)
   
   # abrir bsb carro - especial
   acess_paths_bsb_carro1 <- acess_paths[acess_paths %like% "bsb_origin"]
@@ -67,6 +67,8 @@ organizar_base_acess <- function(ano) {
   # munii <- "for"
   # munii <- "rio"
   # munii <- "bsb"
+  # munii <- "spo"
+  # munii <- "goi"
   
   join_by_muni <- function(munii) {
     
@@ -114,8 +116,8 @@ organizar_base_acess <- function(ano) {
              
              # Selecionar variveis de renda
              R001 = renda_capita, 
-             R002 = quintil, 
-             R003 = decil,
+             R002 = renda_quintil, 
+             R003 = renda_decil,
              
              # # Selecionar atividades de trabalho
              T001 = empregos_total,
@@ -181,6 +183,13 @@ organizar_base_acess <- function(ano) {
       distinct(id_hex, sigla_muni, modo, pico, .keep_all = TRUE) %>%
       setDT()
     
+    # # abrir pontos de fortalewza
+    # points <- fread("../../r5/points/2017/points_spo_09_2017.csv")
+    # 
+    # setdiff(hex_dt_tpcarro$id_hex, points$id_hex)
+    # setdiff(points$id_hex, hex_dt_tpcarro$id_hex)
+    # a1 <- colnames(hex_dt_tpcarro)
+    # a1 <- a1[grepl("^(CMA|CMP|TMI)", a1)]
     
     
     hex_dt_ativo <- acess_muni %>%
@@ -209,6 +218,7 @@ organizar_base_acess <- function(ano) {
       distinct(id_hex, sigla_muni, modo, pico, .keep_all = TRUE) %>%
       setDT()
     
+    # setdiff(hex_dt_ativo$id_hex, points$id_hex)
     
     # # truncar os valores de TMI quando eh infinito
     # # para caminhada: 60 minutos;  para bicicleta de transporte publico: 120 minutos
