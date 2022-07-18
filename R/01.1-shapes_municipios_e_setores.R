@@ -43,10 +43,10 @@ download_muni_setores <- function(ano, munis = "all") {
 
 
     # salvar municipios
-    readr::write_rds(muni_sf, sprintf("../../data-raw/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano), compress = 'gz')
+    readr::write_rds(muni_sf, sprintf("../../data/municipios/%s/municipio_%s_%s.rds", ano, sigla_muni, ano), compress = 'gz')
     
     # salvar setores censitarios
-    readr::write_rds(ct_sf, sprintf("../../data-raw/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla_muni, ano), compress = 'gz')
+    readr::write_rds(ct_sf, sprintf("../../data/setores_censitarios/%s/setores_%s_%s.rds", ano, sigla_muni, ano), compress = 'gz')
   }
   
   # 2. Aplica funcao ------------------------------------------
