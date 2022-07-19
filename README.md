@@ -14,12 +14,13 @@ Os scripts em `R` utilizados neste repositório estão organizados em grupos e n
   - `01_tratamento`: documentação do tratamento inicial feito às bases
     de dados brutas de informações socieconômicas, de uso do solo e
     transporte;
-  - `02_agrupamento`: criação das unidades de espaciais de análise (hexágonos) e
-    agregação espacial das variáveis de transporte e uso do solo;
-  - `03_otp`: configuração das pastas e arquivos do OpenTripPlanner e cálculo de de matriz de tempo de
+  - `02_checagem_geocode`: código utilizado na checagem do geocode das bases de emprego, educação, saúde e CRAS;
+  - `03_agrupamento`: criação das unidades de espaciais de análise (hexágonos) e
+    agregação espacial das variáveis demográficas, uso do solo e transporte;
+  - `04_otp`: configuração das pastas e arquivos do r5r e cálculo de de matriz de tempo de
     viagem;
-  - `04_acesso`: cálculo dos indicadores de acessiblidade;
-  - `05_outputs`: organização da base de dados, mapas e gráficos para publicação.
+  - `05_acesso`: cálculo dos indicadores de acessiblidade;
+  - `06_outputs`: organização da base de dados, mapas e gráficos para publicação.
 
 Além dessa documentação, outros arquivos necessários para o andamento do
 projeto estão divididos nas pastas:
@@ -31,7 +32,7 @@ porque contém dados grande demais para a plataforma do GitHub:
 
   - `data-raw`: dados brutos;
   - `data`: dados tratados e organizados;
-  - `otp`: arquivos utilizados na construção do *router* do
-    OpenTripPlanner.
+  - `r5`: arquivos utilizados na construção do *router* do
+    r5r.
 
 
