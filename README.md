@@ -16,8 +16,8 @@ Os scripts em `R` utilizados neste repositório estão organizados em grupos e n
     transporte;
   - `02_checagem_geocode`: código utilizado na checagem do geocode das bases de emprego, educação, saúde e CRAS;
   - `03_agrupamento`: criação das unidades de espaciais de análise (hexágonos) e
-    agregação espacial das variáveis demográficas, uso do solo e transporte;
-  - `04_otp`: configuração das pastas e arquivos do r5r e cálculo de de matriz de tempo de
+    agregação espacial das variáveis demográficas e de uso do solo;
+  - `04_r5r`: configuração das pastas e arquivos do r5r e cálculo de de matriz de tempo de
     viagem;
   - `05_acesso`: cálculo dos indicadores de acessiblidade;
   - `06_outputs`: organização da base de dados, mapas e gráficos para publicação.
