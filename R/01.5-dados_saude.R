@@ -1,5 +1,10 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###### 0.1.3 Geocode dados do censo escolar
+###### 0.1.5 Dados do CNES
+# Esse script aplica funcoes que foram definidas na pasta R/fun/saude p/ todos os anos de processamento
+# Sao tres funcoes principais:
+# 1) Filtra cada base de saude mantendo somente observaoes de equipamentos de saude publicos e e municipios do projeto
+# 2) Traz o geocode que foi realizado com o streetmap e aprimora a qualidade do geocode quando necessario
+# 3) Filtra somente as observaoes que apresentam boa qualidade de geocode
 
 # carregar bibliotecas
 source('./R/fun/setup.R')

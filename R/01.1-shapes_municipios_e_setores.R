@@ -1,5 +1,10 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.1.1 Download de shape file de municipios e setores censitarios dos  municipios incluidos no projeto
+# Esse script faz o download do shape dos municipios e setores censitarios do pacote geobr,
+# e salva-os na pasta de data-raw
+# Por mais que os shapes nao mudem entre os anos, eles sao salvos em pastas separadas para cada um dos anos
+# Isso em geral causa multiplicacao de shapes para a maioria das cidades, mas algumas cidades podem aprensetar
+# mudanca no seu shape (goiania p/ 2019, por exemplo, q considera a RM) e portanto devem ser consideradas
 
 # carregar bibliotecas
 source('./R/fun/setup.R')

@@ -1,5 +1,8 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###### 0.1.2 Carrega dados socioeconomicos dos setores censitarios
+# Esse script faz um tratamento da base (interna do IPEA) dos setores censitarios, selecionando
+# as variaveis de interesse e preparando o output. Por fim, faz a juncao com os shapes dos setores
+# que foram baixados na etapa 01.1, e salvar na pasta data/setores_agregados
 
 
 # carregar bibliotecas
