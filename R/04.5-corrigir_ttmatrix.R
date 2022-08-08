@@ -10,20 +10,31 @@ source('./R/fun/setup.R')
 # que nao tenha menos que 10 hex de acess.
 
 # sigla_muni <- 'spo'; ano <- 2017
-# sigla_muni <- 'poa'; ano <- 2019
+# sigla_muni <- 'poa'; ano <- 2017
 # sigla_muni <- 'bel'; ano <- 2019
+# sigla_muni <- 'bho'; ano <- 2017
 # sigla_muni <- 'nat'; ano <- 2017
-# sigla_muni <- 'man'; ano <- 2019
+# sigla_muni <- 'man'; ano <- 2017
 # sigla_muni <- 'spo'; ano <- 2019
+# sigla_muni <- 'for'; ano <- 2019
 
-identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
+corrigir_ttmatrix <- function(sigla_muni, ano) {
   
   # status message
   message('Woking on city ', sigla_muni, ' at year ', ano)
   
+  ttmatrix_files <- dir(sprintf("E:/data/output_ttmatrix/%s/r5/", ano),
+                        full.names = TRUE, pattern = sprintf("ttmatrix_%s_%s_r5", ano, sigla_muni))
   
-  ttmatrix_allmodes <- fread(sprintf("E:/data/output_ttmatrix/%s/r5/ttmatrix_%s_%s_r5.csv", 
-                                     ano, ano, sigla_muni))
+  if (length(ttmatrix_files) > 1) {
+    
+    ttmatrix_allmodes <- lapply(ttmatrix_files, fread) %>% rbindlist() 
+    
+    } else ttmatrix_allmodes <- fread(ttmatrix_files)
+  
+  
+  # rename columns
+  colnames(ttmatrix_allmodes) <- c("origin", "destination",  "travel_time", "mode", "pico", "city","ano")
   
   # pegar so bike
   ttmatrix_teste <- ttmatrix_allmodes[mode == "bike"]
@@ -31,10 +42,13 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   # ttmatrix_teste <- ttmatrix_allmodes
   
   # abrir os pontos da resolucao 09 ~~~~
-  points_file <- sprintf("../../r5/points/%s/points_%s_09_%s.csv", ano, sigla_muni, ano)
+  points_file <- sprintf("../../data/acesso_oport/r5/points/%s/points_%s_09_%s.csv", ano, sigla_muni, ano)
   # points_file <- "../../data/avaliacao_intervencoes/r5/points/points_for_09_2019.csv"
   points <- fread(points_file)
   
+  
+  # 2) make sure we dont have too many points -------------------------------
+  ttmatrix_allmodes <- ttmatrix_allmodes[origin %in% points$id_hex]
   
   # 1) Identificar quais pontos nao foram roteados --------------------
   
@@ -46,6 +60,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   
   ## quais origens e destinos ficaram fora? ~~~~
   origem_fora <- setdiff(points$id_hex, origem_matrix) 
+  # setdiff(origem_matrix, points$id_hex) 
   destino_fora <- setdiff(points$id_hex, destino_matrix)
   
   # quais pontos ficaram fora completamente? tanto a origem como o destino ~~
@@ -209,8 +224,7 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
   ttmatrix_hex_fim[mode == "transit", travel_time := fifelse(origin == destination, 5.8, travel_time)]
   
   # salvar output corrigido
-  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds", ano, ano, sigla_muni),
-            compress = "gz")
+  write_rds(ttmatrix_hex_fim, sprintf("E:/data/ttmatrix_fixed/%s/ttmatrix_fixed_%s_%s.rds", ano, ano, sigla_muni))
   
   rm(ttmatrix_allmodes)
   rm(ttmatrix_allmodes_nprob)
@@ -222,15 +236,15 @@ identificar_e_corrigir_extremos_acess_muni <- function(sigla_muni, ano) {
 
 
 # aplicar funcao ------------------------------------------------------------------------------
-plan(multiprocess, workers = 1)
+plan(multiprocess, workers = 2)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2017]$abrev_muni, 
-                   identificar_e_corrigir_extremos_acess_muni, ano = 2017)
+                   corrigir_ttmatrix, ano = 2017)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2018]$abrev_muni, 
-                   identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+                   corrigir_ttmatrix, ano = 2018)
 furrr::future_walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, 
-                   identificar_e_corrigir_extremos_acess_muni, ano = 2019)
+                   corrigir_ttmatrix, ano = 2019)
 walk(munis_list$munis_metro[ano_metro == 2019]$abrev_muni, 
-     identificar_e_corrigir_extremos_acess_muni, ano = 2019)
+     corrigir_ttmatrix, ano = 2019)
 
 
 # falta spo, rio, goi, bsb
@@ -238,11 +252,11 @@ walk(c("for", "cur","poa","bho",
        "sal","man","rec","bel",
        "gua","cam","slz","sgo",
        "mac","duq","cgr", 'nat'),
-     identificar_e_corrigir_extremos_acess_muni, ano = 2018)
+     corrigir_ttmatrix, ano = 2018)
 walk(c("rio","goi","bsb"),
-     identificar_e_corrigir_extremos_acess_muni, ano = 2019)
+     corrigir_ttmatrix, ano = 2019)
 walk(c("for", "cur","poa","bho",
        "sal","man","rec","bel",
        "gua","cam","slz","sgo",
        "mac","duq","cgr", 'nat'),
-     identificar_e_corrigir_extremos_acess_muni, ano = 2019)
+     corrigir_ttmatrix, ano = 2019)
