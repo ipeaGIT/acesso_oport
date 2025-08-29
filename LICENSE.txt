@@ -1,3 +1,3 @@
 GPL-3.0-or-later or MIT
 
-see `licenses/` directory
+COPYRIGHT HOLDER: Ipea
